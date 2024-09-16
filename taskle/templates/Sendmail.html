@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="ja">
+    <head>
+        <meta charset="UTF-8">
+        {% load static %}
+        <link rel="stylesheet" href="{% static 'taskle/SendMailSetting.css' %}">
+        <title>情報分析ツール システマ</title>
+    </head>
+    <body> 
+        <div class="square">
+            <div id="sidebar">
+                    <div class="buttons">
+                        <a class="bold" >メール送信</a>
+                        <button onclick="toggleVisibility('element1')" class="listbutton">メール送信</button>
+                        <a class="bold">テンプレート</a>
+                        <button onclick="toggleVisibility('element2')" class="listbutton">テンプレート作成</button>
+                        <button onclick="toggleVisibility('element3')" class="listbutton">テンプレート変更</button>
+                        <a class="bold">説明書</a>
+                        <button class="listbutton">説明書</button>
+                        <div class="ather-manu">
+                            <a class="bold">ヤフオク価格分析</a>
+                            <form action="{% url 'Yahuoku' %}" method="get">
+                                <button class="listbutton">ヤフオク価格分析</button>
+                            </form>                            
+                            <a class="bold">メインメニュー</a>
+                            <form action="{% url 'index' %}" method="get">
+                                <button class="listbutton">メインメニュー</button>
+                            </form>
+                        </div> 
+                    </div> 
+            </div>
+        </div>
+        <div class="elements">
+            <div id="element1" class="toggle-element">
+                <div class="top-element" width="100px">
+                    <h1>メール送信</h1>
+                    <form id="showsenddeta"  action="/taskle/update_fields/" method="post">{% csrf_token %}
+                        <input type="hidden" name="selected_option" value="{{ selected_option }}">
+                        <button class="lead-button" name="TemplateLead" id="TemplateLead" type="submit">読み込み</button> 
+                     </form>
+                </div>
+                <div class="mail-element" width="100px">
+                        <p>テンプレート名</p>
+                        <select  id= "SendTemplate" name="SendTemplate" style="width: 358px; height: 30px;">
+                            {% for objective in objectives %}
+                            <option value="{{ objective.Objective }}">{{ objective.Objective }}</option>
+                            {% endfor %}
+                        </select>
+                </div>
+                <div class="mail-element" width="100px">
+                <p>メールアドレス</p>
+                <textarea type="text" id="SendAdress" placeholder="メールアドレス" style="width: 350px; height: 20px;"></textarea>
+                </div>
+                <div class="mail-element" width="100px">
+                    <p>メールタイトル</p>
+                    <textarea type="text" id="SendSubject" placeholder="メールタイトル" style="width: 350px; height: 20px;"></textarea>
+                </div>
+                <div class="mail-element" width="100px">
+                    <p>　メール本文　</p>
+                    <textarea type="text" id="SendMailText" style ="width: 350px; height: 250px;"></textarea>
+                </div>
+                <div class="centered-container" width="100px">
+                    <form id="MailItemForm">
+                        <button class="execution-button" id="CreateMailItem" name="CreateMailItem">送信</button>
+                    </form>
+                </div>
+            </div>
+            <div id="element2" class="toggle-element">
+                <h1>テンプレート追加</h1>            
+                    <div class="mail-element" width="100px">
+                        <p>テンプレート名</p>
+                        <textarea type="text" name="AddObjective" id="AddObjective" placeholder="テンプレート名" style="width: 350px; height: 25px;"></textarea>
+                    </div>
+                    <div class="mail-element" width="100px">
+                        <p>メールアドレス</p>
+                        <textarea type="text" name="AddAdress" id="AddAdress" placeholder="メールアドレス" style="width: 350px; height: 20px;"></textarea>
+                    </div>
+                    <div class="mail-element" width="100px">
+                        <p>メールタイトル</p>
+                        <select id="AddOption" name="AddOption" style= "width:  120px; height: 27px;">
+                            <option value="option5">オプションなし</option>
+                            <option value="option1">〇月〇日(曜日)</option>
+                            <option value="option2">〇月〇日</option>
+                            <option value="option3">〇/〇</option>
+                            <option value="option4">〇/〇(曜日)</option>
+                        </select>
+                        <textarea type="text" name="AddSubject" id="AddSubject" placeholder="タイトル" style="width: 230px; height: 20px;"></textarea>
+                    </div>
+                    <div class="mail-element" width="100px">
+                        <p>　メール本文　</p>
+                        <textarea  name="AddMailText" id="AddMailText" style="width: 350px; height: 250px;"></textarea>
+                    </div>
+                    <div class="centered-container" width="100px">
+                        <form id="addtemplate" action="/taskle/add_template" method="POST">{% csrf_token %}
+                            <button  class="execution-button" type="submit" id="AddDataButton" type="submit">追加</button>   
+                        </form>
+                    </div>
+            </div>
+            <div id="element3" class="toggle-element">
+                <div class="top-element" width="100px">
+                    <h1>メール変更</h1>
+                    <form id="showdeletedeta"  action="/taskle/delete_fields/" method="post">{% csrf_token %}
+                        <input type="hidden" name="Delete_selected_option" value="{ Delete_selected_option }">
+                        <button class="lead-button" name="DeleteTemplateLead" id="DeleteTemplateLead" type="submit">読み込み</button> 
+                    </form>
+                </div>
+                <div class="mail-element" width="100px">
+                    <p>テンプレート名</p>
+                    <select  id="DeleteTemplate" style="width: 358px; height: 30px;">
+                        {% for objective in objectives %}
+                        <option value="{{ objective.Objective }}">{{ objective.Objective }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="mail-element" width="100px">
+                    <p>メールアドレス</p>
+                    <textarea type="text" id="DeleteAdress" placeholder="メールアドレス" style="width: 350px; height: 20px;"></textarea>
+                </div>
+                <div class="mail-element" width="100px">
+                    <p>メールタイトル</p>
+                    <textarea readonly id="ViewOption" style="width: 120px; height: 20px;"></textarea>
+                    <textarea type="text" id="DeleteTitle" placeholder="タイトル" style="width: 225px; height: 20px;"></textarea>
+                </div>
+                <div class="mail-element" width="100px">
+                    <p>　メール本文　</p>
+                    <textarea type="text" id="DeleteMailText" style="width: 350px; height: 250px;"></textarea>
+                </div>
+                <div class="centered-container" width="100px">
+                    <form id="deletetenplate" action="/taskle/delete_template" method="POST">{% csrf_token %}
+                        <button class="double-execution-button1" id="delete_button">削除</button>
+                    </form>
+                    <form id="changetenplate" action="/taskle/change_template" method="POST">{% csrf_token %}
+                        <button class="double-execution-button2" id="change_button" name="change_template">変更</button>
+                    </form>
+                </div>
+            </div>
+
+        </div>
+        <script src="{% static 'JS/SendMailSetting.js' %}"></script>
+        <script>
+            function toggleVisibility(elementId) {
+                var elements = document.getElementsByClassName("toggle-element");
+                for (var i = 0; i < elements.length; i++) {
+                    elements[i].style.display = "none";
+                }
+                var elementToShow = document.getElementById(elementId);
+                elementToShow.style.display = "block";
+            }
+        </script>
+    </body>
+</html>
