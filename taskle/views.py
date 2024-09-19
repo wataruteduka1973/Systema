@@ -3,7 +3,6 @@ from django.http import HttpResponse, JsonResponse
 from django.http import HttpResponseNotAllowed
 from django.views.decorators.http import require_http_methods
 from bs4 import BeautifulSoup
-import re
 import requests
 
 from .models import SelectDestination
@@ -11,6 +10,7 @@ from .models import scraping
 
 from datetime import datetime
 import os
+import re
 
 
 def index(request):
