@@ -1,5 +1,4 @@
 #!/usr/bin/env python
-#!/usr/bin/env python
 """Django's command-line utility for administrative tasks."""
 import os
 import sys
@@ -16,9 +15,9 @@ def main():
     """Run administrative tasks."""
     # Djangoの管理タスクを実行するための関数
 
-    os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'Webtaskle.settings')
+    os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'System_Config.settings')
     # Djangoの設定モジュールを指定する環境変数を設定
-    # 'Webtaskle.settings'はプロジェクトの設定ファイルを指します
+    # 'System_Config.settings'はプロジェクトの設定ファイルを指します
 
     try:
         from django.core.management import execute_from_command_line
@@ -40,12 +39,10 @@ def main():
             if arg.startswith('0.0.0.0:') or arg.startswith('127.0.0.1:'):
                 # コマンドライン引数からポート番号を取得
                 port = int(arg.split(':')[1])
-
-        if port == 8000:
+        if port == 8000 and not any(arg.startswith('open') for arg in sys.argv):
             # ポートがデフォルトの8000の場合にのみブラウザを開く
             Timer(1.5, open_browser).start()
-            # 1.5秒後にopen_browser関数を実行するタイマーを開始
-        execute_from_command_line(sys.argv)
+    execute_from_command_line(sys.argv)
     # コマンドライン引数を受け取り、Djangoの管理コマンドを実行
 
 
