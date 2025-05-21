@@ -36,6 +36,7 @@ function performSearch() {
         })
         .then(result => {
             currentData = result.data || [];
+            filteredData = [...currentData];
             if (Array.isArray(currentData) && currentData.length > 0) {
                 currentPage = 1
                 updateTable(paginateData(currentData));
@@ -48,6 +49,11 @@ function performSearch() {
                 document.getElementById('wordcloud').style.display = 'block';
                 setTimeout(() => generateWordCloud(currentData), 0);
                 updatePagination();
+                document.getElementById('minPrice').value = '0';
+                document.getElementById('maxPrice').value = '';
+                document.getElementById('bidLow').checked = false;
+                document.getElementById('bidMedium').checked = false;
+                document.getElementById('bidHigh').checked = false;
             } else {
                 console.error('Error: Data is not a non-empty array');
                 document.getElementById("medianPrice").style.display = "none";
@@ -100,9 +106,9 @@ function updatePagination() {
 function changePage(page) {
     currentPage = page;
     if (currentPage < 1) currentPage = 1;
-    const totalPages = Math.ceil(currentData.length / ITEMS_PER_PAGE);
+    const totalPages = Math.ceil(filteredData.length / ITEMS_PER_PAGE);
     if (currentPage > totalPages) currentPage = totalPages;
-    updateTable(paginateData(currentData));
+    updateTable(paginateData(filteredData));
     updatePagination();
 }
 
@@ -253,6 +259,63 @@ window.addEventListener('resize', () => {
         }
     }, 200);
 });
+
+let filteredData = [...currentData]; // フィルタリング用データ
+
+function filterData() {
+    const minPriceInput = document.getElementById('minPrice').value;
+    const maxPriceInput = document.getElementById('maxPrice').value;
+    const bidLow = document.getElementById('bidLow').checked;
+    const bidMedium = document.getElementById('bidMedium').checked;
+    const bidHigh = document.getElementById('bidHigh').checked;
+
+    // 価格範囲の取得（未入力の場合はデフォルト値を設定）
+    const minPrice = minPriceInput ? parseFloat(minPriceInput) : 0;
+    const maxPrice = maxPriceInput ? parseFloat(maxPriceInput) : Infinity;
+
+    // 入力バリデーション
+    if (minPrice < 0 || (maxPriceInput && maxPrice < 0)) {
+        alert('価格は0以上の値を入力してください');
+        return;
+    }
+    if (maxPriceInput && minPrice > maxPrice) {
+        alert('最低価格は最高価格以下にしてください');
+        return;
+    }
+
+    filteredData = currentData.filter(item => {
+        const price = parseFloat(item.price) || 0;
+        const bidding = parseInt(item.bidding) || 0;
+
+        // 価格フィルター
+        if (price < minPrice || price > maxPrice) return false;
+
+        // 入札数フィルター
+        if (!bidLow && !bidMedium && !bidHigh) return true;
+        if (bidLow && bidding >= 0 && bidding <= 10) return true;
+        if (bidMedium && bidding >= 11 && bidding <= 50) return true;
+        if (bidHigh && bidding >= 51) return true;
+        return false;
+    });
+
+    currentPage = 1;
+    updateTable(paginateData(filteredData));
+    updatePagination();
+    updateWordCloud(); // ワードクラウド更新（トグルの状態に応じて）
+}
+
+function clearFilters() {
+    document.getElementById('minPrice').value = '0';
+    document.getElementById('maxPrice').value = '';
+    document.getElementById('bidLow').checked = false;
+    document.getElementById('bidMedium').checked = false;
+    document.getElementById('bidHigh').checked = false;
+    filteredData = [...currentData]; // フィルターをリセット
+    currentPage = 1;
+    updateTable(paginateData(filteredData));
+    updatePagination();
+    updateWordCloud(); // ワードクラウドをリセット
+}
 
 document.addEventListener('DOMContentLoaded', function () {
     document.querySelector('.Main-Element').style.display = 'none';

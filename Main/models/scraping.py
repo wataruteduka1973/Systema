@@ -2,13 +2,13 @@ from django.db import models
 
 
 class scraping(models.Model):
-    SearchWord = models.TextField()
-    SearchDay = models.TextField()
-    Bidding = models.TextField()
-    EndPrice = models.IntegerField()
-    StartPrice = models.IntegerField()
-    Name = models.TextField()
-    URL = models.TextField()
+    SearchWord = models.TextField(help_text="検索ワード")
+    SearchDay = models.TextField(help_text="検索日")
+    Bidding = models.TextField(help_text="入札数")
+    EndPrice = models.IntegerField(help_text="終了価格")
+    StartPrice = models.IntegerField(help_text="開始価格")
+    Name = models.TextField(help_text="商品名")
+    URL = models.TextField(help_text="URL")
 
     def __str__(self):
         return f"{self.Name} - {self.SearchDay}"

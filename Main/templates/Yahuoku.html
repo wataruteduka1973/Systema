@@ -15,29 +15,32 @@
             font-family: 'Roboto', sans-serif;
         }
 
-        .pagination .page-item .page-link {
-            color: #000000;
+        .jumbotron {
+            background-color: #d7b21d;
+            padding: 2rem 1rem;
         }
 
-        table {
-            border-collapse: collapse;
-            width: 100%;
+        .pagination .page-item .page-link {
+            color: #000000;
         }
 
         .btn-custom {
             background-color: #000000;
             border: 1px solid #ced4da;
+            color: #ffffff;
             padding: 0.5rem 1rem;
             font-size: 1.1rem;
         }
 
         .btn-custom:hover {
-            background-color: #3a3838;
-        }
-
-        .btn-custom .bi-search {
+            background-color: #343a40;
             color: #ffffff;
         }
+
+        .btn-custom .bi-search- {
+            color: #ffffff;
+        }
+
 
         #medianPrice {
             font-size: 1.2rem;
@@ -132,9 +135,9 @@
     </nav>
     <main role="main">
 
-        <section class="text-center">
+        <section class="text-center jumbotron">
             <div class="container">
-                <h1>ヤフオク相場検索</h1>
+                <h1 class="jumbotron-heading">ヤフオク相場検索</h1>
                 <p class="lead text-muted">オークションが終了した商品の情報から売れる商品の傾向を分析します。</p>
             </div>
         </section>
@@ -157,6 +160,36 @@
                                 </svg>
                             </button>
                         </div>
+                    </div>
+                </div>
+            </div>
+            <div class="row mb-3">
+                <div class="col-md-6">
+                    <label>価格範囲 (円):</label>
+                    <div class="input-group mb-2">
+                        <input type="number" class="form-control" id="minPrice" placeholder="最低価格" min="0" value="0">
+                        <span class="input-group-text">〜</span>
+                        <input type="number" class="form-control" id="maxPrice" placeholder="最高価格" min="0">
+                    </div>
+                    <button class="btn btn-primary" onclick="filterData()">絞り込む</button>
+                    <button class="btn btn-secondary mt-2" onclick="clearFilters()">フィルターを解除</button>
+                </div>
+                <div class="col-md-6">
+                    <label>入札数:</label>
+                    <div class="form-check">
+                        <input type="checkbox" class="form-check-input" id="bidLow" value="0-10"
+                            onchange="filterData()">
+                        <label class="form-check-label" for="bidLow">0-10</label>
+                    </div>
+                    <div class="form-check">
+                        <input type="checkbox" class="form-check-input" id="bidMedium" value="11-50"
+                            onchange="filterData()">
+                        <label class="form-check-label" for="bidMedium">11-50</label>
+                    </div>
+                    <div class="form-check">
+                        <input type="checkbox" class="form-check-input" id="bidHigh" value="51-"
+                            onchange="filterData()">
+                        <label class="form-check-label" for="bidHigh">51以上</label>
                     </div>
                 </div>
             </div>
