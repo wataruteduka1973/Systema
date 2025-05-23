@@ -1,11 +1,11 @@
 let currentData = [];
-
 let history = ['キーワード1', 'キーワード2'];
-
-let resizeTimeout;
-
 const ITEMS_PER_PAGE = 10;
 let currentPage = 1;
+let filteredData = [...currentData];
+let sortKey = null;
+let sortOrder = null;
+
 
 function suggestKeyword() {
     const input = document.getElementById('search');
@@ -25,15 +25,31 @@ function performSearch() {
         alert('検索キーワードを入力してください');
         return;
     }
+    const params = new URLSearchParams({
+        keyword: searchKeyword,
+    });
+
+
     const spinner = document.getElementById('searchSpinner');
     const button = document.getElementById('button-search');
     spinner.style.display = 'inline-block';
     button.disabled = true;
-    fetch(`/taskle/perform_search?keyword=${encodeURIComponent(searchKeyword)}`)
+    fetch(`/taskle/perform_search?${params.toString()}`)
         .then(response => {
-            if (!response.ok) throw new Error('ネットワークエラー');
+            if (!response.ok) {
+                if (response.status === 400 || response.status === 500) {
+                    return response.text().then(text => {
+                        document.open();
+                        document.write(text);
+                        document.close();
+                        throw new Error(`Error page rendered: ${response.status}`);
+                    });
+                }
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
             return response.json();
         })
+
         .then(result => {
             currentData = result.data || [];
             filteredData = [...currentData];
@@ -51,9 +67,12 @@ function performSearch() {
                 updatePagination();
                 document.getElementById('minPrice').value = '0';
                 document.getElementById('maxPrice').value = '';
-                document.getElementById('bidLow').checked = false;
-                document.getElementById('bidMedium').checked = false;
-                document.getElementById('bidHigh').checked = false;
+                document.getElementById('bid0_10').checked = false;
+                document.getElementById('bid10_20').checked = false;
+                document.getElementById('bid20_30').checked = false;
+                document.getElementById('bid30_40').checked = false;
+                document.getElementById('bid40_50').checked = false;
+                document.getElementById('bid50_plus').checked = false;
             } else {
                 console.error('Error: Data is not a non-empty array');
                 document.getElementById("medianPrice").style.display = "none";
@@ -72,10 +91,10 @@ function performSearch() {
 }
 
 
-
 function paginateData(data) {
     const start = (currentPage - 1) * ITEMS_PER_PAGE;
     const end = start + ITEMS_PER_PAGE;
+    console.log('paginateData - start:', start, 'end:', end, 'data.length:', data.length); // デバッグ用
     return data.slice(start, end);
 }
 
@@ -151,24 +170,22 @@ function updateTable(data) {
     });
 }
 
+
 function sortData(key, order) {
-    currentData.sort((a, b) => {
+    sortKey = key;
+    sortOrder = order;
+    filteredData.sort((a, b) => {
         let valueA = a[key];
         let valueB = b[key];
-
-        if (typeof valueA === 'string') valueA = parseFloat(valueA.replace(/[^\d.-]/g, ''));
-        if (typeof valueB === 'string') valueB = parseFloat(valueB.replace(/[^\d.-]/g, ''));
-
-        if (order === 'asc') {
-            return valueA - valueB;
-        } else {
-            return valueB - valueA;
-        }
+        if (typeof valueA === 'string') valueA = parseFloat(valueA.replace(/[^\d.-]/g, '')) || 0;
+        if (typeof valueB === 'string') valueB = parseFloat(valueB.replace(/[^\d.-]/g, '')) || 0;
+        return order === 'asc' ? valueA - valueB : valueB - valueA;
     });
-
-    updateTable(currentData);
+    currentPage = 1;
+    updateTable(paginateData(filteredData));
+    updatePagination();
+    //updateWordCloud();
 }
-
 
 document.addEventListener('DOMContentLoaded', function () {
     const sortButtons = document.querySelectorAll('.sort-btn');
@@ -200,9 +217,17 @@ function updateSortIcon(button) {
 
 function generateWordCloud(data) {
     const container = document.querySelector('.wordcloud-container');
-    const width = container.offsetWidth;
-    const height = container.offsetHeight;
-    const allText = data.map(item => item.name).join(' ');
+    let width = container.offsetWidth;
+    let height = container.offsetHeight;
+
+    // フォールバックサイズ
+    if (width === 0 || height === 0) {
+        width = 800; // デフォルト幅
+        height = 400; // デフォルト高さ
+        console.warn('コンテナサイズが取得できませんでした。デフォルトサイズを使用します。');
+    }
+
+    const allText = data.map(item => item.name || '').join(' ');
     const wordCounts = {};
     allText.split(/\s+/).forEach(word => {
         if (word.length > 1) {
@@ -210,13 +235,12 @@ function generateWordCloud(data) {
         }
     });
 
-
     const words = Object.entries(wordCounts)
         .sort((a, b) => b[1] - a[1])
         .slice(0, 50)
         .map(([text, size]) => ({ text, size }));
 
-    const layout = d3.layout.cloud()
+    const layout = d3.layout.cloud() // d3-cloud モジュールを使用
         .size([width, height])
         .words(words)
         .padding(5)
@@ -249,8 +273,7 @@ function generateWordCloud(data) {
     }
 }
 
-
-
+let resizeTimeout;
 window.addEventListener('resize', () => {
     clearTimeout(resizeTimeout);
     resizeTimeout = setTimeout(() => {
@@ -260,20 +283,19 @@ window.addEventListener('resize', () => {
     }, 200);
 });
 
-let filteredData = [...currentData]; // フィルタリング用データ
-
 function filterData() {
     const minPriceInput = document.getElementById('minPrice').value;
     const maxPriceInput = document.getElementById('maxPrice').value;
-    const bidLow = document.getElementById('bidLow').checked;
-    const bidMedium = document.getElementById('bidMedium').checked;
-    const bidHigh = document.getElementById('bidHigh').checked;
-
-    // 価格範囲の取得（未入力の場合はデフォルト値を設定）
+    const bid0_10 = document.getElementById('bid0_10').checked;
+    const bid10_20 = document.getElementById('bid10_20').checked;
+    const bid20_30 = document.getElementById('bid20_30').checked;
+    const bid30_40 = document.getElementById('bid30_40').checked;
+    const bid40_50 = document.getElementById('bid40_50').checked;
+    const bid50_plus = document.getElementById('bid50_plus').checked;
     const minPrice = minPriceInput ? parseFloat(minPriceInput) : 0;
     const maxPrice = maxPriceInput ? parseFloat(maxPriceInput) : Infinity;
 
-    // 入力バリデーション
+
     if (minPrice < 0 || (maxPriceInput && maxPrice < 0)) {
         alert('価格は0以上の値を入力してください');
         return;
@@ -287,36 +309,48 @@ function filterData() {
         const price = parseFloat(item.price) || 0;
         const bidding = parseInt(item.bidding) || 0;
 
-        // 価格フィルター
         if (price < minPrice || price > maxPrice) return false;
-
-        // 入札数フィルター
-        if (!bidLow && !bidMedium && !bidHigh) return true;
-        if (bidLow && bidding >= 0 && bidding <= 10) return true;
-        if (bidMedium && bidding >= 11 && bidding <= 50) return true;
-        if (bidHigh && bidding >= 51) return true;
+        const noBidFilter = !bid0_10 && !bid10_20 && !bid20_30 && !bid30_40 && !bid40_50 && !bid50_plus;
+        if (noBidFilter) return true;
+        if (bid0_10 && bidding >= 0 && bidding < 10) return true;
+        if (bid10_20 && bidding >= 10 && bidding < 20) return true;
+        if (bid20_30 && bidding >= 20 && bidding < 30) return true;
+        if (bid30_40 && bidding >= 30 && bidding < 40) return true;
+        if (bid40_50 && bidding >= 40 && bidding < 50) return true;
+        if (bid50_plus && bidding >= 50) return true;
         return false;
     });
 
     currentPage = 1;
     updateTable(paginateData(filteredData));
     updatePagination();
-    updateWordCloud(); // ワードクラウド更新（トグルの状態に応じて）
+    //updateWordCloud();
+    document.getElementById('wordCloudFilterToggle').checked = true;;
 }
 
 function clearFilters() {
     document.getElementById('minPrice').value = '0';
     document.getElementById('maxPrice').value = '';
-    document.getElementById('bidLow').checked = false;
-    document.getElementById('bidMedium').checked = false;
-    document.getElementById('bidHigh').checked = false;
-    filteredData = [...currentData]; // フィルターをリセット
+    // document.getElementById('bid0_10').checked = false;
+    // document.getElementById('bid10_20').checked = false;
+    // document.getElementById('bid20_30').checked = false;
+    // document.getElementById('bid30_40').checked = false;
+    // document.getElementById('bid40_50').checked = false;
+    // document.getElementById('bid50_plus').checked = false;
+    filterData();
     currentPage = 1;
     updateTable(paginateData(filteredData));
     updatePagination();
-    updateWordCloud(); // ワードクラウドをリセット
+    //updateWordCloud();
 }
 
-document.addEventListener('DOMContentLoaded', function () {
-    document.querySelector('.Main-Element').style.display = 'none';
+function updateWordCloud() {
+    const useFilteredData = document.getElementById('wordCloudFilterToggle').checked;
+    const dataToUse = useFilteredData ? filteredData : currentData;
+    setTimeout(() => generateWordCloud(dataToUse), 0);
+}
+
+
+document.addEventListener('DOMContentLoaded', () => {
+    document.getElementById('wordCloudFilterToggle').checked = false;;
 });

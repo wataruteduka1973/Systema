@@ -10,7 +10,8 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # SECURITY WARNING: keep the secret key used in production secret!
 SECRET_KEY = 'django-insecure-b966em2nj=vv_1u6*id(90$=x3ccd+$vhadoua8v99$mt6du%n'
 
-# SECURITY WARNING: don't run with debug turned on in production!
+# python manage.py collectstatic 本番環境に更新内容を反映させるために必要
+# python manage.py collectstatic --clear 設定リセット
 # DEBUG = False
 DEBUG = True
 

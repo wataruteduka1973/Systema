@@ -1,0 +1,29 @@
+        .navbar-custom {
+            background-color: rgba(0, 0, 0, 0.8);
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            height: 60px;
+            /* 高さを固定 */
+            padding: 0 1rem;
+            /* 一貫したパディング */
+        }
+
+        .navbar-custom .navbar-brand,
+        .navbar-custom .nav-link {
+            color: #ffffff;
+            font-size: 1.1rem;
+            /* フォントサイズを統一 */
+            padding: 0.5rem 1rem;
+            /* 一貫したパディング */
+        }
+
+        .navbar-custom .nav-link:hover {
+            color: #f0f0f0;
+        }
+
+        .navbar-nav .nav-item {
+            border-right: 1px solid #ccc;
+        }
+
+        .navbar-nav .nav-item:last-child {
+            border-right: none;
+        }
