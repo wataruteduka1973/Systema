@@ -5,7 +5,7 @@ let filteredData = [...currentData];
 let sortKey = null;
 let sortOrder = null;
 
-function performSearch() {
+function RealtimeSearch() {
     const searchKeyword = document.getElementById("search").value.trim();
     if (!searchKeyword) {
         alert('検索キーワードを入力してください');
@@ -15,11 +15,12 @@ function performSearch() {
         keyword: searchKeyword,
     });
 
+
     const spinner = document.getElementById('searchSpinner');
     const button = document.getElementById('button-search');
     spinner.style.display = 'inline-block';
     button.disabled = true;
-    fetch(`/taskle/perform_search?${params.toString()}`)
+    fetch(`/taskle/RealtimeSearch?${params.toString()}`)
         .then(response => {
             if (!response.ok) {
                 if (response.status === 400 || response.status === 500) {
@@ -41,14 +42,7 @@ function performSearch() {
             if (Array.isArray(currentData) && currentData.length > 0) {
                 currentPage = 1
                 updateTable(paginateData(currentData));
-                generateWordCloud(currentData);
                 document.querySelector('.Main-Element').style.display = 'block';
-                const prices = currentData.map(item => item.price).filter(price => !isNaN(price));
-                const median = calculateMedian(prices);
-                document.getElementById("medianPrice").textContent = `終了価格の中央値: ${median.toLocaleString()} 円`;
-                document.getElementById("medianPrice").style.display = "block";
-                document.getElementById('wordcloud').style.display = 'block';
-                setTimeout(() => generateWordCloud(currentData), 0);
                 updatePagination();
                 document.getElementById('minPrice').value = '0';
                 document.getElementById('maxPrice').value = '';
@@ -60,9 +54,7 @@ function performSearch() {
                 document.getElementById('bid50_plus').checked = false;
             } else {
                 console.error('Error: Data is not a non-empty array');
-                document.getElementById("medianPrice").style.display = "none";
                 document.querySelector('.table-container').style.display = 'none';
-                document.getElementById('wordcloud').style.display = 'none';
             }
         })
         .catch(error => {
@@ -79,7 +71,6 @@ function performSearch() {
 function paginateData(data) {
     const start = (currentPage - 1) * ITEMS_PER_PAGE;
     const end = start + ITEMS_PER_PAGE;
-    console.log('paginateData - start:', start, 'end:', end, 'data.length:', data.length); // デバッグ用
     return data.slice(start, end);
 }
 
@@ -116,16 +107,6 @@ function changePage(page) {
     updatePagination();
 }
 
-function calculateMedian(numbers) {
-    const sorted = numbers.slice().sort((a, b) => a - b);
-    const middle = Math.floor(sorted.length / 2);
-
-    if (sorted.length % 2 === 0) {
-        return (sorted[middle - 1] + sorted[middle]) / 2;
-    }
-
-    return sorted[middle];
-}
 
 function updateTable(data) {
     const tableBody = document.getElementById("dataTable").getElementsByTagName("tbody")[0];
@@ -133,24 +114,19 @@ function updateTable(data) {
 
     data.forEach(item => {
         const row = tableBody.insertRow();
-
         const productNameCell = row.insertCell(0);
-        productNameCell.textContent = item.name;
-
-        const endPriceCell = row.insertCell(1);
-        endPriceCell.textContent = item.price.toLocaleString();
-
-        const startPriceCell = row.insertCell(2);
-        startPriceCell.textContent = item.startPrice.toLocaleString();
-
-        const biddingCell = row.insertCell(3);
-        biddingCell.textContent = item.bidding;
-
+        productNameCell.textContent = item.name || 'N/A';
+        const currentPriceCell = row.insertCell(1);
+        currentPriceCell.textContent = (item.currentPrice || 0).toLocaleString();
+        const biddingCell = row.insertCell(2);
+        biddingCell.textContent = item.bidding || 0;
+        const remainingTimeCell = row.insertCell(3);
+        remainingTimeCell.textContent = item.remainingTime || 'N/A';
         const productURLCell = row.insertCell(4);
         const link = document.createElement("a");
-        link.href = item.url;
+        link.href = item.url || '#';
         link.textContent = "商品リンクURL";
-        link.target = "_blank"
+        link.target = "_blank";
         productURLCell.appendChild(link);
     });
 }
@@ -162,8 +138,13 @@ function sortData(key, order) {
     filteredData.sort((a, b) => {
         let valueA = a[key];
         let valueB = b[key];
-        if (typeof valueA === 'string') valueA = parseFloat(valueA.replace(/[^\d.-]/g, '')) || 0;
-        if (typeof valueB === 'string') valueB = parseFloat(valueB.replace(/[^\d.-]/g, '')) || 0;
+        if (key === 'remainingTime') {
+            valueA = parseRemainingTime(valueA);
+            valueB = parseRemainingTime(valueB);
+        } else {
+            if (typeof valueA === 'string') valueA = parseFloat(valueA.replace(/[^\d.-]/g, '')) || 0;
+            if (typeof valueB === 'string') valueB = parseFloat(valueB.replace(/[^\d.-]/g, '')) || 0;
+        }
         return order === 'asc' ? valueA - valueB : valueB - valueA;
     });
     currentPage = 1;
@@ -253,81 +234,14 @@ function clearFilters() {
     updatePagination();
 }
 
-let resizeTimeout;
-window.addEventListener('resize', () => {
-    clearTimeout(resizeTimeout);
-    resizeTimeout = setTimeout(() => {
-        if (currentData.length > 0) {
-            generateWordCloud(currentData);
-        }
-    }, 200);
-});
-
-function updateWordCloud() {
-    const useFilteredData = document.getElementById('wordCloudFilterToggle').checked;
-    const dataToUse = useFilteredData ? filteredData : currentData;
-    setTimeout(() => generateWordCloud(dataToUse), 0);
+function parseRemainingTime(str) {
+    if (!str) return 0;
+    let days = 0, hours = 0, minutes = 0;
+    const dayMatch = str.match(/(\d+)日/);
+    const hourMatch = str.match(/(\d+)時間/);
+    const minMatch = str.match(/(\d+)分/);
+    if (dayMatch) days = parseInt(dayMatch[1]);
+    if (hourMatch) hours = parseInt(hourMatch[1]);
+    if (minMatch) minutes = parseInt(minMatch[1]);
+    return days * 24 * 60 + hours * 60 + minutes;
 }
-
-
-function generateWordCloud(data) {
-    const container = document.querySelector('.wordcloud-container');
-    let width = container.offsetWidth;
-    let height = container.offsetHeight;
-
-    // フォールバックサイズ
-    if (width === 0 || height === 0) {
-        width = 800; // デフォルト幅
-        height = 400; // デフォルト高さ
-        console.warn('コンテナサイズが取得できませんでした。デフォルトサイズを使用します。');
-    }
-
-    const allText = data.map(item => item.name || '').join(' ');
-    const wordCounts = {};
-    allText.split(/\s+/).forEach(word => {
-        if (word.length > 1) {
-            wordCounts[word] = (wordCounts[word] || 0) + 1;
-        }
-    });
-
-    const words = Object.entries(wordCounts)
-        .sort((a, b) => b[1] - a[1])
-        .slice(0, 50)
-        .map(([text, size]) => ({ text, size }));
-
-    const layout = d3.layout.cloud()
-        .size([width, height])
-        .words(words)
-        .padding(5)
-        .rotate(() => ~~(Math.random() * 2) * 90)
-        .font("Impact")
-        .fontSize(d => Math.sqrt(d.size) * (width / 800) * 10)
-        .on("end", draw);
-
-    layout.start();
-
-    function draw(words) {
-        d3.select("#wordcloud").html("");
-        const svg = d3.select("#wordcloud").append("svg")
-            .attr("width", width)
-            .attr("height", height)
-            .attr("viewBox", `0 0 ${width} ${height}`)
-            .attr("preserveAspectRatio", "xMidYMid meet")
-            .append("g")
-            .attr("transform", `translate(${width / 2},${height / 2})`);
-
-        svg.selectAll("text")
-            .data(words)
-            .enter().append("text")
-            .style("font-size", d => d.size + "px")
-            .style("font-family", "Impact")
-            .style("fill", () => d3.schemeCategory10[Math.floor(Math.random() * 10)])
-            .attr("text-anchor", "middle")
-            .attr("transform", d => `translate(${d.x},${d.y})rotate(${d.rotate})`)
-            .text(d => d.text);
-    }
-}
-
-document.addEventListener('DOMContentLoaded', () => {
-    document.getElementById('wordCloudFilterToggle').checked = false;;
-});
