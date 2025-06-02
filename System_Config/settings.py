@@ -173,3 +173,8 @@ LOGGING = {
 
 
 }
+
+HANDLER404 = 'Main.views.Error.custom_404'
+HANDLER500 = 'Main.views.Error.custom_500'
+HANDLER400 = 'Main.views.Error.custom_400'
+HANDLER415 = 'Main.views.Error.custom_415'

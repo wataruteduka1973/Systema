@@ -89,68 +89,54 @@ def scrape_current_listings(searchname):
     base_url = 'https://auctions.yahoo.co.jp/search/search'
     urls = [
         f'{base_url}?auccat=&tab_ex=commerce&aq=-&p={searchname}&f=0:1&b=1&n=100',
-
         f'{base_url}?auccat=&tab_ex=commerce&aq=-&p={searchname}&f=0:1&b=101&n=100'
     ]
 
     scraped_data_list = []
     headers = {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'}
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+    }
 
     for url in urls:
         try:
             response = requests.get(url, headers=headers, timeout=10)
-            response.raise_for_status()  # HTTPエラーをチェック
-            html = response.text
-            soup = BeautifulSoup(html, 'html.parser')
+            response.raise_for_status()
+            soup = BeautifulSoup(response.text, 'html.parser')
 
-            # 商品名
-            product_titles = soup.find_all(
-                'a', class_=re.compile(r'Product__titleLink'))
-            names = [title.text.strip()
-                     for title in product_titles if title.text.strip()]
+            # 商品ごとに親要素でループ
+            product_cards = soup.find_all('li', class_=re.compile(r'Product'))
+            for card in product_cards:
+                # 商品名
+                title_tag = card.find('a', class_=re.compile(r'Product__titleLink'))
+                name = title_tag.text.strip() if title_tag else 'N/A'
+                url_ = title_tag['href'] if title_tag and title_tag.has_attr('href') else '#'
 
-            # 現在価格
-            price_elements = soup.find_all(
-                'span', class_=re.compile(r'Product__priceValue'))
-            current_prices = [
-                int(re.sub(r'[^\d]+', '', price.text))
-                for price in price_elements
-                if price and "Product__priceValue--start" not in price.get('class', [])
+                # 現在価格
+                price_tag = card.find('span', class_=re.compile(r'Product__priceValue'))
+                price = 0
+                if price_tag:
+                    price_text = price_tag.text
+                    price = int(re.sub(r'[^\d]+', '', price_text)) if price_text else 0
 
-            ]
+                # 入札数
+                bid_tag = card.find('dd', class_=re.compile(r'Product__bid'))
+                bidding = 0
+                if bid_tag:
+                    bidding_text = bid_tag.text
+                    bidding = int(re.sub(r'[^\d]+', '', bidding_text)) if bidding_text else 0
 
-            # 入札数
-            bid_elements = soup.find_all(
-                'dd', class_=re.compile(r'Product__bid'))
-            bids = [bid.text.strip()
-                    for bid in bid_elements if bid.text.strip()]
+                # 残り時間
+                time_tag = card.find('dd', class_=re.compile(r'Product__time'))
+                remaining_time = time_tag.text.strip() if time_tag else 'N/A'
 
-            # 残り時間
-            time_elements = soup.find_all(
-                'dd', class_=re.compile(r'Product__time'))
-            remaining_times = [time.text.strip()
-                               for time in time_elements if time.text.strip()]
+                scraped_data_list.append({
+                    'name': name,
+                    'currentPrice': price,
+                    'bidding': bidding,
+                    'remainingTime': remaining_time,
+                    'url': url_
+                })
 
-            # URL
-            urls = [title.get('href', '#')
-                    for title in product_titles if title.get('href')]
-
-            # データのマッチングと結合
-            min_length = min(len(names), len(current_prices),
-                             len(bids), len(remaining_times), len(urls))
-            for i in range(min_length):
-                scraped_data = {
-                    'name': names[i],
-                    'currentPrice': current_prices[i] if i < len(current_prices) else '0',
-                    'bidding': bids[i] if i < len(bids) else '0',
-                    'remainingTime': remaining_times[i] if i < len(remaining_times) else 'N/A',
-                    'url': urls[i],
-                }
-                scraped_data_list.append(scraped_data)
-        except requests.RequestException as e:
-            logger.error(f"Request failed for URL {url}: {str(e)}")
-            continue
         except Exception as e:
             logger.error(f"Error processing URL {url}: {str(e)}")
             continue

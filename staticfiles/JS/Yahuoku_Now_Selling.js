@@ -37,11 +37,7 @@ function RealtimeSearch() {
         })
 
         .then(result => {
-            currentData = (result.data || []).map(item => ({
-                ...item,
-                currentPrice: parseFloat(item.currentPrice) || 0,
-                bidding: parseInt(item.bidding) || 0
-            }));
+            currentData = result.data || [];
             filteredData = [...currentData];
             if (Array.isArray(currentData) && currentData.length > 0) {
                 currentPage = 1
@@ -121,9 +117,9 @@ function updateTable(data) {
         const productNameCell = row.insertCell(0);
         productNameCell.textContent = item.name || 'N/A';
         const currentPriceCell = row.insertCell(1);
-        currentPriceCell.textContent = item.currentPrice.toLocaleString();
+        currentPriceCell.textContent = (item.currentPrice || 0).toLocaleString();
         const biddingCell = row.insertCell(2);
-        biddingCell.textContent = item.bidding;
+        biddingCell.textContent = item.bidding || 0;
         const remainingTimeCell = row.insertCell(3);
         remainingTimeCell.textContent = item.remainingTime || 'N/A';
         const productURLCell = row.insertCell(4);
@@ -145,9 +141,9 @@ function sortData(key, order) {
         if (key === 'remainingTime') {
             valueA = parseRemainingTime(valueA);
             valueB = parseRemainingTime(valueB);
-        } else if (key === 'currentPrice' || key === 'bidding') {
-            valueA = Number(valueA) || 0;
-            valueB = Number(valueB) || 0;
+        } else {
+            if (typeof valueA === 'string') valueA = parseFloat(valueA.replace(/[^\d.-]/g, '')) || 0;
+            if (typeof valueB === 'string') valueB = parseFloat(valueB.replace(/[^\d.-]/g, '')) || 0;
         }
         return order === 'asc' ? valueA - valueB : valueB - valueA;
     });
@@ -197,6 +193,7 @@ function filterData() {
     const minPrice = minPriceInput ? parseFloat(minPriceInput) : 0;
     const maxPrice = maxPriceInput ? parseFloat(maxPriceInput) : Infinity;
 
+
     if (minPrice < 0 || (maxPriceInput && maxPrice < 0)) {
         alert('価格は0以上の値を入力してください');
         return;
@@ -207,8 +204,8 @@ function filterData() {
     }
 
     filteredData = currentData.filter(item => {
-        const price = Number(item.currentPrice) || 0;
-        const bidding = Number(item.bidding) || 0;
+        const price = parseFloat(item.price) || 0;
+        const bidding = parseInt(item.bidding) || 0;
 
         if (price < minPrice || price > maxPrice) return false;
         const noBidFilter = !bid0_10 && !bid10_20 && !bid20_30 && !bid30_40 && !bid40_50 && !bid50_plus;
@@ -225,6 +222,7 @@ function filterData() {
     currentPage = 1;
     updateTable(paginateData(filteredData));
     updatePagination();
+    document.getElementById('wordCloudFilterToggle').checked = true;;
 }
 
 function clearFilters() {

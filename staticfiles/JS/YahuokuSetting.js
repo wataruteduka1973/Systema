@@ -1,23 +1,9 @@
 let currentData = [];
-let history = ['キーワード1', 'キーワード2'];
 const ITEMS_PER_PAGE = 10;
 let currentPage = 1;
 let filteredData = [...currentData];
 let sortKey = null;
 let sortOrder = null;
-
-
-function suggestKeyword() {
-    const input = document.getElementById('search');
-    const datalist = document.getElementById('searchHistory');
-    datalist.innerHTML = '';
-    const value = input.value.toLowerCase();
-    history.filter(k => k.toLowerCase().includes(value)).forEach(k => {
-        const option = document.createElement('option');
-        option.value = k;
-        datalist.appendChild(option);
-    });
-}
 
 function performSearch() {
     const searchKeyword = document.getElementById("search").value.trim();
@@ -29,17 +15,11 @@ function performSearch() {
         keyword: searchKeyword,
     });
 
-
     const spinner = document.getElementById('searchSpinner');
     const button = document.getElementById('button-search');
     spinner.style.display = 'inline-block';
     button.disabled = true;
     fetch(`/taskle/perform_search?${params.toString()}`)
-        //fetch(`/taskle/perform_search?keyword=${encodeURIComponent(searchKeyword)}`)
-        // .then(response => {
-        //     if (!response.ok) throw new Error('ネットワークエラー');
-        //     return response.json();
-        // })
         .then(response => {
             if (!response.ok) {
                 if (response.status === 400 || response.status === 500) {
@@ -189,7 +169,7 @@ function sortData(key, order) {
     currentPage = 1;
     updateTable(paginateData(filteredData));
     updatePagination();
-    //updateWordCloud();
+
 }
 
 document.addEventListener('DOMContentLoaded', function () {
@@ -219,74 +199,6 @@ function updateSortIcon(button) {
         `;
     }
 }
-
-function generateWordCloud(data) {
-    const container = document.querySelector('.wordcloud-container');
-    let width = container.offsetWidth;
-    let height = container.offsetHeight;
-
-    // フォールバックサイズ
-    if (width === 0 || height === 0) {
-        width = 800; // デフォルト幅
-        height = 400; // デフォルト高さ
-        console.warn('コンテナサイズが取得できませんでした。デフォルトサイズを使用します。');
-    }
-
-    const allText = data.map(item => item.name || '').join(' ');
-    const wordCounts = {};
-    allText.split(/\s+/).forEach(word => {
-        if (word.length > 1) {
-            wordCounts[word] = (wordCounts[word] || 0) + 1;
-        }
-    });
-
-    const words = Object.entries(wordCounts)
-        .sort((a, b) => b[1] - a[1])
-        .slice(0, 50)
-        .map(([text, size]) => ({ text, size }));
-
-    const layout = d3.layout.cloud() // d3-cloud モジュールを使用
-        .size([width, height])
-        .words(words)
-        .padding(5)
-        .rotate(() => ~~(Math.random() * 2) * 90)
-        .font("Impact")
-        .fontSize(d => Math.sqrt(d.size) * (width / 800) * 10)
-        .on("end", draw);
-
-    layout.start();
-
-    function draw(words) {
-        d3.select("#wordcloud").html("");
-        const svg = d3.select("#wordcloud").append("svg")
-            .attr("width", width)
-            .attr("height", height)
-            .attr("viewBox", `0 0 ${width} ${height}`)
-            .attr("preserveAspectRatio", "xMidYMid meet")
-            .append("g")
-            .attr("transform", `translate(${width / 2},${height / 2})`);
-
-        svg.selectAll("text")
-            .data(words)
-            .enter().append("text")
-            .style("font-size", d => d.size + "px")
-            .style("font-family", "Impact")
-            .style("fill", () => d3.schemeCategory10[Math.floor(Math.random() * 10)])
-            .attr("text-anchor", "middle")
-            .attr("transform", d => `translate(${d.x},${d.y})rotate(${d.rotate})`)
-            .text(d => d.text);
-    }
-}
-
-let resizeTimeout;
-window.addEventListener('resize', () => {
-    clearTimeout(resizeTimeout);
-    resizeTimeout = setTimeout(() => {
-        if (currentData.length > 0) {
-            generateWordCloud(currentData);
-        }
-    }, 200);
-});
 
 function filterData() {
     const minPriceInput = document.getElementById('minPrice').value;
@@ -329,25 +241,27 @@ function filterData() {
     currentPage = 1;
     updateTable(paginateData(filteredData));
     updatePagination();
-    //updateWordCloud();
     document.getElementById('wordCloudFilterToggle').checked = true;;
 }
 
 function clearFilters() {
     document.getElementById('minPrice').value = '0';
     document.getElementById('maxPrice').value = '';
-    // document.getElementById('bid0_10').checked = false;
-    // document.getElementById('bid10_20').checked = false;
-    // document.getElementById('bid20_30').checked = false;
-    // document.getElementById('bid30_40').checked = false;
-    // document.getElementById('bid40_50').checked = false;
-    // document.getElementById('bid50_plus').checked = false;
     filterData();
     currentPage = 1;
     updateTable(paginateData(filteredData));
     updatePagination();
-    //updateWordCloud();
 }
+
+let resizeTimeout;
+window.addEventListener('resize', () => {
+    clearTimeout(resizeTimeout);
+    resizeTimeout = setTimeout(() => {
+        if (currentData.length > 0) {
+            generateWordCloud(currentData);
+        }
+    }, 200);
+});
 
 function updateWordCloud() {
     const useFilteredData = document.getElementById('wordCloudFilterToggle').checked;
@@ -355,6 +269,64 @@ function updateWordCloud() {
     setTimeout(() => generateWordCloud(dataToUse), 0);
 }
 
+
+function generateWordCloud(data) {
+    const container = document.querySelector('.wordcloud-container');
+    let width = container.offsetWidth;
+    let height = container.offsetHeight;
+
+    // フォールバックサイズ
+    if (width === 0 || height === 0) {
+        width = 800; // デフォルト幅
+        height = 400; // デフォルト高さ
+        console.warn('コンテナサイズが取得できませんでした。デフォルトサイズを使用します。');
+    }
+
+    const allText = data.map(item => item.name || '').join(' ');
+    const wordCounts = {};
+    allText.split(/\s+/).forEach(word => {
+        if (word.length > 1) {
+            wordCounts[word] = (wordCounts[word] || 0) + 1;
+        }
+    });
+
+    const words = Object.entries(wordCounts)
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 50)
+        .map(([text, size]) => ({ text, size }));
+
+    const layout = d3.layout.cloud()
+        .size([width, height])
+        .words(words)
+        .padding(5)
+        .rotate(() => ~~(Math.random() * 2) * 90)
+        .font("Impact")
+        .fontSize(d => Math.sqrt(d.size) * (width / 800) * 10)
+        .on("end", draw);
+
+    layout.start();
+
+    function draw(words) {
+        d3.select("#wordcloud").html("");
+        const svg = d3.select("#wordcloud").append("svg")
+            .attr("width", width)
+            .attr("height", height)
+            .attr("viewBox", `0 0 ${width} ${height}`)
+            .attr("preserveAspectRatio", "xMidYMid meet")
+            .append("g")
+            .attr("transform", `translate(${width / 2},${height / 2})`);
+
+        svg.selectAll("text")
+            .data(words)
+            .enter().append("text")
+            .style("font-size", d => d.size + "px")
+            .style("font-family", "Impact")
+            .style("fill", () => d3.schemeCategory10[Math.floor(Math.random() * 10)])
+            .attr("text-anchor", "middle")
+            .attr("transform", d => `translate(${d.x},${d.y})rotate(${d.rotate})`)
+            .text(d => d.text);
+    }
+}
 
 document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('wordCloudFilterToggle').checked = false;;
