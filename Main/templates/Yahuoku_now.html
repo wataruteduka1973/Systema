@@ -54,11 +54,17 @@
             padding: 0 1rem;
         }
 
+        #medianPrice {
+            font-size: 1.2rem;
+            font-weight: bold;
+            margin-bottom: 1rem;
+            background-color: #cc4771;
+        }
+
         @media (max-width: 768px) {
 
             .input-group .form-control {
                 min-width: 150px;
-                /* モバイルでの入力欄調整 */
             }
 
             #dataTableContainer {
@@ -108,7 +114,7 @@
                         <span class="input-group-text">〜</span>
                         <input type="number" class="form-control" id="maxPrice" placeholder="最高価格" min="0">
                     </div>
-                    <button class="btn btn-primary me-2" onclick="filterData()">絞り込む</button>
+                    <button class="btn btn-primary me-2" onclick="validateAndFilter()">絞り込む</button>
                     <button class="btn btn-secondary" onclick="clearFilters()">フィルターをリセット</button>
                 </div>
                 <div class="col-md-6">
@@ -153,54 +159,56 @@
                     </div>
                 </div>
             </div>
-            <div class="Main-Element">
-                <div id="dataTableContainer">
-                    <table id="dataTable" class="table table-striped table-hover table-container">
-                        <thead>
-                            <tr>
-                                <th style="width:200px;">商品名</th>
-                                <th style="width:150px;">現在価格
-                                    <button class="btn btn-sm btn-outline-secondary sort-btn" data-sort="currentPrice"
-                                        data-order="asc">
-                                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16"
-                                            fill="currentColor" class="bi bi-sort-down" viewBox="0 0 16 16">
-                                            <path
-                                                d="M3.5 2.5a.5.5 0 0 0-1 0v8.793l-1.146-1.147a.5.5 0 0 0-.708.708l2 1.999.007.007a.497.497 0 0 0 .7-.006l2-2a.5.5 0 0 0-.707-.708L3.5 11.293V2.5zm3.5 1a.5.5 0 0 1 .5-.5h7a.5.5 0 0 1 0 1h-7a.5.5 0 0 1-.5-.5zM7.5 6a.5.5 0 0 0 0 1h5a.5.5 0 0 0 0-1h-5zm0 3a.5.5 0 0 0 0 1h3a.5.5 0 0 0 0-1h-3zm0 3a.5.5 0 0 0 0 1h1a.5.5 0 0 0 0-1h-1z" />
-                                        </svg>
-                                    </button>
-                                </th>
-                                <th style="width:150px;">入札
-                                    <button class="btn btn-sm btn-outline-secondary sort-btn" data-sort="bidding"
-                                        data-order="asc">
-                                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16"
-                                            fill="currentColor" class="bi bi-sort-down" viewBox="0 0 16 16">
-                                            <path
-                                                d="M3.5 2.5a.5.5 0 0 0-1 0v8.793l-1.146-1.147a.5.5 0 0 0-.708.708l2 1.999.007.007a.497.497 0 0 0 .7-.006l2-2a.5.5 0 0 0-.707-.708L3.5 11.293V2.5zm3.5 1a.5.5 0 0 1 .5-.5h7a.5.5 0 0 1 0 1h-7a.5.5 0 0 1-.5-.5zM7.5 6a.5.5 0 0 0 0 1h5a.5.5 0 0 0 0-1h-5zm0 3a.5.5 0 0 0 0 1h3a.5.5 0 0 0 0-1h-3zm0 3a.5.5 0 0 0 0 1h1a.5.5 0 0 0 0-1h-1z" />
-                                        </svg>
-                                    </button>
-                                </th>
-                                <th style="width:150px;">残り時間
-                                    <button class="btn btn-sm btn-outline-secondary sort-btn" data-sort="remainingTime"
-                                        data-order="asc">
-                                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16"
-                                            fill="currentColor" class="bi bi-sort-down" viewBox="0 0 16 16">
-                                            <path
-                                                d="M3.5 2.5a.5.5 0 0 0-1 0v8.793l-1.146-1.147a.5.5 0 0 0-.708.708l2 1.999.007.007a.497.497 0 0 0 .7-.006l2-2a.5.5 0 0 0-.707-.708L3.5 11.293V2.5zm3.5 1a.5.5 0 0 1 .5-.5h7a.5.5 0 0 1 0 1h-7a.5.5 0 0 1-.5-.5zM7.5 6a.5.5 0 0 0 0 1h5a.5.5 0 0 0 0-1h-5zm0 3a.5.5 0 0 0 0 1h3a.5.5 0 0 0 0-1h-3zm0 3a.5.5 0 0 0 0 1h1a.5.5 0 0 0 0-1h-1z" />
-                                        </svg>
-                                    </button>
-                                </th>
-                                <th style="width:200px;">URL
-                                </th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                        </tbody>
-                    </table>
+            <div id="medianPrice" class="alert alert-info"></div>
+            <div id="dataTableContainer">
+                <div class="Main-Element">
+                    <div id="dataTableContainer">
+                        <table id="dataTable" class="table table-striped table-hover table-container">
+                            <thead>
+                                <tr>
+                                    <th style="width:200px;">商品名</th>
+                                    <th style="width:150px;">現在価格
+                                        <button class="btn btn-sm btn-outline-secondary sort-btn"
+                                            data-sort="currentPrice" data-order="asc">
+                                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16"
+                                                fill="currentColor" class="bi bi-sort-down" viewBox="0 0 16 16">
+                                                <path
+                                                    d="M3.5 2.5a.5.5 0 0 0-1 0v8.793l-1.146-1.147a.5.5 0 0 0-.708.708l2 1.999.007.007a.497.497 0 0 0 .7-.006l2-2a.5.5 0 0 0-.707-.708L3.5 11.293V2.5zm3.5 1a.5.5 0 0 1 .5-.5h7a.5.5 0 0 1 0 1h-7a.5.5 0 0 1-.5-.5zM7.5 6a.5.5 0 0 0 0 1h5a.5.5 0 0 0 0-1h-5zm0 3a.5.5 0 0 0 0 1h3a.5.5 0 0 0 0-1h-3zm0 3a.5.5 0 0 0 0 1h1a.5.5 0 0 0 0-1h-1z" />
+                                            </svg>
+                                        </button>
+                                    </th>
+                                    <th style="width:150px;">入札
+                                        <button class="btn btn-sm btn-outline-secondary sort-btn" data-sort="bidding"
+                                            data-order="asc">
+                                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16"
+                                                fill="currentColor" class="bi bi-sort-down" viewBox="0 0 16 16">
+                                                <path
+                                                    d="M3.5 2.5a.5.5 0 0 0-1 0v8.793l-1.146-1.147a.5.5 0 0 0-.708.708l2 1.999.007.007a.497.497 0 0 0 .7-.006l2-2a.5.5 0 0 0-.707-.708L3.5 11.293V2.5zm3.5 1a.5.5 0 0 1 .5-.5h7a.5.5 0 0 1 0 1h-7a.5.5 0 0 1-.5-.5zM7.5 6a.5.5 0 0 0 0 1h5a.5.5 0 0 0 0-1h-5zm0 3a.5.5 0 0 0 0 1h3a.5.5 0 0 0 0-1h-3zm0 3a.5.5 0 0 0 0 1h1a.5.5 0 0 0 0-1h-1z" />
+                                            </svg>
+                                        </button>
+                                    </th>
+                                    <th style="width:150px;">残り時間
+                                        <button class="btn btn-sm btn-outline-secondary sort-btn"
+                                            data-sort="remainingTime" data-order="asc">
+                                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16"
+                                                fill="currentColor" class="bi bi-sort-down" viewBox="0 0 16 16">
+                                                <path
+                                                    d="M3.5 2.5a.5.5 0 0 0-1 0v8.793l-1.146-1.147a.5.5 0 0 0-.708.708l2 1.999.007.007a.497.497 0 0 0 .7-.006l2-2a.5.5 0 0 0-.707-.708L3.5 11.293V2.5zm3.5 1a.5.5 0 0 1 .5-.5h7a.5.5 0 0 1 0 1h-7a.5.5 0 0 1-.5-.5zM7.5 6a.5.5 0 0 0 0 1h5a.5.5 0 0 0 0-1h-5zm0 3a.5.5 0 0 0 0 1h3a.5.5 0 0 0 0-1h-3zm0 3a.5.5 0 0 0 0 1h1a.5.5 0 0 0 0-1h-1z" />
+                                            </svg>
+                                        </button>
+                                    </th>
+                                    <th style="width:200px;">URL
+                                    </th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
             </div>
-        </div>
-        {% include 'footer.html' %}
     </main>
+    {% include 'footer.html' %}
     <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.9.2/dist/umd/popper.min.js"></script>
     <script src="{% static 'JS\Yahuoku_Now_Selling.js' %}"></script>

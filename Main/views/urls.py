@@ -11,3 +11,7 @@ def Yahuoku(request):
 
 def Yahuoku_now(request):
     return render(request, 'Yahuoku_now.html')
+
+
+def Deep_Analysis(request):
+    return render(request, 'Deep_Analysis.html')

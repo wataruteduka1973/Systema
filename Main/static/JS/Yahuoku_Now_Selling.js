@@ -44,7 +44,7 @@ function RealtimeSearch() {
             }));
             filteredData = [...currentData];
             if (Array.isArray(currentData) && currentData.length > 0) {
-                currentPage = 1
+                currentPage = 1;
                 updateTable(paginateData(currentData));
                 document.querySelector('.Main-Element').style.display = 'block';
                 updatePagination();
@@ -56,6 +56,18 @@ function RealtimeSearch() {
                 document.getElementById('bid30_40').checked = false;
                 document.getElementById('bid40_50').checked = false;
                 document.getElementById('bid50_plus').checked = false;
+
+                // 中央値計算
+                const prices = currentData.map(item => item.currentPrice).filter(currentPrice => !isNaN(currentPrice));
+                const median = calculateMedian(prices);
+
+                // ±15%の範囲を計算
+                const lowerBound = Math.floor(median * 0.85);
+                const upperBound = Math.ceil(median * 1.15);
+
+                // テキスト更新
+                document.getElementById("medianPrice").textContent = `特に多い価格帯 ${lowerBound.toLocaleString()} 円から ${upperBound.toLocaleString()} 円`;
+                document.getElementById("medianPrice").style.display = "block";
             } else {
                 console.error('Error: Data is not a non-empty array');
                 document.querySelector('.table-container').style.display = 'none';
@@ -71,6 +83,16 @@ function RealtimeSearch() {
         });
 }
 
+function calculateMedian(numbers) {
+    const sorted = numbers.slice().sort((a, b) => a - b);
+    const middle = Math.floor(sorted.length / 2);
+
+    if (sorted.length % 2 === 0) {
+        return (sorted[middle - 1] + sorted[middle]) / 2;
+    }
+
+    return sorted[middle];
+}
 
 function paginateData(data) {
     const start = (currentPage - 1) * ITEMS_PER_PAGE;
@@ -246,4 +268,19 @@ function parseRemainingTime(str) {
     if (hourMatch) hours = parseInt(hourMatch[1]);
     if (minMatch) minutes = parseInt(minMatch[1]);
     return days * 24 * 60 + hours * 60 + minutes;
+}
+
+function validateAndFilterData() {
+    const minPrice = parseInt(document.getElementById('minPrice').value, 10);
+    const maxPrice = parseInt(document.getElementById('maxPrice').value, 10);
+
+    if (minPrice > maxPrice) {
+        alert('最低価格は最高価格以下である必要があります。');
+        return;
+    }
+    if (isNaN(minPrice) || isNaN(maxPrice)) {
+        alert('価格は数値で入力してください。');
+        return;
+    }
+    filterData();
 }

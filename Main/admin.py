@@ -3,22 +3,17 @@ from django.utils.html import format_html
 from .models.scraping import scraping
 from .models.errorlog import ErrorLog
 
+# スクレイピングモデル
+
 
 @admin.register(scraping)
 class ScrapingAdmin(admin.ModelAdmin):
-    # 一覧画面で表示するフィールド
     list_display = ('Name', 'SearchWord', 'SearchDay',
                     'EndPrice', 'StartPrice', 'Bidding', 'url_link')
-    # 検索可能なフィールド
     search_fields = ('Name', 'SearchWord')
-    # フィルタリング可能なフィールド
     list_filter = ('SearchDay', 'SearchWord')
-    # 一覧画面での並び順
     ordering = ('-SearchDay',)
-    # 一ページあたりの表示件数
     list_per_page = 25
-
-    # 編集画面でのフィールド配置
     fields = ('SearchWord', 'SearchDay', 'Name',
               'EndPrice', 'StartPrice', 'Bidding', 'URL')
 
@@ -26,6 +21,8 @@ class ScrapingAdmin(admin.ModelAdmin):
         return format_html('<a href="{}" target="_blank">URL</a>', obj.URL)
 
     url_link.short_description = 'リンク'
+
+# エラーログモデル
 
 
 @admin.register(ErrorLog)

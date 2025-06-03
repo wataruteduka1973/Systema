@@ -1,7 +1,8 @@
 import logging
 from django.http import JsonResponse
 from django.shortcuts import render
-from .utils import scrape_data, save_to_database, scrape_current_listings
+from .utils import scrape_data, save_to_database, scrape_current_listings, get_search_words
+from Main.models.scraping import scraping
 
 logger = logging.getLogger('search_logger')
 
@@ -14,6 +15,8 @@ def handle_search_response(request, data_fetch_func, save_func=None):
 
     searchname = request.GET.get('keyword', '')
     logger.info(f"Search started for keyword: {searchname}")
+    if not searchname:
+        return render(request, '400.html', status=400)
 
     try:
         scraped_data_list = data_fetch_func(searchname)
@@ -34,3 +37,26 @@ def perform_search(request):
 
 def RealtimeSearch(request):
     return handle_search_response(request, scrape_current_listings)
+
+
+def get_search_words_api(request):
+    if request.method != 'GET':
+        return JsonResponse({'error': 'Invalid request method'}, status=400)
+    try:
+        search_words = get_search_words()
+        return JsonResponse({'searchWords': search_words})
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)
+
+
+def get_market_data(request):
+    searchname = request.GET.get('keyword', '')
+    if not searchname:
+        return JsonResponse({'error': 'Keyword is required'}, status=400)
+
+    try:
+        data = list(scraping.objects.filter(SearchWord=searchname).values())
+        search_day = scraping.objects.filter(SearchWord=searchname).values_list('SearchDay', flat=True).first()
+        return JsonResponse({'data': data, 'searchDay': search_day})
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)

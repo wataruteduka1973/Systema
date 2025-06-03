@@ -41,15 +41,12 @@ function performSearch() {
             if (Array.isArray(currentData) && currentData.length > 0) {
                 currentPage = 1
                 updateTable(paginateData(currentData));
-                generateWordCloud(currentData);
                 document.querySelector('.Main-Element').style.display = 'block';
                 const prices = currentData.map(item => item.price).filter(price => !isNaN(price));
                 const median = calculateMedian(prices);
+                updatePagination();
                 document.getElementById("medianPrice").textContent = `終了価格の中央値: ${median.toLocaleString()} 円`;
                 document.getElementById("medianPrice").style.display = "block";
-                document.getElementById('wordcloud').style.display = 'block';
-                setTimeout(() => generateWordCloud(currentData), 0);
-                updatePagination();
                 document.getElementById('minPrice').value = '0';
                 document.getElementById('maxPrice').value = '';
                 document.getElementById('bid0_10').checked = false;
@@ -79,7 +76,6 @@ function performSearch() {
 function paginateData(data) {
     const start = (currentPage - 1) * ITEMS_PER_PAGE;
     const end = start + ITEMS_PER_PAGE;
-    console.log('paginateData - start:', start, 'end:', end, 'data.length:', data.length); // デバッグ用
     return data.slice(start, end);
 }
 
@@ -241,7 +237,6 @@ function filterData() {
     currentPage = 1;
     updateTable(paginateData(filteredData));
     updatePagination();
-    document.getElementById('wordCloudFilterToggle').checked = true;;
 }
 
 function clearFilters() {
@@ -253,81 +248,17 @@ function clearFilters() {
     updatePagination();
 }
 
-let resizeTimeout;
-window.addEventListener('resize', () => {
-    clearTimeout(resizeTimeout);
-    resizeTimeout = setTimeout(() => {
-        if (currentData.length > 0) {
-            generateWordCloud(currentData);
-        }
-    }, 200);
-});
+function validateAndFilterData() {
+    const minPrice = parseInt(document.getElementById('minPrice').value, 10);
+    const maxPrice = parseInt(document.getElementById('maxPrice').value, 10);
 
-function updateWordCloud() {
-    const useFilteredData = document.getElementById('wordCloudFilterToggle').checked;
-    const dataToUse = useFilteredData ? filteredData : currentData;
-    setTimeout(() => generateWordCloud(dataToUse), 0);
-}
-
-
-function generateWordCloud(data) {
-    const container = document.querySelector('.wordcloud-container');
-    let width = container.offsetWidth;
-    let height = container.offsetHeight;
-
-    // フォールバックサイズ
-    if (width === 0 || height === 0) {
-        width = 800; // デフォルト幅
-        height = 400; // デフォルト高さ
-        console.warn('コンテナサイズが取得できませんでした。デフォルトサイズを使用します。');
+    if (minPrice > maxPrice) {
+        alert('最低価格は最高価格以下である必要があります。');
+        return;
     }
-
-    const allText = data.map(item => item.name || '').join(' ');
-    const wordCounts = {};
-    allText.split(/\s+/).forEach(word => {
-        if (word.length > 1) {
-            wordCounts[word] = (wordCounts[word] || 0) + 1;
-        }
-    });
-
-    const words = Object.entries(wordCounts)
-        .sort((a, b) => b[1] - a[1])
-        .slice(0, 50)
-        .map(([text, size]) => ({ text, size }));
-
-    const layout = d3.layout.cloud()
-        .size([width, height])
-        .words(words)
-        .padding(5)
-        .rotate(() => ~~(Math.random() * 2) * 90)
-        .font("Impact")
-        .fontSize(d => Math.sqrt(d.size) * (width / 800) * 10)
-        .on("end", draw);
-
-    layout.start();
-
-    function draw(words) {
-        d3.select("#wordcloud").html("");
-        const svg = d3.select("#wordcloud").append("svg")
-            .attr("width", width)
-            .attr("height", height)
-            .attr("viewBox", `0 0 ${width} ${height}`)
-            .attr("preserveAspectRatio", "xMidYMid meet")
-            .append("g")
-            .attr("transform", `translate(${width / 2},${height / 2})`);
-
-        svg.selectAll("text")
-            .data(words)
-            .enter().append("text")
-            .style("font-size", d => d.size + "px")
-            .style("font-family", "Impact")
-            .style("fill", () => d3.schemeCategory10[Math.floor(Math.random() * 10)])
-            .attr("text-anchor", "middle")
-            .attr("transform", d => `translate(${d.x},${d.y})rotate(${d.rotate})`)
-            .text(d => d.text);
+    if (isNaN(minPrice) || isNaN(maxPrice)) {
+        alert('価格は数値で入力してください。');
+        return;
     }
+    filterData();
 }
-
-document.addEventListener('DOMContentLoaded', () => {
-    document.getElementById('wordCloudFilterToggle').checked = false;;
-});

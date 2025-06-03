@@ -107,23 +107,28 @@ def scrape_current_listings(searchname):
             product_cards = soup.find_all('li', class_=re.compile(r'Product'))
             for card in product_cards:
                 # 商品名
-                title_tag = card.find('a', class_=re.compile(r'Product__titleLink'))
+                title_tag = card.find(
+                    'a', class_=re.compile(r'Product__titleLink'))
                 name = title_tag.text.strip() if title_tag else 'N/A'
-                url_ = title_tag['href'] if title_tag and title_tag.has_attr('href') else '#'
+                url_ = title_tag['href'] if title_tag and title_tag.has_attr(
+                    'href') else '#'
 
                 # 現在価格
-                price_tag = card.find('span', class_=re.compile(r'Product__priceValue'))
+                price_tag = card.find(
+                    'span', class_=re.compile(r'Product__priceValue'))
                 price = 0
                 if price_tag:
                     price_text = price_tag.text
-                    price = int(re.sub(r'[^\d]+', '', price_text)) if price_text else 0
+                    price = int(
+                        re.sub(r'[^\d]+', '', price_text)) if price_text else 0
 
                 # 入札数
                 bid_tag = card.find('dd', class_=re.compile(r'Product__bid'))
                 bidding = 0
                 if bid_tag:
                     bidding_text = bid_tag.text
-                    bidding = int(re.sub(r'[^\d]+', '', bidding_text)) if bidding_text else 0
+                    bidding = int(
+                        re.sub(r'[^\d]+', '', bidding_text)) if bidding_text else 0
 
                 # 残り時間
                 time_tag = card.find('dd', class_=re.compile(r'Product__time'))
@@ -148,6 +153,9 @@ def save_to_database(searchname, scraped_data_list):
     now_time = datetime.now()
     SearchDay = now_time.strftime("%Y-%m-%d %H:%M:%S")
 
+    # 同名のSearchWordが存在する場合、削除
+    scraping.objects.filter(SearchWord=searchname).delete()
+
     for scraped_data in scraped_data_list:
         try:
             scraping.objects.create(
@@ -161,3 +169,9 @@ def save_to_database(searchname, scraped_data_list):
             )
         except Exception as e:
             print(f"Error inserting into the database: {e}")
+
+
+def get_search_words():
+    search_words = scraping.objects.values_list(
+        'SearchWord', flat=True).distinct()
+    return list(search_words)
