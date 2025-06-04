@@ -11,6 +11,11 @@ logger = logging.getLogger('search_logger')
 
 
 def scrape_data(searchname):
+    """
+    指定されたキーワードでヤフオクの落札履歴をスクレイピングする。
+    Args:        searchname (str): 検索キーワード
+    Returns:        list: スクレイピングされたデータのリスト
+    """
     base_url = 'https://auctions.yahoo.co.jp/closedsearch/closedsearch'
     urls = [
         f'{base_url}?p={searchname}&va={searchname}&b=1&n=100&select=6',
@@ -86,6 +91,9 @@ def scrape_data(searchname):
 
 
 def scrape_current_listings(searchname):
+    """
+    指定されたキーワードでヤフオクの現在出品されている商品をスクレイピングする。
+    """
     base_url = 'https://auctions.yahoo.co.jp/search/search'
     urls = [
         f'{base_url}?auccat=&tab_ex=commerce&aq=-&p={searchname}&f=0:1&b=1&n=100',
@@ -150,6 +158,9 @@ def scrape_current_listings(searchname):
 
 
 def save_to_database(searchname, scraped_data_list):
+    """
+    スクレイピングされたデータをデータベースに保存する。
+    """
     now_time = datetime.now()
     SearchDay = now_time.strftime("%Y-%m-%d %H:%M:%S")
 
@@ -172,6 +183,9 @@ def save_to_database(searchname, scraped_data_list):
 
 
 def get_search_words():
+    """
+    データベースからユニークな検索ワードのリストを取得する。
+    """
     search_words = scraping.objects.values_list(
         'SearchWord', flat=True).distinct()
     return list(search_words)

@@ -1,0 +1,209 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="ja" data-content_root="./">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>情報分析ツール システマ &mdash; systema 1.0.0 ドキュメント</title>
+      <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=e59714d7" />
+
+  
+      <script src="_static/jquery.js?v=5d32c60e"></script>
+      <script src="_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="_static/documentation_options.js?v=144c8c96"></script>
+      <script src="_static/doctools.js?v=9bcbadda"></script>
+      <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
+      <script src="_static/translations.js?v=4755f45a"></script>
+    <script src="_static/js/theme.js"></script>
+    <link rel="index" title="索引" href="genindex.html" />
+    <link rel="search" title="検索" href="search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="index.html" class="icon icon-home">
+            systema
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <!-- Local TOC -->
+              <div class="local-toc"><ul>
+<li><a class="reference internal" href="#">情報分析ツール システマ</a><ul>
+<li><a class="reference internal" href="#id2">主な機能</a><ul>
+<li><a class="reference internal" href="#id3">1. 相場検索</a></li>
+<li><a class="reference internal" href="#id4">2. 現在価格検索</a></li>
+<li><a class="reference internal" href="#id5">3. 相場再検索（実装予定）</a></li>
+<li><a class="reference internal" href="#id6">4. 相場分析</a></li>
+<li><a class="reference internal" href="#id7">5. 市場分析（実装予定）</a></li>
+<li><a class="reference internal" href="#id8">6. 未定</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#id9">インストール</a></li>
+</ul>
+</li>
+</ul>
+</div>
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">systema</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="index.html" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active">情報分析ツール システマ</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="_sources/introduction.md.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="id1">
+<h1>情報分析ツール システマ<a class="headerlink" href="#id1" title="Link to this heading"></a></h1>
+<p><img alt="GitHub" src="https://img.shields.io/badge/Version-1.0.0-blue" /> <img alt="Build" src="https://img.shields.io/badge/Build-Passing-green" /></p>
+<p>このツールは、ヤフオクの<strong>購入</strong>や<strong>出品</strong>に関する商品の価格や傾向を分析し、ユーザーに最適な意思決定をサポートします。相場データや現在出品中の商品を活用し、市場動向を可視化します。</p>
+<section id="id2">
+<h2>主な機能<a class="headerlink" href="#id2" title="Link to this heading"></a></h2>
+<section id="id3">
+<h3>1. 相場検索<a class="headerlink" href="#id3" title="Link to this heading"></a></h3>
+<ul class="simple">
+<li><p><strong>概要</strong>: 商品名で検索し、過去180日間の落札データを取得。</p></li>
+<li><p><strong>特徴</strong>:</p>
+<ul>
+<li><p>落札金額や落札数を確認。</p></li>
+<li><p><strong>入札数</strong>や<strong>価格</strong>でフィルタリング可能。</p></li>
+</ul>
+</li>
+<li><p><strong>用途</strong>: 過去の相場を基に購入や出品の戦略を立てる。</p></li>
+</ul>
+</section>
+<section id="id4">
+<h3>2. 現在価格検索<a class="headerlink" href="#id4" title="Link to this heading"></a></h3>
+<ul class="simple">
+<li><p><strong>概要</strong>: 商品名で検索し、現在出品中の商品データを取得。</p></li>
+<li><p><strong>特徴</strong>:</p>
+<ul>
+<li><p>現在の金額や入札数を確認。</p></li>
+<li><p><strong>入札数</strong>や<strong>価格</strong>でフィルタリング可能。</p></li>
+</ul>
+</li>
+<li><p><strong>用途</strong>: リアルタイムの市場価格を把握。</p></li>
+</ul>
+</section>
+<section id="id5">
+<h3>3. 相場再検索（実装予定）<a class="headerlink" href="#id5" title="Link to this heading"></a></h3>
+<ul class="simple">
+<li><p><strong>概要</strong>: 相場検索で取得したデータを再度確認。</p></li>
+<li><p><strong>予定機能</strong>:</p>
+<ul>
+<li><p>データの更新や削除で整理。</p></li>
+</ul>
+</li>
+<li><p><strong>目標</strong>: ユーザーがデータを効率的に管理。</p></li>
+</ul>
+</section>
+<section id="id6">
+<h3>4. 相場分析<a class="headerlink" href="#id6" title="Link to this heading"></a></h3>
+<ul class="simple">
+<li><p><strong>概要</strong>: 相場検索データを基に売れ筋商品を分析。</p></li>
+<li><p><strong>機能</strong>:</p>
+<ul>
+<li><p><strong>ワードクラウド</strong>: 売れている商品に含まれるフレーズを可視化。</p></li>
+<li><p><strong>棒グラフ</strong>: 価格帯と個数を表示し、価格幅を把握。</p></li>
+</ul>
+</li>
+<li><p><strong>用途</strong>: 市場トレンドを視覚的に理解。</p></li>
+</ul>
+</section>
+<section id="id7">
+<h3>5. 市場分析（実装予定）<a class="headerlink" href="#id7" title="Link to this heading"></a></h3>
+<ul class="simple">
+<li><p><strong>概要</strong>: 現在出品中の商品から注目商品をピックアップ。</p></li>
+<li><p><strong>予定機能</strong>:</p>
+<ul>
+<li><p>相場価格と比較し、お買い得商品や目玉商品を特定。</p></li>
+</ul>
+</li>
+<li><p><strong>目標</strong>: 競争激しい市場での優位性を確保。</p></li>
+</ul>
+</section>
+<section id="id8">
+<h3>6. 未定<a class="headerlink" href="#id8" title="Link to this heading"></a></h3>
+<ul class="simple">
+<li><p><strong>ステータス</strong>: 機能未定。</p></li>
+<li><p><strong>計画</strong>: 今後のフィードバックを基に追加予定。</p></li>
+</ul>
+</section>
+</section>
+<section id="id9">
+<h2>インストール<a class="headerlink" href="#id9" title="Link to this heading"></a></h2>
+<ol class="arabic">
+<li><p>リポジトリをクローン:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>git<span class="w"> </span>clone<span class="w"> </span>https://github.com/wataruteduka1973/taskle.git
+<span class="nb">cd</span><span class="w"> </span>taskle
+</pre></div>
+</div>
+</li>
+<li><p>依存関係をインストール
+pip install -r requirements.txt</p></li>
+<li><p>サーバーを起動
+python manage.py migrate
+python manage.py runserver</p></li>
+</ol>
+<p>2025 WataruTezuka. All Rights Reserved.</p>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2025, WataruTezuka.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>
