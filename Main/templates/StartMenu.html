@@ -52,8 +52,15 @@
   </style>
 </head>
 
+
 <body>
   {% include 'header.html' %}
+  <section class="text-center jumbotron">
+    <div class="container">
+      <h1 class="jumbotron-heading">情報分析ツールシステマ</h1>
+      <p class="lead text-muted">過去に検索した商品や現在出品されている商品の情報を取得し分析します</p>
+    </div>
+  </section>
   <div class="album py-5 bg-light">
     <div class="container">
       <div class="row">
@@ -61,10 +68,10 @@
           <div class="card h-100">
             <div class="card-body">
               <img src="{% static 'png/yahuoku.png' %}" class="card-img-top" alt="ヤフオク相場検索">
-              <h5 class="card-title">ヤフオク相場検索</h5>
+              <h5 class="card-title">相場検索</h5>
               <p class="card-text">検索名から直近で落札された商品の金額やよく用いられるワード、落札金額の中央値などを可視化します。</p>
               </li>
-              <a href="http://127.0.0.1:8000/taskle/yahuoku" class="btn btn-secondary">詳細を見る</a>
+              <a href="{% url 'yahuoku' %}" class="btn btn-secondary">詳細を見る</a>
             </div>
           </div>
         </div>
@@ -72,9 +79,9 @@
           <div class="card h-100">
             <div class="card-body">
               <img src="{% static 'png/mercari.jpg' %}" class="card-img-top" alt="メルカリ相場検索">
-              <h5 class="card-title">ヤフオク現在価格検索</h5>
+              <h5 class="card-title">現在価格検索</h5>
               <p class="card-text">リアルタイムで現在ヤフオクで出品されている商品を調べます</p>
-              <a href="http://127.0.0.1:8000/taskle/yahuoku_now" class="btn btn-secondary">詳細を見る</a>
+              <a href="{% url 'yahuoku_now' %}" class="btn btn-secondary">詳細を見る</a>
             </div>
           </div>
         </div>
@@ -84,7 +91,7 @@
               <img src="{% static 'png/mercari.jpg' %}" class="card-img-top" alt="カリ画像">
               <h5 class="card-title">過去データ参照</h5>
               <p class="card-text">過去に調べた相場の情報を改めて見ることができます</p>
-              <a href="#" class="btn btn-secondary mt-auto" disabled>実装予定</a>
+              <a href="{% url 'yahuoku_history' %}" class="btn btn-secondary mt-auto" disabled>詳細を見る</a>
             </div>
           </div>
         </div>
@@ -92,9 +99,9 @@
           <div class="card h-100">
             <div class="card-body">
               <img src="{% static 'png/mercari.jpg' %}" class="card-img-top" alt="カリ画像">
-              <h5 class="card-title">ヤフオク価格分析</h5>
+              <h5 class="card-title">価格分析</h5>
               <p class="card-text">今まで取得したデータを分析し、売れ行きの傾向を分析します</p>
-              <a href="http://127.0.0.1:8000/taskle/Deep_Analysis" class="btn btn-secondary" disabled>詳細を見る</a>
+              <a href="{% url 'Deep_Analysis' %}" class="btn btn-secondary" disabled>詳細を見る</a>
             </div>
           </div>
         </div>
@@ -102,7 +109,7 @@
           <div class="card h-100">
             <div class="card-body">
               <img src="{% static 'png/mercari.jpg' %}" class="card-img-top" alt="カリ画像">
-              <h5 class="card-title">機能5</h5>
+              <h5 class="card-title">ターゲット分析</h5>
               <p class="card-text">準備中の機能です。新しい分析ツールやサービスを追加予定です。お楽しみに！</p>
               <a href="#" class="btn btn-secondary" disabled>準備中</a>
             </div>

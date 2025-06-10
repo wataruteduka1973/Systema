@@ -1,4 +1,4 @@
-# 情報分析ツール システマ
+# 本アプリケーションの概要
 
 ![GitHub](https://img.shields.io/badge/Version-1.0.0-blue) ![Build](https://img.shields.io/badge/Build-Passing-green)
 

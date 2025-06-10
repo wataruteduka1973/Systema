@@ -117,6 +117,11 @@
                 <p class="lead text-muted">取得したデータからより深い分析を行います</p>
             </div>
         </section>
+        <div class="form-group mt-4 d-flex gap-2 align-items-center">
+            <label for="searchWordDropdown">関連項目</label>
+            <a href="{% url 'yahuoku' %}" class="btn btn-light">相場検索</a>
+            <a href="{% url 'yahuoku_history' %}" class="btn btn-light">過去データ参照</a>
+        </div>
         <h2>過去の検索ワード</h2>
         <div class="form-group">
             <label for="searchWordDropdown">検索ワードを選択:</label>

@@ -13,5 +13,13 @@ def Yahuoku_now(request):
     return render(request, 'Yahuoku_now.html')
 
 
+def Yahuoku_history(request):
+    return render(request, 'Yahuoku_history.html')
+
+
 def Deep_Analysis(request):
     return render(request, 'Deep_Analysis.html')
+
+
+def Deep_Analysis_now(request):
+    return render(request, 'Deep_Analysis_now.html')
