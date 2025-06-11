@@ -117,35 +117,41 @@
                 <p class="lead text-muted">取得したデータからより深い分析を行います</p>
             </div>
         </section>
-        <div class="form-group mt-4 d-flex gap-2 align-items-center">
-            <label for="searchWordDropdown">関連項目</label>
-            <a href="{% url 'yahuoku' %}" class="btn btn-light">相場検索</a>
-            <a href="{% url 'yahuoku_history' %}" class="btn btn-light">過去データ参照</a>
-        </div>
-        <h2>過去の検索ワード</h2>
-        <div class="form-group">
-            <label for="searchWordDropdown">検索ワードを選択:</label>
-            <select id="searchWordDropdown" class="form-control">
-                <option value="">選択してください</option>
-            </select>
-        </div>
-        <div class="form-group mt-4 d-flex gap-2 align-items-center">
-            <button id="analyzeMarketPrice" class="btn btn-info">相場の分析</button>
-            <button id="updateMarketData" class="btn btn-success">相場データの更新</button>
-            <button id="deleteMarketData" class="btn btn-warning">相場データの削除</button>
-        </div>
-        <div class="mt-5 text-center">
-            <h2>よく用いられるキーワード</h2>
-        </div>
-        <div class="wordcloud-container">
-            <div id="wordcloud"></div>
-        </div>
-        <div id="priceChartContainer" class="mt-5 text-center">
-            <h3>価格分布</h3>
-            <div id="priceChart"></div>
-        </div>
-        <div class="search-day mt-4 container">
-            <p>最終更新日: <span id="searchDay"></span></p>
+        <div class="container search-container">
+            <div class="form-group mt-4 d-flex gap-2 align-items-center">
+                <h3>関連項目</h3>
+                <a href="{% url 'yahuoku' %}" class="btn btn-light">相場検索</a>
+                <a href="{% url 'yahuoku_history' %}" class="btn btn-light">過去データ参照</a>
+            </div>
+            <h2>過去の検索ワード</h2>
+            <div class="form-group">
+                <label for="searchWordDropdown">検索ワードを選択:</label>
+                <select id="searchWordDropdown" class="form-control">
+                    <option value="">選択してください</option>
+                </select>
+            </div>
+            <div class="form-group mt-4 d-flex gap-2 align-items-center">
+                <button id="analyzeMarketPrice" class="btn btn-info">相場の分析</button>
+                <button id="updateMarketData" class="btn btn-success">
+                    相場データの更新
+                    <span id="updateSpinner" class="spinner-border spinner-border-sm" style="display:none;"
+                        role="status"></span>
+                </button>
+                <button id="deleteMarketData" class="btn btn-warning">相場データの削除</button>
+            </div>
+            <div class="mt-5 text-center">
+                <h2>よく用いられるキーワード</h2>
+            </div>
+            <div class="wordcloud-container">
+                <div id="wordcloud"></div>
+            </div>
+            <div id="priceChartContainer" class="mt-5 text-center">
+                <h3>価格分布</h3>
+                <div id="priceChart"></div>
+            </div>
+            <div class="search-day mt-4 container">
+                <p>最終更新日: <span id="searchDay"></span></p>
+            </div>
         </div>
     </main>
     {% include 'footer.html' %}

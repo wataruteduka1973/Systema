@@ -86,12 +86,12 @@
                 <p class="lead text-muted">オークションが終了した商品の情報から売れる商品の傾向を分析します。</p>
             </div>
         </section>
-        <div class="form-group mt-4 d-flex gap-2 align-items-center">
-            <label for="searchWordDropdown">関連項目</label>
-            <a href="{% url 'yahuoku_history' %}" class="btn btn-light">過去データ参照</a>
-            <a href="{% url 'Deep_Analysis' %}" class="btn btn-light">相場分析</a>
-        </div>
         <div class="container search-container">
+            <div class="form-group mt-4 d-flex gap-2 align-items-center">
+                <h3>関連項目</h3>
+                <a href="{% url 'yahuoku_history' %}" class="btn btn-light">過去データ参照</a>
+                <a href="{% url 'Deep_Analysis' %}" class="btn btn-light">相場分析</a>
+            </div>
             <h2>キーワードの行間を開けると詳細に検索できます</h2>
             <div class="row justify-content-center search-button">
                 <div class="col-12">

@@ -80,12 +80,15 @@
 
         <section class="text-center jumbotron">
             <div class="container">
-                <h1 class="jumbotron-heading">ヤフオク現在価格検索</h1>
+                <h1 class="jumbotron-heading">現在価格検索</h1>
                 <p class="lead text-muted">現在行われているオークションの情報をリアルタイムで取得します。</p>
             </div>
         </section>
-
         <div class="container search-container">
+            <div class="form-group mt-4 d-flex gap-2 align-items-center">
+                <h3>関連項目</h3>
+                <a href="{% url 'Deep_Analysis_now' %}" class="btn btn-light">ターゲット分析</a>
+            </div>
             <h2>キーワードの行間を開けると詳細に検索できます</h2>
             <div class="row justify-content-center search-button">
                 <div class="col-12">

@@ -13,8 +13,6 @@ logger = logging.getLogger('search_logger')
 def scrape_data(searchname):
     """
     指定されたキーワードでヤフオクの落札履歴をスクレイピングする。
-    Args:        searchname (str): 検索キーワード
-    Returns:        list: スクレイピングされたデータのリスト
     """
     base_url = 'https://auctions.yahoo.co.jp/closedsearch/closedsearch'
     urls = [
