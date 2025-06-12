@@ -1,11 +1,11 @@
 from bs4 import BeautifulSoup
-from datetime import datetime
-from Main.models import scraping
 
 import requests
 import re
 import logging
+from datetime import datetime
 
+from Main.models import scraping
 
 logger = logging.getLogger('search_logger')
 
@@ -65,6 +65,14 @@ def scrape_data(searchname):
             urls = [title.get('href', '#')
                     for title in product_titles if title.get('href')]
 
+            time_elements = soup.find_all(
+                'span', class_='Product__time')  # 追加: 落札時間帯と日付
+            times = [time.text.strip()
+                     for time in time_elements if time.text.strip()]
+
+            urls = [title.get('href', '#')
+                    for title in product_titles if title.get('href')]
+
             # データのマッチングと結合
             min_length = min(len(names), len(prices), len(
                 bids), len(startprices), len(urls))
@@ -74,6 +82,7 @@ def scrape_data(searchname):
                     'price': prices[i] if i < len(prices) else 0,
                     'startPrice': startprices[i] if i < len(startprices) else 0,
                     'bidding': bids[i] if i < len(bids) else 0,
+                    'time': times[i] if i < len(times) else 'N/A',
                     'url': urls[i],
                 }
                 scraped_data_list.append(scraped_data)

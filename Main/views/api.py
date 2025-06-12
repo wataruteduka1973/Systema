@@ -1,10 +1,14 @@
-import logging
-import numpy as np
 from django.http import JsonResponse
 from django.shortcuts import render
 from django.views.decorators.csrf import csrf_exempt
-from .utils import scrape_data, save_to_database, scrape_current_listings, get_search_words
 from Main.models.scraping import scraping
+import numpy as np
+from sklearn.cluster import KMeans
+
+import logging
+from datetime import datetime, timedelta
+
+from .utils import scrape_data, save_to_database, scrape_current_listings, get_search_words
 
 logger = logging.getLogger('search_logger')
 
@@ -202,4 +206,99 @@ def complex_market_data(request):
             'recommend_items': response_items
         })
     except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)
+
+
+def prediction_market(request):
+    """
+    過去90日間の価格推移を分析し、異常値を排除した移動平均と1ヶ月予測を返す。
+    """
+    if request.method != 'GET':
+        return JsonResponse({'error': 'Invalid request method'}, status=400)
+
+    searchname = request.GET.get('keyword', '')
+    if not searchname:
+        return JsonResponse({'error': 'Keyword is required'}, status=400)
+
+    try:
+        # 過去180日間の落札データを取得
+        closed_data = scrape_data(searchname)
+        if not closed_data:
+            return JsonResponse({'error': 'No data available'}, status=404)
+
+        # 過去90日間のデータにフィルタリング
+        current_date = datetime.now()
+        past_90_days = current_date - timedelta(days=90)
+        filtered_data = []
+        for item in closed_data:
+            if item['time'] != 'N/A':
+                try:
+                    month_day, time_part = item['time'].split()
+                    month, day = month_day.split('/')
+                    year = current_date.year
+                    full_date = f"{year}-{month.zfill(2)}-{day.zfill(2)} {time_part}"
+                    item_date = datetime.strptime(full_date, '%Y-%m-%d %H:%M')
+                    if item_date >= past_90_days:
+                        filtered_data.append(item)
+                except Exception as e:
+                    logger.error(
+                        f"Date parsing error for {item['time']}: {str(e)}")
+                    continue
+
+        prices = [item['price'] for item in filtered_data if isinstance(
+            item['price'], (int, float))]
+        if not prices:
+            return JsonResponse({'error': 'No price data in the last 90 days'}, status=404)
+
+        # 異常値除去 (KMeansクラスタリング)
+        if len(prices) > 10:  # 十分なデータがある場合
+            kmeans = KMeans(n_clusters=2, random_state=42)  # 2クラスタで異常値と通常値を分離
+            labels = kmeans.fit_predict(np.array(prices).reshape(-1, 1))
+            # クラスタのサイズが小さい方を異常値とみなす
+            cluster_sizes = np.bincount(labels)
+            outlier_cluster = np.argmin(cluster_sizes)
+            cleaned_prices = [p for i, p in enumerate(
+                prices) if labels[i] != outlier_cluster]
+        else:
+            cleaned_prices = prices  # データが少ない場合はそのまま
+
+        # 移動平均線 (30日)
+        window_size = 30
+        moving_averages = []
+        for i in range(len(cleaned_prices)):
+            if i >= window_size - 1:
+                avg = np.mean(cleaned_prices[i - window_size + 1:i + 1])
+                moving_averages.append(int(avg))
+            else:
+                moving_averages.append(None)
+
+        # 1ヶ月予測 (最新の移動平均を基に簡易予測)
+        latest_avg = moving_averages[-1] if moving_averages[-1] else np.mean(
+            cleaned_prices)
+        predicted_price = latest_avg * 1.02  # 仮に2%増加と仮定（トレンド調整可能）
+
+        # 信頼区間（±10%）
+        confidence_interval = [
+            int(predicted_price * 0.9), int(predicted_price * 1.1)]
+
+        # 過去90日分の価格推移と移動平均
+        price_trends = [
+            {'date': item['time'], 'price': item['price'],
+                'moving_avg': moving_averages[i] if i < len(moving_averages) else None}
+            for i, item in enumerate(filtered_data)
+        ]
+
+        # レスポンス準備
+        response = {
+            'keyword': searchname,
+            'moving_average': int(np.mean(cleaned_prices) if cleaned_prices else 0),
+            'predicted_price': int(predicted_price),
+            'confidence_interval': confidence_interval,
+            'price_trends': price_trends  # 過去90日分の推移と移動平均
+        }
+
+        return JsonResponse(response)
+
+    except Exception as e:
+        logger.error(f"Error in prediction_market: {str(e)}")
         return JsonResponse({'error': str(e)}, status=500)

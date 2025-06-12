@@ -1,13 +1,10 @@
 document.addEventListener('DOMContentLoaded', () => {
     refreshSearchWordDropdown();
-});
-
-document.addEventListener('DOMContentLoaded', () => {
     const dropdown = document.getElementById('searchWordDropdown');
     const analyzeMarketPriceButton = document.getElementById('analyzeMarketPrice');
     const updateMarketDataButton = document.getElementById('updateMarketData');
     const deleteMarketDataButton = document.getElementById('deleteMarketData');
-
+    const spinner = document.getElementById('updateSpinner');
 
     analyzeMarketPriceButton.addEventListener('click', () => {
         const searchWord = dropdown.value;
@@ -36,6 +33,8 @@ document.addEventListener('DOMContentLoaded', () => {
             alert('検索ワードを選択してください');
             return;
         }
+        spinner.style.display = 'inline-block';
+        updateMarketDataButton.disabled = true;
         fetch(`/taskle/update_market_data?keyword=${encodeURIComponent(searchWord)}`, { method: 'POST' })
             .then(response => response.json())
             .then(data => {
@@ -43,7 +42,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 refreshSearchWordDropdown(searchWord);
                 analyzeMarketPriceButton.click();
             })
-            .catch(error => alert('更新に失敗しました: ' + error));
+            .catch(error => alert('更新に失敗しました: ' + error))
+            .finally(() => {
+                spinner.style.display = 'none';
+                analyzeMarketPriceButton.disabled = false;
+            });
     });
 
     deleteMarketDataButton.addEventListener('click', () => {
