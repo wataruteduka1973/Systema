@@ -17,6 +17,7 @@ DEBUG = True
 
 ALLOWED_HOSTS = ['127.0.0.1', 'localhost']
 
+TEST_RUNNER = 'django.test.runner.DiscoverRunner'
 
 # Application definition
 INSTALLED_APPS = [

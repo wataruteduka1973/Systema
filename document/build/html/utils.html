@@ -48,10 +48,15 @@
 <li class="toctree-l1"><a class="reference internal" href="introduction.html">本アプリケーションの概要</a></li>
 <li class="toctree-l1"><a class="reference internal" href="models.html">データベース</a></li>
 <li class="toctree-l1 current"><a class="current reference internal" href="#">ユーティリティ</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#Main.views.utils.complex_market_data_logic"><code class="docutils literal notranslate"><span class="pre">complex_market_data_logic()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#Main.views.utils.delete_market_data_logic"><code class="docutils literal notranslate"><span class="pre">delete_market_data_logic()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#Main.views.utils.get_market_data_logic"><code class="docutils literal notranslate"><span class="pre">get_market_data_logic()</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="#Main.views.utils.get_search_words"><code class="docutils literal notranslate"><span class="pre">get_search_words()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#Main.views.utils.prediction_market_logic"><code class="docutils literal notranslate"><span class="pre">prediction_market_logic()</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="#Main.views.utils.save_to_database"><code class="docutils literal notranslate"><span class="pre">save_to_database()</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="#Main.views.utils.scrape_current_listings"><code class="docutils literal notranslate"><span class="pre">scrape_current_listings()</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="#Main.views.utils.scrape_data"><code class="docutils literal notranslate"><span class="pre">scrape_data()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#Main.views.utils.update_market_data_logic"><code class="docutils literal notranslate"><span class="pre">update_market_data_logic()</span></code></a></li>
 </ul>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="api.html">API</a></li>
@@ -85,9 +90,34 @@
   <section id="module-Main.views.utils">
 <span id="id1"></span><h1>ユーティリティ<a class="headerlink" href="#module-Main.views.utils" title="Link to this heading"></a></h1>
 <dl class="py function">
+<dt class="sig sig-object py" id="Main.views.utils.complex_market_data_logic">
+<span class="sig-prename descclassname"><span class="pre">Main.views.utils.</span></span><span class="sig-name descname"><span class="pre">complex_market_data_logic</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">request</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/Main/views/utils.html#complex_market_data_logic"><span class="viewcode-link"><span class="pre">[ソース]</span></span></a><a class="headerlink" href="#Main.views.utils.complex_market_data_logic" title="Link to this definition"></a></dt>
+<dd><p>指定キーワードの落札履歴と現在出品中データから、価格リスト・商品名リスト・中央値・おすすめ出品リストを返す。
+また、落札履歴データはデータベースにも保存・更新する。</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="Main.views.utils.delete_market_data_logic">
+<span class="sig-prename descclassname"><span class="pre">Main.views.utils.</span></span><span class="sig-name descname"><span class="pre">delete_market_data_logic</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">request</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/Main/views/utils.html#delete_market_data_logic"><span class="viewcode-link"><span class="pre">[ソース]</span></span></a><a class="headerlink" href="#Main.views.utils.delete_market_data_logic" title="Link to this definition"></a></dt>
+<dd><p>指定キーワードの取引データをデータベースから削除する。</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="Main.views.utils.get_market_data_logic">
+<span class="sig-prename descclassname"><span class="pre">Main.views.utils.</span></span><span class="sig-name descname"><span class="pre">get_market_data_logic</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">request</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/Main/views/utils.html#get_market_data_logic"><span class="viewcode-link"><span class="pre">[ソース]</span></span></a><a class="headerlink" href="#Main.views.utils.get_market_data_logic" title="Link to this definition"></a></dt>
+<dd><p>指定キーワードの取引データをデータベースから取得し、JSONで返す。</p>
+</dd></dl>
+
+<dl class="py function">
 <dt class="sig sig-object py" id="Main.views.utils.get_search_words">
 <span class="sig-prename descclassname"><span class="pre">Main.views.utils.</span></span><span class="sig-name descname"><span class="pre">get_search_words</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/Main/views/utils.html#get_search_words"><span class="viewcode-link"><span class="pre">[ソース]</span></span></a><a class="headerlink" href="#Main.views.utils.get_search_words" title="Link to this definition"></a></dt>
 <dd><p>データベースからユニークな検索ワードのリストを取得する。</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="Main.views.utils.prediction_market_logic">
+<span class="sig-prename descclassname"><span class="pre">Main.views.utils.</span></span><span class="sig-name descname"><span class="pre">prediction_market_logic</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">request</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/Main/views/utils.html#prediction_market_logic"><span class="viewcode-link"><span class="pre">[ソース]</span></span></a><a class="headerlink" href="#Main.views.utils.prediction_market_logic" title="Link to this definition"></a></dt>
+<dd><p>過去90日間の価格推移取得し、分析、クラスタリングを行う</p>
 </dd></dl>
 
 <dl class="py function">
@@ -105,9 +135,13 @@
 <dl class="py function">
 <dt class="sig sig-object py" id="Main.views.utils.scrape_data">
 <span class="sig-prename descclassname"><span class="pre">Main.views.utils.</span></span><span class="sig-name descname"><span class="pre">scrape_data</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">searchname</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/Main/views/utils.html#scrape_data"><span class="viewcode-link"><span class="pre">[ソース]</span></span></a><a class="headerlink" href="#Main.views.utils.scrape_data" title="Link to this definition"></a></dt>
-<dd><p>指定されたキーワードでヤフオクの落札履歴をスクレイピングする。
-Args:        searchname (str): 検索キーワード
-Returns:        list: スクレイピングされたデータのリスト</p>
+<dd><p>指定されたキーワードでヤフオクの落札履歴をスクレイピングする。</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="Main.views.utils.update_market_data_logic">
+<span class="sig-prename descclassname"><span class="pre">Main.views.utils.</span></span><span class="sig-name descname"><span class="pre">update_market_data_logic</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">request</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/Main/views/utils.html#update_market_data_logic"><span class="viewcode-link"><span class="pre">[ソース]</span></span></a><a class="headerlink" href="#Main.views.utils.update_market_data_logic" title="Link to this definition"></a></dt>
+<dd><p>指定キーワードで新たにデータを取得し、データベースを更新する。</p>
 </dd></dl>
 
 <p>このモジュールはデータ取得・保存・検索ワード取得など、バックエンドのユーティリティ処理をまとめています。</p>

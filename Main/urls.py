@@ -1,6 +1,6 @@
 from django.urls import path
 from Main.views.urls import index, Yahuoku, Yahuoku_now, Deep_Analysis, Deep_Analysis_now, Yahuoku_history, Yahuoku_prediction
-from Main.views.api import perform_search, RealtimeSearch, get_search_words_api, get_market_data, update_market_data, delete_market_data, complex_market_data, prediction_market
+from Main.views.api import perform_search, RealtimeSearch, get_search_words, get_market_data, update_market_data, delete_market_data, complex_market_data, prediction_market
 
 urlpatterns = [
     path('', index, name='index'),
@@ -12,7 +12,7 @@ urlpatterns = [
     path('Yahuoku_prediction', Yahuoku_prediction, name='Yahuoku_prediction'),
     path('perform_search', perform_search, name='perform_search'),
     path('RealtimeSearch', RealtimeSearch, name='RealtimeSearch'),
-    path('get_search_words', get_search_words_api, name='get_search_words'),
+    path('get_search_words', get_search_words, name='get_search_words'),
     path('get_market_data', get_market_data, name='get_market_data'),
     path('update_market_data', update_market_data, name='update_market_data'),
     path('delete_market_data', delete_market_data, name='delete_market_data'),

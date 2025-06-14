@@ -31,3 +31,5 @@ source_suffix = {
 }
 master_doc = 'index'
 source_dir = '.'
+
+# ドキュメント生成のコマンドsphinx-build -b html document/ document/build/html

@@ -74,12 +74,23 @@
            <div itemprop="articleBody">
              
   <h1>Main.views.api のソースコード</h1><div class="highlight"><pre>
-<span></span><span class="kn">import</span><span class="w"> </span><span class="nn">logging</span>
-<span class="kn">from</span><span class="w"> </span><span class="nn">django.http</span><span class="w"> </span><span class="kn">import</span> <span class="n">JsonResponse</span>
+<span></span><span class="kn">from</span><span class="w"> </span><span class="nn">django.http</span><span class="w"> </span><span class="kn">import</span> <span class="n">JsonResponse</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">django.shortcuts</span><span class="w"> </span><span class="kn">import</span> <span class="n">render</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">django.views.decorators.csrf</span><span class="w"> </span><span class="kn">import</span> <span class="n">csrf_exempt</span>
-<span class="kn">from</span><span class="w"> </span><span class="nn">.utils</span><span class="w"> </span><span class="kn">import</span> <span class="n">scrape_data</span><span class="p">,</span> <span class="n">save_to_database</span><span class="p">,</span> <span class="n">scrape_current_listings</span><span class="p">,</span> <span class="n">get_search_words</span>
-<span class="kn">from</span><span class="w"> </span><span class="nn">Main.models.scraping</span><span class="w"> </span><span class="kn">import</span> <span class="n">scraping</span>
+
+<span class="kn">import</span><span class="w"> </span><span class="nn">logging</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">.utils</span><span class="w"> </span><span class="kn">import</span> <span class="p">(</span>
+    <span class="n">scrape_data</span><span class="p">,</span>
+    <span class="n">scrape_current_listings</span><span class="p">,</span>
+    <span class="n">save_to_database</span><span class="p">,</span>
+    <span class="n">get_search_words</span><span class="p">,</span>
+    <span class="n">get_market_data_logic</span><span class="p">,</span>
+    <span class="n">update_market_data_logic</span><span class="p">,</span>
+    <span class="n">delete_market_data_logic</span><span class="p">,</span>
+    <span class="n">complex_market_data_logic</span><span class="p">,</span>
+    <span class="n">prediction_market_logic</span><span class="p">,</span>
+<span class="p">)</span>
 
 <span class="n">logger</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="s1">&#39;search_logger&#39;</span><span class="p">)</span>
 
@@ -88,7 +99,7 @@
 <a class="viewcode-back" href="../../../api.html#Main.views.api.handle_search_response">[ドキュメント]</a>
 <span class="k">def</span><span class="w"> </span><span class="nf">handle_search_response</span><span class="p">(</span><span class="n">request</span><span class="p">,</span> <span class="n">data_fetch_func</span><span class="p">,</span> <span class="n">save_func</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">    検索リクエストを処理し、スクレイピングされたデータを含むJSONレスポンスを返す。</span>
+<span class="sd">    リクエストを処理し、JSONレスポンスを返す。</span>
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;Logger initialized&quot;</span><span class="p">)</span>
     <span class="k">if</span> <span class="n">request</span><span class="o">.</span><span class="n">method</span> <span class="o">!=</span> <span class="s1">&#39;GET&#39;</span><span class="p">:</span>
@@ -138,7 +149,7 @@
 <a class="viewcode-back" href="../../../api.html#Main.views.api.get_search_words_api">[ドキュメント]</a>
 <span class="k">def</span><span class="w"> </span><span class="nf">get_search_words_api</span><span class="p">(</span><span class="n">request</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">    APIエンドポイントで、検索ワードのリストを取得する。</span>
+<span class="sd">    データベースにアクセスして過去の検索履歴を取得する</span>
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="k">if</span> <span class="n">request</span><span class="o">.</span><span class="n">method</span> <span class="o">!=</span> <span class="s1">&#39;GET&#39;</span><span class="p">:</span>
         <span class="k">return</span> <span class="n">JsonResponse</span><span class="p">({</span><span class="s1">&#39;error&#39;</span><span class="p">:</span> <span class="s1">&#39;Invalid request method&#39;</span><span class="p">},</span> <span class="n">status</span><span class="o">=</span><span class="mi">400</span><span class="p">)</span>
@@ -154,19 +165,9 @@
 <a class="viewcode-back" href="../../../api.html#Main.views.api.get_market_data">[ドキュメント]</a>
 <span class="k">def</span><span class="w"> </span><span class="nf">get_market_data</span><span class="p">(</span><span class="n">request</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">    APIエンドポイントで、特定のキーワードに関連する相場データを取得する。</span>
+<span class="sd">    データベースにアクセスして過去の検索履歴を取得する。</span>
 <span class="sd">    &quot;&quot;&quot;</span>
-    <span class="n">searchname</span> <span class="o">=</span> <span class="n">request</span><span class="o">.</span><span class="n">GET</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;keyword&#39;</span><span class="p">,</span> <span class="s1">&#39;&#39;</span><span class="p">)</span>
-    <span class="k">if</span> <span class="ow">not</span> <span class="n">searchname</span><span class="p">:</span>
-        <span class="k">return</span> <span class="n">JsonResponse</span><span class="p">({</span><span class="s1">&#39;error&#39;</span><span class="p">:</span> <span class="s1">&#39;Keyword is required&#39;</span><span class="p">},</span> <span class="n">status</span><span class="o">=</span><span class="mi">400</span><span class="p">)</span>
-
-    <span class="k">try</span><span class="p">:</span>
-        <span class="n">data</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">scraping</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">filter</span><span class="p">(</span><span class="n">SearchWord</span><span class="o">=</span><span class="n">searchname</span><span class="p">)</span><span class="o">.</span><span class="n">values</span><span class="p">())</span>
-        <span class="n">search_day</span> <span class="o">=</span> <span class="n">scraping</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">filter</span><span class="p">(</span>
-            <span class="n">SearchWord</span><span class="o">=</span><span class="n">searchname</span><span class="p">)</span><span class="o">.</span><span class="n">values_list</span><span class="p">(</span><span class="s1">&#39;SearchDay&#39;</span><span class="p">,</span> <span class="n">flat</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span><span class="o">.</span><span class="n">first</span><span class="p">()</span>
-        <span class="k">return</span> <span class="n">JsonResponse</span><span class="p">({</span><span class="s1">&#39;data&#39;</span><span class="p">:</span> <span class="n">data</span><span class="p">,</span> <span class="s1">&#39;searchDay&#39;</span><span class="p">:</span> <span class="n">search_day</span><span class="p">})</span>
-    <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
-        <span class="k">return</span> <span class="n">JsonResponse</span><span class="p">({</span><span class="s1">&#39;error&#39;</span><span class="p">:</span> <span class="nb">str</span><span class="p">(</span><span class="n">e</span><span class="p">)},</span> <span class="n">status</span><span class="o">=</span><span class="mi">500</span><span class="p">)</span></div>
+    <span class="k">return</span> <span class="n">get_market_data_logic</span><span class="p">(</span><span class="n">request</span><span class="p">)</span></div>
 
 
 
@@ -175,19 +176,9 @@
 <span class="nd">@csrf_exempt</span>
 <span class="k">def</span><span class="w"> </span><span class="nf">update_market_data</span><span class="p">(</span><span class="n">request</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">    APIエンドポイントで、特定のキーワードに関連する相場データを更新する。</span>
+<span class="sd">    フロントエンドから取得した対象を更新する</span>
 <span class="sd">    &quot;&quot;&quot;</span>
-    <span class="k">if</span> <span class="n">request</span><span class="o">.</span><span class="n">method</span> <span class="o">!=</span> <span class="s1">&#39;POST&#39;</span><span class="p">:</span>
-        <span class="k">return</span> <span class="n">JsonResponse</span><span class="p">({</span><span class="s1">&#39;error&#39;</span><span class="p">:</span> <span class="s1">&#39;Invalid request method&#39;</span><span class="p">},</span> <span class="n">status</span><span class="o">=</span><span class="mi">400</span><span class="p">)</span>
-    <span class="n">searchname</span> <span class="o">=</span> <span class="n">request</span><span class="o">.</span><span class="n">GET</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;keyword&#39;</span><span class="p">,</span> <span class="s1">&#39;&#39;</span><span class="p">)</span>
-    <span class="k">if</span> <span class="ow">not</span> <span class="n">searchname</span><span class="p">:</span>
-        <span class="k">return</span> <span class="n">JsonResponse</span><span class="p">({</span><span class="s1">&#39;error&#39;</span><span class="p">:</span> <span class="s1">&#39;Keyword is required&#39;</span><span class="p">},</span> <span class="n">status</span><span class="o">=</span><span class="mi">400</span><span class="p">)</span>
-    <span class="k">try</span><span class="p">:</span>
-        <span class="n">scraped_data_list</span> <span class="o">=</span> <span class="n">scrape_data</span><span class="p">(</span><span class="n">searchname</span><span class="p">)</span>
-        <span class="n">save_to_database</span><span class="p">(</span><span class="n">searchname</span><span class="p">,</span> <span class="n">scraped_data_list</span><span class="p">)</span>
-        <span class="k">return</span> <span class="n">JsonResponse</span><span class="p">({</span><span class="s1">&#39;message&#39;</span><span class="p">:</span> <span class="s1">&#39;相場データを更新しました&#39;</span><span class="p">})</span>
-    <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
-        <span class="k">return</span> <span class="n">JsonResponse</span><span class="p">({</span><span class="s1">&#39;error&#39;</span><span class="p">:</span> <span class="nb">str</span><span class="p">(</span><span class="n">e</span><span class="p">)},</span> <span class="n">status</span><span class="o">=</span><span class="mi">500</span><span class="p">)</span></div>
+    <span class="k">return</span> <span class="n">update_market_data_logic</span><span class="p">(</span><span class="n">request</span><span class="p">)</span></div>
 
 
 
@@ -196,18 +187,29 @@
 <span class="nd">@csrf_exempt</span>
 <span class="k">def</span><span class="w"> </span><span class="nf">delete_market_data</span><span class="p">(</span><span class="n">request</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">    APIエンドポイントで、特定のキーワードに関連する相場データを削除する。</span>
+<span class="sd">    フロントエンドから取得した対象を削除する</span>
 <span class="sd">    &quot;&quot;&quot;</span>
-    <span class="k">if</span> <span class="n">request</span><span class="o">.</span><span class="n">method</span> <span class="o">!=</span> <span class="s1">&#39;DELETE&#39;</span><span class="p">:</span>
-        <span class="k">return</span> <span class="n">JsonResponse</span><span class="p">({</span><span class="s1">&#39;error&#39;</span><span class="p">:</span> <span class="s1">&#39;Invalid request method&#39;</span><span class="p">},</span> <span class="n">status</span><span class="o">=</span><span class="mi">400</span><span class="p">)</span>
-    <span class="n">searchname</span> <span class="o">=</span> <span class="n">request</span><span class="o">.</span><span class="n">GET</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;keyword&#39;</span><span class="p">,</span> <span class="s1">&#39;&#39;</span><span class="p">)</span>
-    <span class="k">if</span> <span class="ow">not</span> <span class="n">searchname</span><span class="p">:</span>
-        <span class="k">return</span> <span class="n">JsonResponse</span><span class="p">({</span><span class="s1">&#39;error&#39;</span><span class="p">:</span> <span class="s1">&#39;Keyword is required&#39;</span><span class="p">},</span> <span class="n">status</span><span class="o">=</span><span class="mi">400</span><span class="p">)</span>
-    <span class="k">try</span><span class="p">:</span>
-        <span class="n">scraping</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">filter</span><span class="p">(</span><span class="n">SearchWord</span><span class="o">=</span><span class="n">searchname</span><span class="p">)</span><span class="o">.</span><span class="n">delete</span><span class="p">()</span>
-        <span class="k">return</span> <span class="n">JsonResponse</span><span class="p">({</span><span class="s1">&#39;message&#39;</span><span class="p">:</span> <span class="s1">&#39;相場データを削除しました&#39;</span><span class="p">})</span>
-    <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
-        <span class="k">return</span> <span class="n">JsonResponse</span><span class="p">({</span><span class="s1">&#39;error&#39;</span><span class="p">:</span> <span class="nb">str</span><span class="p">(</span><span class="n">e</span><span class="p">)},</span> <span class="n">status</span><span class="o">=</span><span class="mi">500</span><span class="p">)</span></div>
+    <span class="k">return</span> <span class="n">delete_market_data_logic</span><span class="p">(</span><span class="n">request</span><span class="p">)</span></div>
+
+
+
+<div class="viewcode-block" id="complex_market_data">
+<a class="viewcode-back" href="../../../api.html#Main.views.api.complex_market_data">[ドキュメント]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">complex_market_data</span><span class="p">(</span><span class="n">request</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    指定キーワードの落札履歴と現在出品中データを取得し、分析結果を返す</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="n">complex_market_data_logic</span><span class="p">(</span><span class="n">request</span><span class="p">)</span></div>
+
+
+
+<div class="viewcode-block" id="prediction_market">
+<a class="viewcode-back" href="../../../api.html#Main.views.api.prediction_market">[ドキュメント]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">prediction_market</span><span class="p">(</span><span class="n">request</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    過去90日間の価格推移を分析し、異常値を排除した90日移動平均と1ヶ月予測を返す。</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="n">prediction_market_logic</span><span class="p">(</span><span class="n">request</span><span class="p">)</span></div>
 
 </pre></div>
 
