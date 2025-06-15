@@ -45,7 +45,7 @@ document.addEventListener('DOMContentLoaded', () => {
             .catch(error => alert('更新に失敗しました: ' + error))
             .finally(() => {
                 spinner.style.display = 'none';
-                analyzeMarketPriceButton.disabled = false;
+                updateMarketDataButton.disabled = false;
             });
     });
 

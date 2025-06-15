@@ -3,6 +3,9 @@ from django.test import RequestFactory
 from Main.views import api, utils
 import json
 
+# テスト開始、レポート生成
+# pytest tests/api_test.py --html=tests/report.html
+
 
 @pytest.mark.django_db
 class TestAPIUtils:
