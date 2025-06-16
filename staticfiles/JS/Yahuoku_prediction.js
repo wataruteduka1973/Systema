@@ -35,6 +35,13 @@ function Prediction_Search() {
                 return;
             }
 
+            // 日付順にソート
+            currentData.price_trends.sort((a, b) => {
+                const dateA = new Date(`${new Date().getFullYear()}-${a.date.split('/')[0]}-${a.date.split('/')[1].split(' ')[0]} ${a.date.split(' ')[1]}`);
+                const dateB = new Date(`${new Date().getFullYear()}-${b.date.split('/')[0]}-${b.date.split('/')[1].split(' ')[0]} ${b.date.split(' ')[1]}`);
+                return dateA - dateB;
+            });
+
             updatePredictionChart();
             updatePredictionTable();
         })
@@ -67,35 +74,30 @@ function updatePredictionChart() {
     const prices = currentData.price_trends.map(item => item.price);
     const movingAverages = currentData.price_trends.map(item => item.moving_avg);
     const predictedPrice = currentData.predicted_price || 0;
-    const confidenceInterval = currentData.confidence_interval || [0, 0];
+
+    // 過去価格と予測価格を1本の線でつなぐ
+    const combinedPrices = [...prices, predictedPrice];
 
     predictionChart.data = {
         labels: [...labels, '1ヶ月後'],
         datasets: [
             {
-                label: '過去価格',
-                data: prices,
+                label: '価格推移',
+                data: combinedPrices,
                 borderColor: '#1E90FF',
                 fill: false,
                 tension: 0.1
             },
             {
-                label: '移動平均 (30日)',
-                data: movingAverages,
+                label: '90日移動平均',
+                data: movingAverages.concat([null]), // 予測点は移動平均なし
                 borderColor: '#32CD32',
                 fill: false,
                 tension: 0.1
             },
             {
-                label: '予測価格',
-                data: [...Array(labels.length).fill(null), predictedPrice],
-                borderColor: '#FF4500',
-                fill: false,
-                tension: 0.1
-            },
-            {
                 label: '信頼区間 (95%)',
-                data: [...Array(labels.length).fill(null), confidenceInterval[0], confidenceInterval[1]],
+                data: [...Array(labels.length).fill(null), currentData.confidence_interval?.[0], currentData.confidence_interval?.[1]],
                 borderColor: '#FFD700',
                 fill: false,
                 borderDash: [5, 5],
@@ -118,6 +120,26 @@ function updatePredictionChart() {
         </p>
     `;
 }
+
+function updatePredictionTable() {
+    const tableBody = document.getElementById('predictionTable').getElementsByTagName('tbody')[0];
+    if (!tableBody) return;
+
+    tableBody.innerHTML = '';
+    const data = [
+        { label: '90日移動平均', value: currentData.moving_average || 'N/A' },
+        { label: '1ヶ月予測', value: currentData.predicted_price || 'N/A' },
+        { label: '信頼区間下限', value: currentData.confidence_interval?.[0] || 'N/A' },
+        { label: '信頼区間上限', value: currentData.confidence_interval?.[1] || 'N/A' }
+    ];
+
+    data.forEach(item => {
+        const row = tableBody.insertRow();
+        row.insertCell(0).textContent = item.label;
+        row.insertCell(1).textContent = item.value;
+    });
+}
+
 
 function updatePredictionTable() {
     const tableBody = document.getElementById('predictionTable').getElementsByTagName('tbody')[0];

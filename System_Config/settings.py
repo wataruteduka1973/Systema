@@ -12,8 +12,8 @@ SECRET_KEY = 'django-insecure-b966em2nj=vv_1u6*id(90$=x3ccd+$vhadoua8v99$mt6du%n
 
 # python manage.py collectstatic 本番環境に更新内容を反映させるために必要
 # python manage.py collectstatic --clear 設定リセット
-# DEBUG = False
-DEBUG = True
+DEBUG = False
+# DEBUG = True
 
 ALLOWED_HOSTS = ['127.0.0.1', 'localhost']
 
@@ -148,6 +148,12 @@ LOGGING = {
             'filename': str(BASE_DIR / 'logs/error.log'),
             'formatter': 'verbose',
         },
+        'server_file': {  # 新しいハンドラを追加
+            'level': 'INFO',
+            'class': 'logging.FileHandler',
+            'filename': str(BASE_DIR / 'logs/server.log'),
+            'formatter': 'verbose',
+        },
     },
     'loggers': {
         '': {
@@ -170,9 +176,12 @@ LOGGING = {
             'level': 'INFO',
             'propagate': False,
         },
+        'server_logger': {  # 新しいロガーを追加
+            'handlers': ['server_file', 'console'],  # server.logとコンソールに出力
+            'level': 'INFO',
+            'propagate': False,
+        },
     },
-
-
 }
 
 HANDLER404 = 'Main.views.Error.custom_404'

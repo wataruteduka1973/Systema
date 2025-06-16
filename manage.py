@@ -1,18 +1,46 @@
-#!/usr/bin/env python
-"""Django's command-line utility for administrative tasks."""
 import os
 import sys
 import webbrowser
-from threading import Timer
+import requests
+import time
+from threading import Thread
+from django.conf import settings
+
+import logging
+
+logger = logging.getLogger('server_logger')
 
 
-def open_browser():
-    webbrowser.open_new('http://127.0.0.1:8000/taskle/')
+def check_server_and_open(port=8000, max_attempts=10, delay=1.0):
+    """サーバーが起動するまで待機し、応答したらブラウザを開く"""
+    attempt = 0
+    while attempt < max_attempts:
+        try:
+            response = requests.get(
+                f'http://127.0.0.1:{port}/taskle/', timeout=5)
+            if response.status_code == 200:
+                environment = "Debug" if settings.DEBUG else "Production"
+                logger.info(
+                    f"Server started successfully on port {port} in {environment} environment.")
+                webbrowser.open_new(f'http://127.0.0.1:{port}/taskle/')
+                break
+        except requests.Timeout:
+            logger.warning(
+                f"Attempt {attempt + 1}: Timeout while connecting to server.")
+        except requests.ConnectionError:
+            logger.warning(
+                f"Attempt {attempt + 1}: Connection refused. Server may not be ready.")
+        except Exception as e:
+            logger.warning(
+                f"Attempt {attempt + 1}: Unexpected error: {str(e)}")
+        attempt += 1
+        time.sleep(delay)
+    else:
+        logger.warning(
+            f"Could not connect to server after {max_attempts} attempts. Please open http://127.0.0.1:{port}/taskle/ manually.")
 
 
 def main():
-    """Run administrative tasks."""
-
     os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'System_Config.settings')
 
     try:
@@ -25,13 +53,16 @@ def main():
         ) from exc
 
     if 'runserver' in sys.argv:
-
         port = 8000  # デフォルトポート
         for arg in sys.argv:
             if arg.startswith('0.0.0.0:') or arg.startswith('127.0.0.1:'):
                 port = int(arg.split(':')[1])
         if port == 8000 and not any(arg.startswith('open') for arg in sys.argv) and os.environ.get('RUN_MAIN') != 'true' and os.environ.get('DJANGO_RUN_MAIN') != 'true':
-            Timer(1.5, open_browser).start()
+            # サーバー起動後にブラウザを開くスレッドを起動
+            thread = Thread(target=check_server_and_open,
+                            args=(port,), daemon=True)
+            thread.start()
+
     execute_from_command_line(sys.argv)
 
 
