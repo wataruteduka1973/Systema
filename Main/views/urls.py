@@ -27,3 +27,7 @@ def Deep_Analysis_now(request):
 
 def Yahuoku_prediction(request):
     return render(request, 'Yahuoku_prediction.html')
+
+
+def introduction(request):
+    return render(request, 'introduction.html')

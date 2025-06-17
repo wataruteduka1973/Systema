@@ -1,0 +1,342 @@
+<!DOCTYPE html>
+<html lang="ja">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>情報分析ツール システマ ガイド</title>
+    {% load static %}
+    <link href="{% static 'css/header.css' %}" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@400;600&display=swap" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Roboto', sans-serif;
+            background: linear-gradient(135deg, #ffffff, #f9f9f9);
+            color: #333;
+            min-height: 100vh;
+        }
+
+        .hero-section {
+            background: linear-gradient(135deg, #ff4d4d, #ff8c8c);
+            color: #fff;
+            padding: 5rem 1rem;
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+
+        .hero-section h1 {
+            font-size: 3rem;
+            font-weight: 700;
+            margin-bottom: 1rem;
+        }
+
+        .badge-container {
+            margin-top: 1rem;
+        }
+
+        .feature-section {
+            padding: 4rem 0;
+        }
+
+        .feature-card {
+            background: #fff;
+            border: none;
+            border-radius: 15px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            height: 100%;
+        }
+
+        .feature-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 6px 18px rgba(0, 0, 0, 0.15);
+        }
+
+        .feature-card img {
+            width: 100%;
+            height: 200px;
+            object-fit: cover;
+            border-radius: 15px 15px 0 0;
+        }
+
+        .feature-card h3 {
+            font-size: 1.5rem;
+            margin-top: 1rem;
+        }
+
+        .feature-card ul {
+            list-style-type: none;
+            padding-left: 0;
+            color: #7f8c8d;
+        }
+
+        .feature-card ul li {
+            padding: 0.5rem 0;
+        }
+
+        .license-section {
+            background: #f5e7e7;
+            /* 淡い赤系の背景 */
+            padding: 3rem 1rem;
+            margin-top: 2rem;
+            text-align: center;
+        }
+
+        .license-section h2 {
+            color: #c0392b;
+        }
+
+        .btn-custom {
+            background-color: #ff4d4d;
+            color: #fff;
+            border: none;
+            padding: 0.75rem 1.5rem;
+            border-radius: 25px;
+            transition: background-color 0.3s ease;
+        }
+
+        .btn-custom:hover {
+            background-color: #e74c3c;
+        }
+
+        .modal-content {
+            border-radius: 15px;
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.2);
+        }
+
+        .modal-header {
+            background: #ff4d4d;
+            color: #fff;
+            border-radius: 15px 15px 0 0;
+        }
+
+        .modal-body img {
+            width: 100%;
+            border-radius: 10px;
+        }
+    </style>
+</head>
+</head>
+
+<body>
+    {% include 'header.html' %}
+    <section class="hero-section">
+        <div class="container">
+            <h1>情報分析ツール システマ ガイド</h1>
+            <p class="lead">ヤフオクの価格分析をサポートする機能と使い方の紹介</p>
+        </div>
+    </section>
+
+    <section class="feature-section">
+        <div class="container">
+            <h2 class="text-center mb-5">主な機能</h2>
+            <div class="row g-4">
+                <div class="col-md-6 col-lg-4">
+                    <div class="feature-card h-100" data-bs-toggle="modal" data-bs-target="#marketSearchModal">
+                        <img src="{% static 'jpg/yahuoku.jpg' %}" alt="相場検索スクリーンショット">
+                        <div class="card-body">
+                            <h3>相場検索</h3>
+                            <ul>
+                                <li><strong>概要</strong>: 過去180日間の落札データを取得します。</li>
+                                <li><strong>特徴</strong>: 落札金額・入札数確認をフィルタリングして条件を絞れます</li>
+                                <li><strong>用途</strong>: 相場の把握。</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-6 col-lg-4">
+                    <div class="feature-card h-100" data-bs-toggle="modal" data-bs-target="#currentPriceModal">
+                        <img src="{% static 'jpg/yahuoku.jpg' %}" alt="現在価格検索スクリーンショット">
+                        <div class="card-body">
+                            <h3>現在価格検索</h3>
+                            <ul>
+                                <li><strong>概要</strong>: 現在出品中の商品データを取得。</li>
+                                <li><strong>特徴</strong>: 現在出品されている商品の金額・入札数確認。</li>
+                                <li><strong>用途</strong>: 市場価格の把握。</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-6 col-lg-4">
+                    <div class="feature-card h-100" data-bs-toggle="modal" data-bs-target="#rescanModal">
+                        <img src="{% static 'jpg/yahuoku.jpg' %}" alt="相場再検索スクリーンショット">
+                        <div class="card-body">
+                            <h3>過去データ参照</h3>
+                            <ul>
+                                <li><strong>概要</strong>: 過去に検索した相場データを再検索。</li>
+                                <li><strong>機能</strong>: データを再検索するだけでなく、更新や削除も行えます。</li>
+                                <li><strong>用途</strong>: 過去のデータの閲覧、更新</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-6 col-lg-4">
+                    <div class="feature-card h-100" data-bs-toggle="modal" data-bs-target="#analysisModal">
+                        <img src="{% static 'jpg/yahuoku.jpg' %}" alt="相場分析スクリーンショット">
+                        <div class="card-body">
+                            <h3>価格分析</h3>
+                            <ul>
+                                <li><strong>概要</strong>: 過去に検索した相場のデータを分析します。</li>
+                                <li><strong>機能</strong>: ワードクラウドの作成、棒グラフによる価格帯の視覚化</li>
+                                <li><strong>用途</strong>: 市場トレンドを視覚的に把握できるようにする。</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-6 col-lg-4">
+                    <div class="feature-card h-100" data-bs-toggle="modal" data-bs-target="#marketAnalysisModal">
+                        <img src="{% static 'jpg/yahuoku.jpg' %}" alt="市場分析スクリーンショット">
+                        <div class="card-body">
+                            <h3>ターゲット分析</h3>
+                            <ul>
+                                <li><strong>概要</strong>: 現在売られている商品の中から目玉商品をピックアップ。</li>
+                                <li><strong>機能</strong>: 相場との比較、お買い得商品のピックアップ。</li>
+                                <li><strong>用途</strong>: 競争優位性の確保。</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-6 col-lg-4">
+                    <div class="feature-card h-100" data-bs-toggle="modal" data-bs-target="#predictionModal">
+                        <img src="{% static 'jpg/yahuoku.jpg' %}" alt="相場予想スクリーンショット">
+                        <div class="card-body">
+                            <h3>相場予想</h3>
+                            <ul>
+                                <li><strong>概要</strong>: 過去データを参考に購入すべき金額を算出。</li>
+                                <li><strong>機能</strong>: 折れ線グラフで価格の推移を可視化、将来的な価格帯の予想。</li>
+                                <li><strong>用途</strong>: 落札価格の推計、出品時の落札価格の見込みを立てる。</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="license-section">
+        <div class="container">
+            <h2>連絡先</h2>
+            <p>ご質問やフィードバックは <a href="mailto:agtmpdd992@gmail.com">agtmpdd992@gmail.com</a> までお寄せください。</p>
+        </div>
+    </section>
+    <div class="modal fade" id="marketSearchModal" tabindex="-1" aria-labelledby="marketSearchModalLabel"
+        aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="marketSearchModalLabel">相場検索 詳細</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <p>過去180日間の落札データを取得し、落札金額や入札数でフィルタリングが可能です。購入や出品戦略を立てる際に役立ちます。</p>
+                    <img src="{% static 'jpg/souba.jpg' %}" alt="相場検索詳細">
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-custom" data-bs-dismiss="modal">閉じる</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade" id="currentPriceModal" tabindex="-1" aria-labelledby="currentPriceModalLabel"
+        aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="currentPriceModalLabel">現在価格検索 詳細</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <p>相場検索と同様のフィルタリングができます。条件に合わせてお使いください。</p>
+                    <img src="{% static 'jpg/yahuoku.jpg' %}" alt="現在価格検索詳細">
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-custom" data-bs-dismiss="modal">閉じる</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade" id="rescanModal" tabindex="-1" aria-labelledby="rescanModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="rescanModalLabel">過去データ参照 詳細</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <p>過去に検索したワードから検索時の情報が確認できます。最新の情報に更新、削除も行えます。</p>
+                    <img src="{% static 'jpg/yahuoku.jpg' %}" alt="相場再検索詳細">
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-custom" data-bs-dismiss="modal">閉じる</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade" id="analysisModal" tabindex="-1" aria-labelledby="analysisModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="analysisModalLabel">価格分析 詳細</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <p>売れ筋商品をワードクラウドや棒グラフで視覚化し、市場トレンドを視覚化、出品の際に役に立ちます。</p>
+                    <img src="{% static 'jpg/yahuoku.jpg' %}" alt="相場分析詳細">
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-custom" data-bs-dismiss="modal">閉じる</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade" id="marketAnalysisModal" tabindex="-1" aria-labelledby="marketAnalysisModalLabel"
+        aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="marketAnalysisModalLabel">ターゲット分析 詳細</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <p>相場のデータと現在出品されている商品の価格を比較して今注目の商品をピックアップします。</p>
+                    <img src="{% static 'jpg/yahuoku.jpg' %}" alt="市場分析詳細">
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-custom" data-bs-dismiss="modal">閉じる</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade" id="predictionModal" tabindex="-1" aria-labelledby="predictionModalLabel"
+        aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="predictionModalLabel">相場予想 詳細</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <p>過去データを基に今後の価格を出品、落札の際の目安を数字とグラフで分かりやすく表示。</p>
+                    <img src="{% static 'jpg/yahuoku.jpg' %}" alt="相場予想詳細">
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-custom" data-bs-dismiss="modal">閉じる</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {% include 'footer.html' %}
+    <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.9.2/dist/umd/popper.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+
+</html>

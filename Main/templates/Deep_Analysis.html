@@ -13,13 +13,24 @@
 </head>
 <style>
     body {
-        background-color: rgb(205, 69, 69);
         font-family: 'Roboto', sans-serif;
+        background: linear-gradient(135deg, #ffffff, #f9f9f9);
+        color: #333;
+        min-height: 100vh;
     }
 
-    .jumbotron {
-        background-color: #e6e6e6;
-        padding: 2rem 1rem;
+    .hero-section {
+        background: linear-gradient(135deg, #ff4d4d, #ff8c8c);
+        color: #fff;
+        padding: 5rem 1rem;
+        text-align: center;
+        margin-bottom: 2rem;
+    }
+
+    .hero-section h1 {
+        font-size: 3rem;
+        font-weight: 700;
+        margin-bottom: 1rem;
     }
 
     .search-day {
@@ -111,17 +122,17 @@
 <body>
     {% include 'header.html' %}
     <main role="main">
-        <section class="jumbotron text-center">
+        <section class="hero-section">
             <div class="container">
-                <h1 class="jumbotron-heading">ヤフオク情報分析</h1>
-                <p class="lead text-muted">取得したデータからより深い分析を行います</p>
+                <h1>ヤフオク情報分析</h1>
+                <p class="lead">取得したデータからより深い分析を行います</p>
             </div>
         </section>
         <div class="container search-container">
             <div class="form-group mt-4 d-flex gap-2 align-items-center">
                 <h3>関連項目</h3>
-                <a href="{% url 'yahuoku' %}" class="btn btn-light">相場検索</a>
-                <a href="{% url 'yahuoku_history' %}" class="btn btn-light">過去データ参照</a>
+                <a href="{% url 'yahuoku' %}" class="btn btn-danger">相場検索</a>
+                <a href="{% url 'yahuoku_history' %}" class="btn btn-danger">過去データ参照</a>
             </div>
             <h2>過去の検索ワード</h2>
             <div class="form-group">

@@ -11,13 +11,24 @@
     <title>情報分析ツール システマ</title>
     <style>
         body {
-            background-color: rgb(205, 69, 69);
             font-family: 'Roboto', sans-serif;
+            background: linear-gradient(135deg, #ffffff, #f9f9f9);
+            color: #333;
+            min-height: 100vh;
         }
 
-        .jumbotron {
-            background-color: #e6e6e6;
-            padding: 2rem 1rem;
+        .hero-section {
+            background: linear-gradient(135deg, #ff4d4d, #ff8c8c);
+            color: #fff;
+            padding: 5rem 1rem;
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+
+        .hero-section h1 {
+            font-size: 3rem;
+            font-weight: 700;
+            margin-bottom: 1rem;
         }
 
         .pagination .page-item .page-link {
@@ -77,18 +88,17 @@
 <body>
     {% include 'header.html' %}
     <main role="main">
-
-        <section class="text-center jumbotron">
+        <section class="hero-section">
             <div class="container">
-                <h1 class="jumbotron-heading">現在価格検索</h1>
-                <p class="lead text-muted">現在行われているオークションの情報をリアルタイムで取得します。</p>
+                <h1>現在価格検索</h1>
+                <p class="lead">現在行われているオークションの情報をリアルタイムで取得します。</p>
             </div>
         </section>
         <div class="container search-container">
             <div class="form-group mt-4 d-flex gap-2 align-items-center">
                 <h3>関連項目</h3>
-                <a href="{% url 'Deep_Analysis_now' %}" class="btn btn-light">ターゲット分析</a>
-                <a href="{% url 'Yahuoku_prediction' %}" class="btn btn-light">相場予想</a>
+                <a href="{% url 'Deep_Analysis_now' %}" class="btn btn-danger">ターゲット分析</a>
+                <a href="{% url 'Yahuoku_prediction' %}" class="btn btn-danger">相場予想</a>
             </div>
             <h2>キーワードの行間を開けると詳細に検索できます</h2>
             <div class="row justify-content-center search-button">

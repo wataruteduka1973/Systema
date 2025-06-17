@@ -13,14 +13,24 @@
 </head>
 <style>
     body {
-        background-color: rgb(205, 69, 69);
         font-family: 'Roboto', sans-serif;
+        background: linear-gradient(135deg, #ffffff, #f9f9f9);
+        color: #333;
+        min-height: 100vh;
     }
 
+    .hero-section {
+        background: linear-gradient(135deg, #ff4d4d, #ff8c8c);
+        color: #fff;
+        padding: 5rem 1rem;
+        text-align: center;
+        margin-bottom: 2rem;
+    }
 
-    .jumbotron {
-        background-color: #e6e6e6;
-        padding: 2rem 1rem;
+    .hero-section h1 {
+        font-size: 3rem;
+        font-weight: 700;
+        margin-bottom: 1rem;
     }
 
     .btn-custom {
@@ -69,18 +79,18 @@
 <body>
     {% include 'header.html' %}
     <main role="main">
-        <section class="jumbotron text-center">
+        <section class="hero-section">
             <div class="container">
-                <h1 class="jumbotron-heading">ターゲット分析</h1>
-                <p class="lead text-muted">出品中の商品を統計的に分析して狙い目の商品をピックアップして表示します</p>
+                <h1>ターゲット分析</h1>
+                <p class="lead">出品中の商品を統計的に分析して狙い目の商品をピックアップして表示します</p>
             </div>
         </section>
         <div class="container search-container">
             <div class="form-group mt-4 d-flex gap-2 align-items-center">
                 <h3>関連項目</h3>
-                <a href="{% url 'yahuoku_now' %}" class="btn btn-light">相場検索</a>
-                <a href="{% url 'yahuoku_now' %}" class="btn btn-light">現在価格検索</a>
-                <a href="{% url 'Yahuoku_prediction' %}" class="btn btn-light">相場予想</a>
+                <a href="{% url 'yahuoku_now' %}" class="btn btn-danger">相場検索</a>
+                <a href="{% url 'yahuoku_now' %}" class="btn btn-danger">現在価格検索</a>
+                <a href="{% url 'Yahuoku_prediction' %}" class="btn btn-danger">相場予想</a>
             </div>
             <div class="row justify-content-center search-button">
                 <h2>キーワードの行間を開けると詳細に検索できます</h2>
