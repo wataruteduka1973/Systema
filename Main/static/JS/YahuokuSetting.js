@@ -180,6 +180,17 @@ document.addEventListener('DOMContentLoaded', function () {
             updateSortIcon(this);
         });
     });
+
+    const searchInput = document.getElementById('search');
+
+    // Enterキーで検索
+    searchInput.addEventListener('keydown', function (e) {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            performSearch();
+        }
+    });
+
 });
 
 function updateSortIcon(button) {
@@ -261,3 +272,4 @@ function validateAndFilterData() {
     }
     filterData();
 }
+

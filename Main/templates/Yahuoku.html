@@ -31,6 +31,86 @@
             margin-bottom: 1rem;
         }
 
+        .search-bar {
+            max-width: 500px;
+            margin: 0 auto 2rem auto;
+            display: flex;
+            gap: 0.5rem;
+        }
+
+        .search-bar input[type="text"] {
+            flex: 1;
+            border-radius: 25px;
+            border: 1px solid #ddd;
+            padding: 0.75rem 1.5rem;
+            font-size: 1.1rem;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.03);
+            transition: border 0.2s;
+        }
+
+        .search-bar input[type="text"]:focus {
+            border: 1.5px solid #ff4d4d;
+            outline: none;
+        }
+
+        .search-bar button {
+            background: #ff4d4d;
+            color: #fff;
+            border: none;
+            border-radius: 25px;
+            padding: 0.75rem 2rem;
+            font-weight: 600;
+            font-size: 1.1rem;
+            transition: background 0.3s;
+            box-shadow: 0 2px 8px rgba(255, 77, 77, 0.15);
+        }
+
+        .search-bar button:hover {
+            background: #ff8c8c;
+        }
+
+        .result-table {
+            background: #fff;
+            border-radius: 18px;
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+            overflow: hidden;
+            margin-bottom: 2rem;
+        }
+
+        .result-table th,
+        .result-table td {
+            padding: 1rem 1.2rem;
+            text-align: center;
+            border-bottom: 1px solid #f0f0f0;
+            vertical-align: middle;
+        }
+
+        .result-table th {
+            background: #f9f9f9;
+            font-weight: 600;
+            color: #ff4d4d;
+            font-size: 1.05rem;
+            border-bottom: 2px solid #ff8c8c;
+        }
+
+        .result-table tr:last-child td {
+            border-bottom: none;
+        }
+
+        .median-price {
+            background: linear-gradient(135deg, #ff8c8c 60%, #fff 100%);
+            color: #fff;
+            font-weight: 700;
+            border-radius: 18px;
+            box-shadow: 0 4px 16px rgba(255, 77, 77, 0.15);
+            padding: 1.5rem 0;
+            margin: 2rem auto 2rem auto;
+            max-width: 340px;
+            font-size: 2rem;
+            letter-spacing: 0.05em;
+            text-shadow: 0 2px 8px rgba(255, 77, 77, 0.10);
+        }
+
         .pagination .page-item .page-link {
             color: #000000;
         }

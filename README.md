@@ -1,6 +1,6 @@
 # 情報分析ツール システマ
 
-![Version](https://img.shields.io/badge/Version-1.0.0-blue) ![Build](https://img.shields.io/badge/Build-Passing-green) !
+![Version](https://img.shields.io/badge/Version-1.0.0-blue) ![Build](https://img.shields.io/badge/Build-Passing-green)
 
 このツールは、ヤフオクの**購入**や**出品**に関する商品の価格や傾向を分析し、ユーザーに最適な意思決定をサポートします。相場データや現在出品中の商品を活用し、市場動向を可視化します。
 

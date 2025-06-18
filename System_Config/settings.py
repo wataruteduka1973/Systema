@@ -148,7 +148,7 @@ LOGGING = {
             'filename': str(BASE_DIR / 'logs/error.log'),
             'formatter': 'verbose',
         },
-        'server_file': {  # 新しいハンドラを追加
+        'server_file': {
             'level': 'INFO',
             'class': 'logging.FileHandler',
             'filename': str(BASE_DIR / 'logs/server.log'),
@@ -176,8 +176,8 @@ LOGGING = {
             'level': 'INFO',
             'propagate': False,
         },
-        'server_logger': {  # 新しいロガーを追加
-            'handlers': ['server_file', 'console'],  # server.logとコンソールに出力
+        'server_logger': {
+            'handlers': ['server_file', 'console'],
             'level': 'INFO',
             'propagate': False,
         },

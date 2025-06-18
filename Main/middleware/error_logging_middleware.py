@@ -1,6 +1,5 @@
 import logging
 import traceback
-from django.http import HttpResponseServerError
 from ..models.errorlog import ErrorLog
 
 
@@ -58,5 +57,4 @@ class ErrorLoggingMiddleware:
             file_path=file_path,
             line_number=line_number
         )
-
-        return HttpResponseServerError("An error occurred. Check the admin panel for details.")
+        return None

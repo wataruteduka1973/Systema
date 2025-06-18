@@ -1,18 +1,29 @@
 from django.shortcuts import render
-from django.http import HttpResponseNotFound, HttpResponseServerError, HttpResponseBadRequest
+
+
+def custom_error(request, exception=None, status=500):
+    """
+    すべてのエラーで共通のエラーページを表示
+    """
+    # status_codeのみをテンプレートに渡す（メッセージはテンプレート側で分岐）
+    context = {
+        "status_code": status,
+        "message": None,  # messageはテンプレートで自動分岐
+    }
+    return render(request, "errors.html", context=context, status=status)
 
 
 def custom_404(request, exception):
-    return render(request, '404.html', status=404)
+    return custom_error(request, exception, status=404)
 
 
 def custom_500(request):
-    return render(request, '500.html', status=500)
+    return custom_error(request, status=500)
 
 
 def custom_400(request, exception):
-    return render(request, '400.html', status=400)
+    return custom_error(request, exception, status=400)
 
 
-def custom_415(request):
-    return render(request, '415.html', status=415)
+def custom_403(request, exception):
+    return custom_error(request, exception, status=403)
