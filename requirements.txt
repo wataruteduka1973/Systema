@@ -8,3 +8,4 @@ autopep8==2.3.2
 pytest==8.4.0
 pytest-django==4.11.1
 pytest-html==4.1.1
+whitenoise==6.9.0

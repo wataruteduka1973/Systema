@@ -136,6 +136,7 @@ LOGGING = {
             'class': 'logging.FileHandler',
             'filename': str(BASE_DIR / 'logs/search.log'),
             'formatter': 'verbose',
+            'encoding': 'utf-8',
         },
         'console': {
             'level': 'INFO',
