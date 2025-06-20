@@ -18,6 +18,7 @@ from Main.views.api import (
     delete_market_data,
     complex_market_data,
     prediction_market,
+    get_popular_words,
 )
 
 urlpatterns = [
@@ -37,4 +38,5 @@ urlpatterns = [
     path('delete_market_data', delete_market_data, name='delete_market_data'),
     path('complex_market_data', complex_market_data, name='complex_market_data'),
     path('prediction_market', prediction_market, name='prediction_market'),
+    path('get_popular_words', get_popular_words, name='get_popular_words'),
 ]

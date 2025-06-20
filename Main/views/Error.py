@@ -5,10 +5,10 @@ def custom_error(request, exception=None, status=500):
     """
     すべてのエラーで共通のエラーページを表示
     """
-    # status_codeのみをテンプレートに渡す（メッセージはテンプレート側で分岐）
+
     context = {
         "status_code": status,
-        "message": None,  # messageはテンプレートで自動分岐
+        "message": None,
     }
     return render(request, "errors.html", context=context, status=status)
 

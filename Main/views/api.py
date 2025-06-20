@@ -1,5 +1,7 @@
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
+from django.db.models import Count
+from Main.models import searchwordlog
 
 import logging
 
@@ -100,3 +102,15 @@ def prediction_market(request):
     過去90日間の価格推移を分析し、異常値を排除した90日移動平均と1ヶ月予測を返す。
     """
     return prediction_market_logic(request)
+
+
+def get_popular_words(request):
+    """
+    使用頻度の高い検索ワードを返すAPI
+    """
+    top_n = int(request.GET.get('top', 10))
+    words = (searchwordlog.objects
+             .values('word')
+             .annotate(count=Count('word'))
+             .order_by('-count')[:top_n])
+    return JsonResponse({'words': [w['word'] for w in words]})

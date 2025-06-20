@@ -4,9 +4,11 @@ import requests
 import re
 import logging
 from datetime import datetime, timedelta
+
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from Main.models.scraping import scraping
+from Main.models.searchwordlog import searchwordlog
 import numpy as np
 from sklearn.cluster import KMeans
 
@@ -26,7 +28,8 @@ def scrape_data(searchname):
     scraped_data_list = []
     headers = {
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'}
-
+    if searchname:
+        searchwordlog.objects.create(word=searchname)
     for url in urls:
         try:
             response = requests.get(url, headers=headers, timeout=10)
