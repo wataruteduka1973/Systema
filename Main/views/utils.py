@@ -1,16 +1,17 @@
-from bs4 import BeautifulSoup
+from Main.models.scraping import scraping
+from Main.models.searchwordlog import searchwordlog
 
 import requests
 import re
 import logging
 from datetime import datetime, timedelta
+from collections import Counter
 
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
-from Main.models.scraping import scraping
-from Main.models.searchwordlog import searchwordlog
 import numpy as np
 from sklearn.cluster import KMeans
+from bs4 import BeautifulSoup
 
 logger = logging.getLogger('search_logger')
 
@@ -112,7 +113,8 @@ def scrape_current_listings(searchname):
         f'{base_url}?auccat=&tab_ex=commerce&aq=-&p={searchname}&f=0:1&b=1&n=100',
         f'{base_url}?auccat=&tab_ex=commerce&aq=-&p={searchname}&f=0:1&b=101&n=100'
     ]
-
+    if searchname:
+        searchwordlog.objects.create(word=searchname)
     scraped_data_list = []
     headers = {
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
@@ -443,4 +445,28 @@ def prediction_market_logic(request):
 
     except Exception as e:
         logger.error(f"Error in prediction_market: {str(e)}")
+        return JsonResponse({'error': str(e)}, status=500)
+
+
+def get_popular_words_logic(request):
+    """
+    人気のある検索ワードを取得する。
+    """
+    if request.method != 'GET':
+        return JsonResponse({'error': 'Invalid request method'}, status=400)
+
+    try:
+        top_n = int(request.GET.get('top', 10))
+        # 全検索ワード履歴を取得
+        all_words = searchwordlog.objects.values_list('word', flat=True)
+        tokens = []
+        for phrase in all_words:
+            if phrase:
+                tokens.extend(re.split(r'[\u3000\s]+', phrase.strip()))
+        tokens = [t for t in tokens if t]
+        counter = Counter(tokens)
+        most_common = [w for w, _ in counter.most_common(top_n)]
+        return JsonResponse({'words': most_common})
+
+    except Exception as e:
         return JsonResponse({'error': str(e)}, status=500)

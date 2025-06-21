@@ -1,7 +1,6 @@
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
-from django.db.models import Count
-from Main.models import searchwordlog
+
 
 import logging
 
@@ -15,12 +14,16 @@ from .utils import (
     delete_market_data_logic,
     complex_market_data_logic,
     prediction_market_logic,
+    get_popular_words_logic,
 )
 
 logger = logging.getLogger('search_logger')
 
 
 def handle_search_response(request, data_fetch_func, save_func=None):
+    """
+    共通の検索処理を行うヘルパー関数。
+    """
     logger.info("Logger initialized")
     if request.method != 'GET':
         logger.warning("Invalid request method received")
@@ -106,11 +109,6 @@ def prediction_market(request):
 
 def get_popular_words(request):
     """
-    使用頻度の高い検索ワードを返すAPI
+    使用頻度の高い検索ワードを返す
     """
-    top_n = int(request.GET.get('top', 10))
-    words = (searchwordlog.objects
-             .values('word')
-             .annotate(count=Count('word'))
-             .order_by('-count')[:top_n])
-    return JsonResponse({'words': [w['word'] for w in words]})
+    return get_popular_words_logic(request)

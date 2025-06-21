@@ -116,20 +116,36 @@
         .modal-content {
             border-radius: 15px;
             box-shadow: 0 8px 20px rgba(0, 0, 0, 0.2);
+            max-width: 1100px;
+            margin: auto;
         }
 
-        .modal-header {
-            background: #ff4d4d;
-            color: #fff;
-            border-radius: 15px 15px 0 0;
+        .modal-dialog.modal-lg {
+            max-width: 1100px;
         }
 
         .modal-body img {
             width: 100%;
-            border-radius: 10px;
+            height: auto;
+            max-width: 900px;
+            max-height: 600px;
+            display: block;
+            margin: 0 auto;
+        }
+
+        @media (max-width: 1200px) {
+
+            .modal-content,
+            .modal-dialog.modal-lg {
+                max-width: 98vw;
+            }
+
+            .modal-body img {
+                max-width: 95vw;
+                max-height: 60vw;
+            }
         }
     </style>
-</head>
 </head>
 
 <body>
@@ -147,7 +163,7 @@
             <div class="row g-4">
                 <div class="col-md-6 col-lg-4">
                     <div class="feature-card h-100" data-bs-toggle="modal" data-bs-target="#marketSearchModal">
-                        <img src="{% static 'jpg/yahuoku.jpg' %}" alt="相場検索スクリーンショット">
+                        <img src="{% static 'jpg/yahuoku_screen.jpg' %}" alt="相場検索スクリーンショット">
                         <div class="card-body">
                             <h3>相場検索</h3>
                             <ul>
@@ -160,7 +176,7 @@
                 </div>
                 <div class="col-md-6 col-lg-4">
                     <div class="feature-card h-100" data-bs-toggle="modal" data-bs-target="#currentPriceModal">
-                        <img src="{% static 'jpg/yahuoku.jpg' %}" alt="現在価格検索スクリーンショット">
+                        <img src="{% static 'jpg/yahuoku_now_screen.jpg' %}" alt="現在価格検索スクリーンショット">
                         <div class="card-body">
                             <h3>現在価格検索</h3>
                             <ul>
@@ -173,7 +189,7 @@
                 </div>
                 <div class="col-md-6 col-lg-4">
                     <div class="feature-card h-100" data-bs-toggle="modal" data-bs-target="#rescanModal">
-                        <img src="{% static 'jpg/yahuoku.jpg' %}" alt="相場再検索スクリーンショット">
+                        <img src="{% static 'jpg/yahuoku_history_screen.jpg' %}" alt="相場再検索スクリーンショット">
                         <div class="card-body">
                             <h3>過去データ参照</h3>
                             <ul>
@@ -243,7 +259,7 @@
                 </div>
                 <div class="modal-body">
                     <p>過去180日間の落札データを取得し、落札金額や入札数でフィルタリングが可能です。購入や出品戦略を立てる際に役立ちます。</p>
-                    <img src="{% static 'jpg/souba.jpg' %}" alt="相場検索詳細">
+                    <img src="{% static 'jpg/yahuoku_screen.jpg' %}" alt="相場検索詳細">
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-custom" data-bs-dismiss="modal">閉じる</button>
@@ -262,7 +278,7 @@
                 </div>
                 <div class="modal-body">
                     <p>相場検索と同様のフィルタリングができます。条件に合わせてお使いください。</p>
-                    <img src="{% static 'jpg/yahuoku.jpg' %}" alt="現在価格検索詳細">
+                    <img src="{% static 'jpg/yahuoku_now_screen.jpg' %}" alt="現在価格検索詳細">
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-custom" data-bs-dismiss="modal">閉じる</button>
@@ -280,7 +296,7 @@
                 </div>
                 <div class="modal-body">
                     <p>過去に検索したワードから検索時の情報が確認できます。最新の情報に更新、削除も行えます。</p>
-                    <img src="{% static 'jpg/yahuoku.jpg' %}" alt="相場再検索詳細">
+                    <img src="{% static 'jpg/yahuoku_history_screen.jpg' %}" alt="相場再検索詳細">
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-custom" data-bs-dismiss="modal">閉じる</button>
