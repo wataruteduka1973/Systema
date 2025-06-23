@@ -4,7 +4,7 @@ let sortKey = null;
 let sortOrder = null;
 let marketData = [];
 let filteredData = [...marketData];
-
+//ソートした際のアイコン表示
 document.addEventListener('DOMContentLoaded', function () {
     const sortButtons = document.querySelectorAll('.sort-btn');
     sortButtons.forEach(button => {
@@ -19,7 +19,8 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     });
 });
-
+// ページ読み込み時にソートアイコンを初期化
+// ボタンのクリックイベントを設定
 document.addEventListener('DOMContentLoaded', () => {
     refreshSearchWordDropdown();
 
@@ -104,13 +105,13 @@ document.addEventListener('DOMContentLoaded', () => {
             .catch(error => alert('削除に失敗しました: ' + error));
     });
 });
-
+// ページ読み込み時にテーブルを初期化
 function paginateData(data) {
     const start = (currentPage - 1) * ITEMS_PER_PAGE;
     const end = start + ITEMS_PER_PAGE;
     return data.slice(start, end);
 }
-
+// 中央値を計算する関数
 function calculateMedian(numbers) {
     const sorted = numbers.slice().sort((a, b) => a - b);
     const middle = Math.floor(sorted.length / 2);
@@ -121,7 +122,7 @@ function calculateMedian(numbers) {
 
     return sorted[middle];
 }
-
+// テーブルとページネーションを更新する関数
 function updatePagination() {
     const totalPages = Math.ceil(marketData.length / ITEMS_PER_PAGE);
     const pagination = document.createElement('nav');
@@ -145,7 +146,7 @@ function updatePagination() {
     if (existingPagination) existingPagination.remove();
     container.appendChild(pagination);
 }
-
+// ページを変更する関数
 function changePage(page) {
     currentPage = page;
     if (currentPage < 1) currentPage = 1;
@@ -154,7 +155,7 @@ function changePage(page) {
     updateTable(paginateData(filteredData));
     updatePagination();
 }
-
+// テーブルを更新する関数
 function updateTable(data) {
     const tableBody = document.getElementById("dataTable").getElementsByTagName("tbody")[0];
     tableBody.innerHTML = "";
@@ -176,14 +177,14 @@ function updateTable(data) {
 
         const productURLCell = row.insertCell(4);
         const link = document.createElement("a");
-        link.href = item.url;
+        link.href = item.URL || "#";
         link.textContent = "商品リンクURL";
         link.target = "_blank"
         productURLCell.appendChild(link);
     });
 }
 
-
+// ソート機能を実装する関数
 function sortData(key, order) {
     sortKey = key;
     sortOrder = order;
@@ -199,7 +200,7 @@ function sortData(key, order) {
     updatePagination();
 
 }
-
+// ソートアイコンを更新する関数
 function updateSortIcon(button) {
     const svg = button.querySelector('svg');
     if (button.dataset.order === 'asc') {
@@ -212,7 +213,7 @@ function updateSortIcon(button) {
         `;
     }
 }
-
+// フィルタリング機能に関する関数
 function filterData() {
     const minPriceInput = document.getElementById('minPrice').value;
     const maxPriceInput = document.getElementById('maxPrice').value;
@@ -255,7 +256,7 @@ function filterData() {
     updateTable(paginateData(filteredData));
     updatePagination();
 }
-
+// フィルタリングのためのイベントリスナーを設定
 function clearFilters() {
     document.getElementById('minPrice').value = '0';
     document.getElementById('maxPrice').value = '';
@@ -264,7 +265,7 @@ function clearFilters() {
     updateTable(paginateData(filteredData));
     updatePagination();
 }
-
+// 価格フィルタリングのためのイベントリスナーを設定
 function validateAndFilterData() {
     const minPrice = parseInt(document.getElementById('minPrice').value, 10);
     const maxPrice = parseInt(document.getElementById('maxPrice').value, 10);
@@ -279,7 +280,7 @@ function validateAndFilterData() {
     }
     filterData();
 }
-
+// 検索ワードのドロップダウンを更新する関数
 function refreshSearchWordDropdown(selectedValue = "") {
     fetch('/taskle/get_search_words')
         .then(response => response.json())

@@ -5,6 +5,57 @@ let filteredData = [...currentData];
 let sortKey = null;
 let sortOrder = null;
 
+// 初期データの取得とテーブルの初期化
+document.addEventListener('DOMContentLoaded', function () {
+    const sortButtons = document.querySelectorAll('.sort-btn');
+    sortButtons.forEach(button => {
+        button.addEventListener('click', function () {
+            const key = this.dataset.sort;
+            const order = this.dataset.order;
+
+            sortData(key, order);
+
+            this.dataset.order = order === 'asc' ? 'desc' : 'asc';
+            updateSortIcon(this);
+        });
+    });
+
+    const searchInput = document.getElementById('search');
+
+    // Enterキーで検索
+    searchInput.addEventListener('keydown', function (e) {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            performSearch();
+        }
+    });
+
+    // 人気ワード取得・ボタン生成
+    fetch('/taskle/get_popular_words?top=10')
+        .then(res => res.json())
+        .then(data => {
+            const area = document.getElementById('popularWordsBtnGroup');
+            area.innerHTML = '';
+            (data.words || []).forEach(word => {
+                const btn = document.createElement('button');
+                btn.type = 'button';
+                btn.className = 'btn btn-outline-danger btn-sm';
+                btn.textContent = word;
+                btn.onclick = function () {
+                    const searchInput = document.getElementById('search');
+                    if (searchInput.value) {
+                        searchInput.value += ' ' + word;
+                    } else {
+                        searchInput.value = word;
+                    }
+                    searchInput.focus();
+                };
+                area.appendChild(btn);
+            });
+
+        });
+});
+// 検索ボタンのクリックイベントを設定
 function performSearch() {
     const searchKeyword = document.getElementById("search").value.trim();
     if (!searchKeyword) {
@@ -71,13 +122,13 @@ function performSearch() {
         });
 }
 
-
+// ページネーションのためのデータを取得
 function paginateData(data) {
     const start = (currentPage - 1) * ITEMS_PER_PAGE;
     const end = start + ITEMS_PER_PAGE;
     return data.slice(start, end);
 }
-
+// ページネーションの更新
 function updatePagination() {
     const totalPages = Math.ceil(currentData.length / ITEMS_PER_PAGE);
     const pagination = document.createElement('nav');
@@ -101,7 +152,7 @@ function updatePagination() {
     if (existingPagination) existingPagination.remove();
     container.appendChild(pagination);
 }
-
+// ページ変更の処理
 function changePage(page) {
     currentPage = page;
     if (currentPage < 1) currentPage = 1;
@@ -110,7 +161,7 @@ function changePage(page) {
     updateTable(paginateData(filteredData));
     updatePagination();
 }
-
+// 終了価格の中央値を計算
 function calculateMedian(numbers) {
     const sorted = numbers.slice().sort((a, b) => a - b);
     const middle = Math.floor(sorted.length / 2);
@@ -121,7 +172,7 @@ function calculateMedian(numbers) {
 
     return sorted[middle];
 }
-
+// テーブルの更新
 function updateTable(data) {
     const tableBody = document.getElementById("dataTable").getElementsByTagName("tbody")[0];
     tableBody.innerHTML = "";
@@ -139,9 +190,12 @@ function updateTable(data) {
         startPriceCell.textContent = item.startPrice.toLocaleString();
 
         const biddingCell = row.insertCell(3);
-        biddingCell.textContent = item.bidding;
+        biddingCell.textContent = item.time;
 
-        const productURLCell = row.insertCell(4);
+        const timeCell = row.insertCell(4);
+        timeCell.textContent = item.bidding;
+
+        const productURLCell = row.insertCell(5);
         const link = document.createElement("a");
         link.href = item.url;
         link.textContent = "商品リンクURL";
@@ -150,7 +204,7 @@ function updateTable(data) {
     });
 }
 
-
+// ソート機能
 function sortData(key, order) {
     sortKey = key;
     sortOrder = order;
@@ -167,21 +221,7 @@ function sortData(key, order) {
 
 }
 
-document.addEventListener('DOMContentLoaded', function () {
-    const sortButtons = document.querySelectorAll('.sort-btn');
-    sortButtons.forEach(button => {
-        button.addEventListener('click', function () {
-            const key = this.dataset.sort;
-            const order = this.dataset.order;
-
-            sortData(key, order);
-
-            this.dataset.order = order === 'asc' ? 'desc' : 'asc';
-            updateSortIcon(this);
-        });
-    });
-});
-
+// ソートアイコンの更新
 function updateSortIcon(button) {
     const svg = button.querySelector('svg');
     if (button.dataset.order === 'asc') {
@@ -194,7 +234,7 @@ function updateSortIcon(button) {
         `;
     }
 }
-
+// フィルタリング機能
 function filterData() {
     const minPriceInput = document.getElementById('minPrice').value;
     const maxPriceInput = document.getElementById('maxPrice').value;
@@ -237,7 +277,7 @@ function filterData() {
     updateTable(paginateData(filteredData));
     updatePagination();
 }
-
+// フィルタリングのためのイベントリスナーを設定
 function clearFilters() {
     document.getElementById('minPrice').value = '0';
     document.getElementById('maxPrice').value = '';
@@ -246,7 +286,7 @@ function clearFilters() {
     updateTable(paginateData(filteredData));
     updatePagination();
 }
-
+// 価格フィルタリングのためのイベントリスナーを設定
 function validateAndFilterData() {
     const minPrice = parseInt(document.getElementById('minPrice').value, 10);
     const maxPrice = parseInt(document.getElementById('maxPrice').value, 10);
@@ -261,3 +301,4 @@ function validateAndFilterData() {
     }
     filterData();
 }
+

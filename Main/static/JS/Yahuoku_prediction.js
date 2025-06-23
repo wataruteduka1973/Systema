@@ -35,6 +35,21 @@ function Prediction_Search() {
                 return;
             }
 
+            // データが少ない場合の警告
+            if (!currentData.price_trends || currentData.price_trends.length < 10) {
+                showPredictionWarning("データが少なく情報の偏りがある可能性があります。");
+            } else {
+                showPredictionWarning(""); // 警告を消す
+            }
+
+            // 中央値から40%以上乖離しているデータを除外
+            const prices = currentData.price_trends.map(item => item.price).filter(v => typeof v === "number" && !isNaN(v));
+            const median = calculateMedian(prices);
+            currentData.price_trends = currentData.price_trends.filter(item => {
+                if (typeof item.price !== "number" || isNaN(item.price)) return false;
+                return Math.abs(item.price - median) / median <= 0.4;
+            });
+
             // 日付順にソート
             currentData.price_trends.sort((a, b) => {
                 const dateA = new Date(`${new Date().getFullYear()}-${a.date.split('/')[0]}-${a.date.split('/')[1].split(' ')[0]} ${a.date.split(' ')[1]}`);
@@ -55,10 +70,38 @@ function Prediction_Search() {
         });
 }
 
+// 警告表示用
+function showPredictionWarning(msg) {
+    let warn = document.getElementById('prediction-warning');
+    if (!warn) {
+        warn = document.createElement('div');
+        warn.id = 'prediction-warning';
+        warn.className = 'alert alert-warning mt-2';
+        const chartContainer = document.querySelector('.chart-container');
+        if (chartContainer) {
+            chartContainer.parentNode.insertBefore(warn, chartContainer);
+        } else {
+            document.body.insertBefore(warn, document.body.firstChild);
+        }
+    }
+    warn.style.display = msg ? 'block' : 'none';
+    warn.textContent = msg;
+}
+
+// 中央値計算
+function calculateMedian(arr) {
+    if (!arr.length) return 0;
+    const sorted = arr.slice().sort((a, b) => a - b);
+    const mid = Math.floor(sorted.length / 2);
+    return sorted.length % 2 !== 0
+        ? sorted[mid]
+        : (sorted[mid - 1] + sorted[mid]) / 2;
+}
+
 function updatePredictionChart() {
     if (!window.Chart) return;
 
-    const labels = currentData.price_trends.map(item => item.date.split(' ')[0]); // 日付のみ
+    const labels = currentData.price_trends.map(item => item.date.split(' ')[0]);
     const prices = currentData.price_trends.map(item => item.price);
     const movingAverages = currentData.price_trends.map(item => item.moving_avg);
     const predictedPrice = currentData.predicted_price || 0;

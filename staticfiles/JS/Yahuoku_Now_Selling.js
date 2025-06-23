@@ -5,6 +5,56 @@ let filteredData = [...currentData];
 let sortKey = null;
 let sortOrder = null;
 
+// 初期データの取得とテーブルの初期化
+document.addEventListener('DOMContentLoaded', function () {
+    const sortButtons = document.querySelectorAll('.sort-btn');
+    sortButtons.forEach(button => {
+        button.addEventListener('click', function () {
+            const key = this.dataset.sort;
+            const order = this.dataset.order;
+
+            sortData(key, order);
+
+            this.dataset.order = order === 'asc' ? 'desc' : 'asc';
+            updateSortIcon(this);
+        });
+    });
+    const searchInput = document.getElementById('search');
+    // Enterキーで検索
+    searchInput.addEventListener('keydown', function (e) {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            RealtimeSearch();
+        }
+    });
+
+    // 人気ワードの取得と表示
+    fetch('/taskle/get_popular_words?top=10')
+        .then(res => res.json())
+        .then(data => {
+            const area = document.getElementById('popularWordsBtnGroup');
+            if (!area) return;
+            area.innerHTML = '';
+            (data.words || []).forEach(word => {
+                const btn = document.createElement('button');
+                btn.type = 'button';
+                btn.className = 'btn btn-outline-danger btn-sm';
+                btn.textContent = word;
+                btn.onclick = function () {
+                    const searchInput = document.getElementById('search');
+                    if (searchInput.value) {
+                        searchInput.value += ' ' + word;
+                    } else {
+                        searchInput.value = word;
+                    }
+                    searchInput.focus();
+                };
+                area.appendChild(btn);
+            });
+        });
+});
+
+// 検索ボタンのクリックイベント
 function RealtimeSearch() {
     const searchKeyword = document.getElementById("search").value.trim();
     if (!searchKeyword) {
@@ -56,15 +106,12 @@ function RealtimeSearch() {
                 document.getElementById('bid30_40').checked = false;
                 document.getElementById('bid40_50').checked = false;
                 document.getElementById('bid50_plus').checked = false;
-
                 // 中央値計算
                 const prices = currentData.map(item => item.currentPrice).filter(currentPrice => !isNaN(currentPrice));
                 const median = calculateMedian(prices);
-
                 // ±15%の範囲を計算
                 const lowerBound = Math.floor(median * 0.85);
                 const upperBound = Math.ceil(median * 1.15);
-
                 // テキスト更新
                 document.getElementById("medianPrice").textContent = `特に多い価格帯 ${lowerBound.toLocaleString()} 円から ${upperBound.toLocaleString()} 円`;
                 document.getElementById("medianPrice").style.display = "block";
@@ -82,7 +129,7 @@ function RealtimeSearch() {
             button.disabled = false;
         });
 }
-
+// 中央値の計算
 function calculateMedian(numbers) {
     const sorted = numbers.slice().sort((a, b) => a - b);
     const middle = Math.floor(sorted.length / 2);
@@ -93,13 +140,13 @@ function calculateMedian(numbers) {
 
     return sorted[middle];
 }
-
+// ページネーションのデータを取得
 function paginateData(data) {
     const start = (currentPage - 1) * ITEMS_PER_PAGE;
     const end = start + ITEMS_PER_PAGE;
     return data.slice(start, end);
 }
-
+// ページネーションの更新
 function updatePagination() {
     const totalPages = Math.ceil(currentData.length / ITEMS_PER_PAGE);
     const pagination = document.createElement('nav');
@@ -123,7 +170,7 @@ function updatePagination() {
     if (existingPagination) existingPagination.remove();
     container.appendChild(pagination);
 }
-
+// ページ変更処理
 function changePage(page) {
     currentPage = page;
     if (currentPage < 1) currentPage = 1;
@@ -133,7 +180,7 @@ function changePage(page) {
     updatePagination();
 }
 
-
+//テーブルの更新
 function updateTable(data) {
     const tableBody = document.getElementById("dataTable").getElementsByTagName("tbody")[0];
     tableBody.innerHTML = "";
@@ -157,7 +204,7 @@ function updateTable(data) {
     });
 }
 
-
+// 検索ボタンのクリックイベント
 function sortData(key, order) {
     sortKey = key;
     sortOrder = order;
@@ -179,21 +226,7 @@ function sortData(key, order) {
 
 }
 
-document.addEventListener('DOMContentLoaded', function () {
-    const sortButtons = document.querySelectorAll('.sort-btn');
-    sortButtons.forEach(button => {
-        button.addEventListener('click', function () {
-            const key = this.dataset.sort;
-            const order = this.dataset.order;
-
-            sortData(key, order);
-
-            this.dataset.order = order === 'asc' ? 'desc' : 'asc';
-            updateSortIcon(this);
-        });
-    });
-});
-
+//　アイコンの切り替え
 function updateSortIcon(button) {
     const svg = button.querySelector('svg');
     if (button.dataset.order === 'asc') {
@@ -206,7 +239,7 @@ function updateSortIcon(button) {
         `;
     }
 }
-
+// フィルタリング機能
 function filterData() {
     const minPriceInput = document.getElementById('minPrice').value;
     const maxPriceInput = document.getElementById('maxPrice').value;
@@ -248,7 +281,7 @@ function filterData() {
     updateTable(paginateData(filteredData));
     updatePagination();
 }
-
+// フィルタリングのリセット
 function clearFilters() {
     document.getElementById('minPrice').value = '0';
     document.getElementById('maxPrice').value = '';
@@ -257,7 +290,7 @@ function clearFilters() {
     updateTable(paginateData(filteredData));
     updatePagination();
 }
-
+// 残り時間のパース
 function parseRemainingTime(str) {
     if (!str) return 0;
     let days = 0, hours = 0, minutes = 0;
@@ -269,7 +302,7 @@ function parseRemainingTime(str) {
     if (minMatch) minutes = parseInt(minMatch[1]);
     return days * 24 * 60 + hours * 60 + minutes;
 }
-
+//ソート処置
 function validateAndFilterData() {
     const minPrice = parseInt(document.getElementById('minPrice').value, 10);
     const maxPrice = parseInt(document.getElementById('maxPrice').value, 10);
