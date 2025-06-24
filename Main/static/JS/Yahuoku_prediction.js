@@ -106,14 +106,11 @@ function updatePredictionChart() {
     const movingAverages = currentData.price_trends.map(item => item.moving_avg);
     const predictedPrice = currentData.predicted_price || 0;
 
-    // 棒グラフ用データ
     const barLabels = [...labels, '1ヶ月後'];
     const barData = [...prices, predictedPrice];
 
-    // 90日移動平均線が全てnullの場合は非表示
     const hasMovingAvg = movingAverages.some(v => v !== null && v !== undefined);
 
-    // 既存チャートがあれば破棄
     if (predictionChart) {
         predictionChart.destroy();
     }
@@ -131,7 +128,7 @@ function updatePredictionChart() {
             type: 'bar',
             label: '1ヶ月後予測',
             data: barData.map((v, i) => i === barData.length - 1 ? v : null),
-            backgroundColor: barData.map((v, i) => i === barData.length - 1 ? '#ff4d4d' : 'rgba(0,0,0,0)'),
+            backgroundColor: barData.map((v, i) => i === barData.length - 1 ? '#ff4d4d' : '#ff4d4d'),
             borderWidth: 1
         }
     ];
@@ -164,13 +161,37 @@ function updatePredictionChart() {
                 }
             },
             plugins: {
-                legend: { position: 'top' },
-                tooltip: { mode: 'index', intersect: false }
+                legend: { position: 'top' }, // グラフ上部のラベルを赤色に
+                tooltip: {
+                    mode: 'index',
+                    intersect: false,
+                    callbacks: {
+                        label: function (context) {
+                            // 価格推移バー
+                            if (context.dataset.label === '価格推移' && context.parsed.y !== null) {
+                                return `価格推移: ${context.parsed.y.toLocaleString()} 円`;
+                            }
+                            // 1ヶ月後予測バー
+                            if (context.dataset.label === '1ヶ月後予測' && context.parsed.y !== null) {
+                                return `1ヶ月後予測: ${context.parsed.y.toLocaleString()} 円`;
+                            }
+                            // 90日移動平均
+                            if (context.dataset.label === '90日移動平均' && context.parsed.y !== null) {
+                                return `90日移動平均: ${context.parsed.y.toLocaleString()} 円`;
+                            }
+                            return '';
+                        },
+                        // 他の系列のツールチップを非表示
+                        filter: function (context) {
+                            return context.parsed.y !== null;
+                        }
+                    }
+                }
             }
         }
     });
 
-    // アノテーション
+
     const chartContainer = document.querySelector('.chart-container');
     let annotation = chartContainer.querySelector('.chart-annotation');
     if (!annotation) {
