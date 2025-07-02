@@ -1,5 +1,53 @@
 let currentData = [];
 
+document.addEventListener("DOMContentLoaded", function () {
+
+    const searchInput = document.getElementById('search');
+
+    // Enterキーで検索
+    searchInput.addEventListener('keydown', function (e) {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            TargetSearch();
+        }
+    });
+
+
+    // Enterキーで検索
+    searchInput.addEventListener('keydown', function (e) {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            Prediction_Search();
+        }
+    });
+
+    // 人気ワード取得・ボタン生成
+    fetch('/taskle/get_popular_words?top=10')
+        .then(res => res.json())
+        .then(data => {
+            const area = document.getElementById('popularWordsBtnGroup');
+            area.innerHTML = '';
+            (data.words || []).forEach(word => {
+                const btn = document.createElement('button');
+                btn.type = 'button';
+                btn.className = 'btn btn-outline-danger btn-sm';
+                btn.textContent = word;
+                btn.onclick = function () {
+                    const searchInput = document.getElementById('search');
+                    if (searchInput.value) {
+                        searchInput.value += ' ' + word;
+                    } else {
+                        searchInput.value = word;
+                    }
+                    searchInput.focus();
+                };
+                area.appendChild(btn);
+            });
+
+        });
+
+});
+// 検索ボタンのクリックイベント
 function TargetSearch() {
     const searchKeyword = document.getElementById("search").value.trim();
     if (!searchKeyword) {

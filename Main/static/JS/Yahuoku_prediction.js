@@ -1,7 +1,52 @@
-// グローバル変数
 let currentData = {};
 let predictionChart = null;
+// 初期データの取得
+document.addEventListener('DOMContentLoaded', () => {
+    const script = document.createElement('script');
+    script.src = 'https://cdn.jsdelivr.net/npm/chart.js';
+    script.onload = () => {
+        console.log('Chart.js loaded');
+    };
+    script.onerror = () => console.error('Failed to load Chart.js');
+    document.head.appendChild(script);
 
+    const searchInput = document.getElementById('search');
+
+    // Enterキーで検索
+    searchInput.addEventListener('keydown', function (e) {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            Prediction_Search();
+        }
+    });
+
+    // 人気ワード取得・ボタン生成
+    fetch('/taskle/get_popular_words?top=10')
+        .then(res => res.json())
+        .then(data => {
+            const area = document.getElementById('popularWordsBtnGroup');
+            area.innerHTML = '';
+            (data.words || []).forEach(word => {
+                const btn = document.createElement('button');
+                btn.type = 'button';
+                btn.className = 'btn btn-outline-danger btn-sm';
+                btn.textContent = word;
+                btn.onclick = function () {
+                    const searchInput = document.getElementById('search');
+                    if (searchInput.value) {
+                        searchInput.value += ' ' + word;
+                    } else {
+                        searchInput.value = word;
+                    }
+                    searchInput.focus();
+                };
+                area.appendChild(btn);
+            });
+
+        });
+});
+
+// 検索ボタンのクリックイベント
 function Prediction_Search() {
     const searchKeyword = document.getElementById('search').value.trim();
     if (!searchKeyword) {
@@ -97,7 +142,7 @@ function calculateMedian(arr) {
         ? sorted[mid]
         : (sorted[mid - 1] + sorted[mid]) / 2;
 }
-
+// グラフの更新
 function updatePredictionChart() {
     if (!window.Chart) return;
 
@@ -205,7 +250,7 @@ function updatePredictionChart() {
         </p>
     `;
 }
-
+// 予測テーブルの更新
 function updatePredictionTable() {
     const tableBody = document.getElementById('predictionTable').getElementsByTagName('tbody')[0];
     if (!tableBody) return;
@@ -225,15 +270,3 @@ function updatePredictionTable() {
         row.insertCell(1).textContent = item.value;
     });
 }
-
-// Chart.jsの非同期ロードと初期化
-document.addEventListener('DOMContentLoaded', () => {
-    const script = document.createElement('script');
-    script.src = 'https://cdn.jsdelivr.net/npm/chart.js';
-    script.onload = () => {
-        console.log('Chart.js loaded');
-    };
-    script.onerror = () => console.error('Failed to load Chart.js');
-    document.head.appendChild(script);
-});
-

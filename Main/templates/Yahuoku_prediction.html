@@ -10,24 +10,37 @@
     <title>情報分析ツール システマ</title>
     <style>
         body {
-            font-family: 'Roboto', sans-serif;
-            background: linear-gradient(135deg, #ffffff, #f9f9f9);
+            font-family: 'Poppins', sans-serif;
+            background: #f8f9fa;
             color: #333;
             min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        main {
+            flex: 1 0 auto;
         }
 
         .hero-section {
-            background: linear-gradient(135deg, #ff4d4d, #ff8c8c);
-            color: #fff;
-            padding: 5rem 1rem;
+            background: linear-gradient(135deg, rgba(255, 77, 77, 0.8), rgba(255, 140, 140, 0.6));
+            color: #ffffff;
+            padding: 4rem 1.5rem;
             text-align: center;
-            margin-bottom: 2rem;
+            margin-bottom: 3rem;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
         }
 
         .hero-section h1 {
-            font-size: 3rem;
-            font-weight: 700;
+            font-size: 2.5rem;
+            font-weight: 600;
             margin-bottom: 1rem;
+        }
+
+        .hero-section p {
+            font-size: 1.1rem;
+            max-width: 600px;
+            margin: 0 auto;
         }
 
         .btn-custom {
@@ -135,6 +148,10 @@
                         </div>
                     </div>
                 </div>
+            </div>
+            <div id="popularWordsArea" class="mb-3">
+                <label class="fw-bold">よく使われるキーワード:</label>
+                <div id="popularWordsBtnGroup" class="d-flex flex-wrap gap-2 mt-2"></div>
             </div>
             <div class="chart-container">
                 <canvas id="predictionChart"></canvas>
