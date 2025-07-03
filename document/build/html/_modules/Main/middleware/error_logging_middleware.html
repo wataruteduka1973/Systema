@@ -42,7 +42,7 @@
         </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
               <p class="caption" role="heading"><span class="caption-text">目次:</span></p>
 <ul>
-<li class="toctree-l1"><a class="reference internal" href="../../../introduction.html">本アプリケーションの概要</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../introduction.html">情報分析ツール システマ</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../../models.html">データベース</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../../utils.html">ユーティリティ</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../../api.html">API</a></li>
@@ -76,7 +76,6 @@
   <h1>Main.middleware.error_logging_middleware のソースコード</h1><div class="highlight"><pre>
 <span></span><span class="kn">import</span><span class="w"> </span><span class="nn">logging</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">traceback</span>
-<span class="kn">from</span><span class="w"> </span><span class="nn">django.http</span><span class="w"> </span><span class="kn">import</span> <span class="n">HttpResponseServerError</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">..models.errorlog</span><span class="w"> </span><span class="kn">import</span> <span class="n">ErrorLog</span>
 
 
@@ -138,8 +137,7 @@
             <span class="n">file_path</span><span class="o">=</span><span class="n">file_path</span><span class="p">,</span>
             <span class="n">line_number</span><span class="o">=</span><span class="n">line_number</span>
         <span class="p">)</span>
-
-        <span class="k">return</span> <span class="n">HttpResponseServerError</span><span class="p">(</span><span class="s2">&quot;An error occurred. Check the admin panel for details.&quot;</span><span class="p">)</span></div>
+        <span class="k">return</span> <span class="kc">None</span></div>
 </div>
 
 </pre></div>

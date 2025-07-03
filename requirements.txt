@@ -10,3 +10,4 @@ pytest-django==4.11.1
 pytest-html==4.1.1
 whitenoise==6.9.0
 scikit-learn==1.7.0
+myst-parser == 4.0.1

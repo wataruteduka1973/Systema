@@ -40,8 +40,15 @@
   </form>
 </div>
         </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
-              <!-- Local TOC -->
-              <div class="local-toc"></div>
+              <p class="caption" role="heading"><span class="caption-text">目次:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../introduction.html">情報分析ツール システマ</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../models.html">データベース</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../utils.html">ユーティリティ</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../api.html">API</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../errorlog.html">エラーログ設定</a></li>
+</ul>
+
         </div>
       </div>
     </nav>
@@ -70,6 +77,7 @@
 <span></span><span class="kn">from</span><span class="w"> </span><span class="nn">django.http</span><span class="w"> </span><span class="kn">import</span> <span class="n">JsonResponse</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">django.views.decorators.csrf</span><span class="w"> </span><span class="kn">import</span> <span class="n">csrf_exempt</span>
 
+
 <span class="kn">import</span><span class="w"> </span><span class="nn">logging</span>
 
 <span class="kn">from</span><span class="w"> </span><span class="nn">.utils</span><span class="w"> </span><span class="kn">import</span> <span class="p">(</span>
@@ -82,6 +90,7 @@
     <span class="n">delete_market_data_logic</span><span class="p">,</span>
     <span class="n">complex_market_data_logic</span><span class="p">,</span>
     <span class="n">prediction_market_logic</span><span class="p">,</span>
+    <span class="n">get_popular_words_logic</span><span class="p">,</span>
 <span class="p">)</span>
 
 <span class="n">logger</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="s1">&#39;search_logger&#39;</span><span class="p">)</span>
@@ -90,6 +99,9 @@
 <div class="viewcode-block" id="handle_search_response">
 <a class="viewcode-back" href="../../../api.html#Main.views.api.handle_search_response">[ドキュメント]</a>
 <span class="k">def</span><span class="w"> </span><span class="nf">handle_search_response</span><span class="p">(</span><span class="n">request</span><span class="p">,</span> <span class="n">data_fetch_func</span><span class="p">,</span> <span class="n">save_func</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    共通の検索処理を行うヘルパー関数。</span>
+<span class="sd">    &quot;&quot;&quot;</span>
     <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;Logger initialized&quot;</span><span class="p">)</span>
     <span class="k">if</span> <span class="n">request</span><span class="o">.</span><span class="n">method</span> <span class="o">!=</span> <span class="s1">&#39;GET&#39;</span><span class="p">:</span>
         <span class="n">logger</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="s2">&quot;Invalid request method received&quot;</span><span class="p">)</span>
@@ -195,6 +207,16 @@
 <span class="sd">    過去90日間の価格推移を分析し、異常値を排除した90日移動平均と1ヶ月予測を返す。</span>
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="k">return</span> <span class="n">prediction_market_logic</span><span class="p">(</span><span class="n">request</span><span class="p">)</span></div>
+
+
+
+<div class="viewcode-block" id="get_popular_words">
+<a class="viewcode-back" href="../../../api.html#Main.views.api.get_popular_words">[ドキュメント]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">get_popular_words</span><span class="p">(</span><span class="n">request</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    使用頻度の高い検索ワードを返す</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="n">get_popular_words_logic</span><span class="p">(</span><span class="n">request</span><span class="p">)</span></div>
 
 </pre></div>
 

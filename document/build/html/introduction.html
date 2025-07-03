@@ -6,7 +6,7 @@
   <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>本アプリケーションの概要 &mdash; systema 1.0.0 ドキュメント</title>
+  <title>情報分析ツール システマ &mdash; systema 1.0.0 ドキュメント</title>
       <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=b86133f3" />
       <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=e59714d7" />
 
@@ -19,7 +19,9 @@
       <script src="_static/translations.js?v=4755f45a"></script>
     <script src="_static/js/theme.js"></script>
     <link rel="index" title="索引" href="genindex.html" />
-    <link rel="search" title="検索" href="search.html" /> 
+    <link rel="search" title="検索" href="search.html" />
+    <link rel="next" title="データベース" href="models.html" />
+    <link rel="prev" title="情報分析ツール システマ" href="index.html" /> 
 </head>
 
 <body class="wy-body-for-nav"> 
@@ -41,21 +43,21 @@
   </form>
 </div>
         </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
-              <!-- Local TOC -->
-              <div class="local-toc"><ul>
-<li><a class="reference internal" href="#">本アプリケーションの概要</a><ul>
-<li><a class="reference internal" href="#id2">主な機能と活用例</a><ul>
-<li><a class="reference internal" href="#id3">相場検索</a></li>
-<li><a class="reference internal" href="#id4">現在価格検索</a></li>
-<li><a class="reference internal" href="#id5">相場分析</a></li>
-<li><a class="reference internal" href="#id6">相場予想</a></li>
+              <p class="caption" role="heading"><span class="caption-text">目次:</span></p>
+<ul class="current">
+<li class="toctree-l1 current"><a class="current reference internal" href="#">情報分析ツール システマ</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#id2">✨ 特徴</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#id3">📋 主な機能</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#id4">🚀 インストール</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#id5">🤝 貢献</a></li>
 </ul>
 </li>
-<li><a class="reference internal" href="#id7">インストール</a></li>
+<li class="toctree-l1"><a class="reference internal" href="models.html">データベース</a></li>
+<li class="toctree-l1"><a class="reference internal" href="utils.html">ユーティリティ</a></li>
+<li class="toctree-l1"><a class="reference internal" href="api.html">API</a></li>
+<li class="toctree-l1"><a class="reference internal" href="errorlog.html">エラーログ設定</a></li>
 </ul>
-</li>
-</ul>
-</div>
+
         </div>
       </div>
     </nav>
@@ -70,7 +72,7 @@
           <div role="navigation" aria-label="Page navigation">
   <ul class="wy-breadcrumbs">
       <li><a href="index.html" class="icon icon-home" aria-label="Home"></a></li>
-      <li class="breadcrumb-item active">本アプリケーションの概要</li>
+      <li class="breadcrumb-item active">情報分析ツール システマ</li>
       <li class="wy-breadcrumbs-aside">
             <a href="_sources/introduction.md.txt" rel="nofollow"> View page source</a>
       </li>
@@ -81,42 +83,63 @@
            <div itemprop="articleBody">
              
   <section id="id1">
-<h1>本アプリケーションの概要<a class="headerlink" href="#id1" title="Link to this heading"></a></h1>
-<p>このツールは、ヤフオクで「最適な購入タイミング」や「売り時」を知りたい方のための分析支援アプリです。
-初心者からリセラーまで、誰でも簡単に相場やトレンドを把握できます。</p>
+<h1>情報分析ツール システマ<a class="headerlink" href="#id1" title="Link to this heading"></a></h1>
+<p><img alt="Version" src="https://img.shields.io/badge/Version-1.0.0-blue" /> <img alt="Build" src="https://img.shields.io/badge/Build-Passing-green" /></p>
+<p>このツールは、ヤフオクの<strong>購入</strong>や<strong>出品</strong>に関する商品の価格や傾向を分析し、ユーザーに最適な意思決定をサポートします。相場データや現在出品中の商品を活用し、市場動向を可視化します。</p>
 <section id="id2">
-<h2>主な機能と活用例<a class="headerlink" href="#id2" title="Link to this heading"></a></h2>
-<section id="id3">
-<h3>相場検索<a class="headerlink" href="#id3" title="Link to this heading"></a></h3>
+<h2>✨ 特徴<a class="headerlink" href="#id2" title="Link to this heading"></a></h2>
 <ul class="simple">
-<li><p>過去180日間の落札データを取得し、価格や入札数で絞り込み</p></li>
-<li><p><strong>活用例</strong>: 「今いくらで売れる？」「いくらで買えばお得？」</p></li>
+<li><p><strong>リアルタイムデータ</strong>: 最新の市場動向を即座に把握。</p></li>
+<li><p><strong>データ可視化</strong>: グラフやワードクラウドでトレンドを視覚化。</p></li>
+<li><p><strong>価格予測</strong>: AIを活用した将来の価格予測。</p></li>
 </ul>
+</section>
+<section id="id3">
+<h2>📋 主な機能<a class="headerlink" href="#id3" title="Link to this heading"></a></h2>
+<table class="docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>機能名</p></th>
+<th class="head"><p>概要</p></th>
+<th class="head"><p>特徴</p></th>
+<th class="head"><p>用途</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p><strong>相場検索</strong></p></td>
+<td><p>過去180日間の落札データを取得</p></td>
+<td><p>落札金額・入札数確認、フィルタリング</p></td>
+<td><p>購入・出品戦略の策定</p></td>
+</tr>
+<tr class="row-odd"><td><p><strong>現在価格検索</strong></p></td>
+<td><p>現在出品中の商品データを取得</p></td>
+<td><p>リアルタイム金額・入札数確認</p></td>
+<td><p>市場価格の把握</p></td>
+</tr>
+<tr class="row-even"><td><p><strong>相場再検索</strong></p></td>
+<td><p>取得データを再度確認</p></td>
+<td><p>データ更新・削除</p></td>
+<td><p>データ管理</p></td>
+</tr>
+<tr class="row-odd"><td><p><strong>相場分析</strong></p></td>
+<td><p>売れ筋商品を分析</p></td>
+<td><p>ワードクラウド、棒グラフ</p></td>
+<td><p>市場トレンドの理解</p></td>
+</tr>
+<tr class="row-even"><td><p><strong>市場分析</strong></p></td>
+<td><p>注目商品をピックアップ</p></td>
+<td><p>相場との比較、お買い得商品特定</p></td>
+<td><p>競争優位性の確保</p></td>
+</tr>
+<tr class="row-odd"><td><p><strong>相場予想</strong></p></td>
+<td><p>今後の商品価格を予想</p></td>
+<td><p>過去データベースのマーケット予想</p></td>
+<td><p>落札価格の推測・出品分析</p></td>
+</tr>
+</tbody>
+</table>
 </section>
 <section id="id4">
-<h3>現在価格検索<a class="headerlink" href="#id4" title="Link to this heading"></a></h3>
-<ul class="simple">
-<li><p>現在出品中の商品を一覧表示</p></li>
-<li><p><strong>活用例</strong>: 「今の最安値は？」「競合の出品状況は？」</p></li>
-</ul>
-</section>
-<section id="id5">
-<h3>相場分析<a class="headerlink" href="#id5" title="Link to this heading"></a></h3>
-<ul class="simple">
-<li><p>ワードクラウドや棒グラフで売れ筋や価格帯を可視化</p></li>
-<li><p><strong>活用例</strong>: 「どんなキーワードが人気？」「どの価格帯が売れやすい？」</p></li>
-</ul>
-</section>
-<section id="id6">
-<h3>相場予想<a class="headerlink" href="#id6" title="Link to this heading"></a></h3>
-<ul class="simple">
-<li><p>過去データから今後の価格推移を予測</p></li>
-<li><p><strong>活用例</strong>: 「来週・来月の相場はどうなる？」</p></li>
-</ul>
-</section>
-</section>
-<section id="id7">
-<h2>インストール<a class="headerlink" href="#id7" title="Link to this heading"></a></h2>
+<h2>🚀 インストール<a class="headerlink" href="#id4" title="Link to this heading"></a></h2>
 <ol class="arabic">
 <li><p>リポジトリをクローン:</p>
 <div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>git<span class="w"> </span>clone<span class="w"> </span>https://github.com/wataruteduka1973/taskle.git
@@ -130,6 +153,11 @@ pip install -r requirements.txt</p></li>
 python manage.py migrate
 python manage.py runserver</p></li>
 </ol>
+</section>
+<section id="id5">
+<h2>🤝 貢献<a class="headerlink" href="#id5" title="Link to this heading"></a></h2>
+<p>バグ報告や機能リクエストは <a class="reference external" href="https://github.com/wataruteduka1973/Systema/issues">GitHub Issues</a> へ。<br />
+ご質問は <a class="reference external" href="mailto:agtmpdd992&#37;&#52;&#48;gmail&#46;com">agtmpdd992<span>&#64;</span>gmail<span>&#46;</span>com</a>まで</p>
 <p>2025 WataruTezuka. All Rights Reserved.</p>
 </section>
 </section>
@@ -137,7 +165,10 @@ python manage.py runserver</p></li>
 
            </div>
           </div>
-          <footer>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="index.html" class="btn btn-neutral float-left" title="情報分析ツール システマ" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="models.html" class="btn btn-neutral float-right" title="データベース" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
 
   <hr/>
 
