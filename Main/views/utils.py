@@ -1,19 +1,96 @@
 from Main.models.scraping import scraping
 from Main.models.searchwordlog import searchwordlog
+from Main.scraping.yahoo import YahooAuctionParser
 
 import requests
 import re
+import json
 import logging
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from collections import Counter
 
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 import numpy as np
 from sklearn.cluster import KMeans
-from bs4 import BeautifulSoup
 
 logger = logging.getLogger('search_logger')
+
+
+def _normalize_url(raw_url):
+    if not raw_url:
+        return '#'
+    value = str(raw_url).strip()
+    if not value or value == '#':
+        return '#'
+    if value.startswith('http://') or value.startswith('https://'):
+        return value
+    if value.startswith('//'):
+        return 'https:' + value
+    if value.startswith('/'):
+        return 'https://auctions.yahoo.co.jp' + value
+    if value.startswith('jp/auction/') or value.startswith('auction/'):
+        return 'https://auctions.yahoo.co.jp/' + value
+    return value
+
+
+def _safe_int(value):
+    return YahooAuctionParser._safe_int(value)
+
+
+def _find_item_list(node):
+    return YahooAuctionParser._find_item_list(node)
+
+
+def _extract_listing_items(html):
+    return YahooAuctionParser.extract_listing_items(html)
+
+
+def _build_item_url(raw_url, auction_id=None, item=None):
+    return YahooAuctionParser.build_item_url(raw_url, auction_id, item)
+
+
+def _normalize_yahoo_item(item):
+    return YahooAuctionParser.normalize_item(item)
+
+
+def _format_remaining_time(end_time):
+    if not end_time:
+        return 'N/A'
+    try:
+        dt = datetime.fromisoformat(str(end_time).replace('Z', '+00:00'))
+        now = datetime.now(dt.tzinfo or timezone.utc)
+        remaining_seconds = max(int((dt - now).total_seconds()), 0)
+        days, remainder = divmod(remaining_seconds, 86400)
+        hours, remainder = divmod(remainder, 3600)
+        minutes, _ = divmod(remainder, 60)
+        parts = []
+        if days:
+            parts.append(f'{days}日')
+        if hours:
+            parts.append(f'{hours}時間')
+        if minutes:
+            parts.append(f'{minutes}分')
+        return ''.join(parts) if parts else '0分'
+    except ValueError:
+        return 'N/A'
+
+
+def _request_with_retry(url, headers, max_retries=3, timeout=15):
+    last_error = None
+    for attempt in range(1, max_retries + 1):
+        try:
+            logger.info(f"Fetching Yahoo page attempt {attempt}/{max_retries}: {url}")
+            response = requests.get(url, headers=headers, timeout=timeout)
+            response.raise_for_status()
+            return response
+        except requests.RequestException as exc:
+            last_error = exc
+            if attempt == max_retries:
+                logger.error(f"Yahoo fetch failed after {max_retries} attempts for {url}: {exc}")
+                raise
+            logger.warning(f"Retrying Yahoo fetch ({attempt}/{max_retries}) for {url}: {exc}")
+    raise last_error
 
 
 def scrape_data(searchname):
@@ -28,71 +105,31 @@ def scrape_data(searchname):
 
     scraped_data_list = []
     headers = {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'}
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+    }
     if searchname:
         searchwordlog.objects.create(word=searchname)
+
     for url in urls:
         try:
-            response = requests.get(url, headers=headers, timeout=10)
-            response.raise_for_status()
+            response = _request_with_retry(url, headers=headers)
             html = response.text
-            soup = BeautifulSoup(html, 'html.parser')
+            items = _extract_listing_items(html)
+            if not items:
+                logger.warning(f'No Yahoo item data extracted from {url}')
+                continue
 
-            # 商品名
-            product_titles = soup.find_all(
-                'a', class_=re.compile(r'Product__titleLink'))
-            names = [title.text.strip()
-                     for title in product_titles if title.text.strip()]
-
-            # 落札価格
-            price_elements = soup.find_all(
-                'span', class_=re.compile(r'Product__priceValue'))
-            prices = [
-                int(re.sub(r'[^\d]+', '', price.text))
-                for price in price_elements
-                if price and "Product__priceValue--start" not in price.get('class', [])
-            ]
-
-            # 入札数
-            bid_elements = soup.find_all(
-                'a', class_=re.compile(r'Product__bid'))
-            bids = [bid.text.strip()
-                    for bid in bid_elements if bid.text.strip()]
-
-            # 開始価格
-            start_elements = soup.find_all('span', class_=re.compile(
-                r'Product__priceValue Product__priceValue--start'))
-            startprices = [
-                int(re.sub(r'[^\d]+', '', price.text))
-                for price in start_elements
-                if price and price.text.strip()
-            ]
-
-            # URL
-            urls = [title.get('href', '#')
-                    for title in product_titles if title.get('href')]
-
-            time_elements = soup.find_all(
-                'span', class_='Product__time')  # 追加: 落札時間帯と日付
-            times = [time.text.strip()
-                     for time in time_elements if time.text.strip()]
-
-            urls = [title.get('href', '#')
-                    for title in product_titles if title.get('href')]
-
-            # データのマッチングと結合
-            min_length = min(len(names), len(prices), len(
-                bids), len(startprices), len(urls))
-            for i in range(min_length):
-                scraped_data = {
-                    'name': names[i],
-                    'price': prices[i] if i < len(prices) else 0,
-                    'startPrice': startprices[i] if i < len(startprices) else 0,
-                    'bidding': bids[i] if i < len(bids) else 0,
-                    'time': times[i] if i < len(times) else 'N/A',
-                    'url': urls[i],
-                }
-                scraped_data_list.append(scraped_data)
+            for item in items:
+                normalized = _normalize_yahoo_item(item)
+                if normalized:
+                    scraped_data_list.append({
+                        'name': normalized['name'],
+                        'price': normalized['price'],
+                        'startPrice': normalized['startPrice'],
+                        'bidding': normalized['bidding'],
+                        'time': normalized['time'],
+                        'url': normalized['url'],
+                    })
 
         except requests.RequestException as e:
             logger.error(f"Request failed for URL {url}: {str(e)}")
@@ -122,54 +159,28 @@ def scrape_current_listings(searchname):
 
     for url in urls:
         try:
-            response = requests.get(url, headers=headers, timeout=10)
-            response.raise_for_status()
-            soup = BeautifulSoup(response.text, 'html.parser')
-
-            # 商品ごとに親要素でループ
-            product_cards = soup.find_all('li', class_=re.compile(r'Product'))
-            for card in product_cards:
-                # 商品名
-                title_tag = card.find(
-                    'a', class_=re.compile(r'Product__titleLink'))
-                name = title_tag.text.strip() if title_tag else 'N/A'
-                url_ = title_tag['href'] if title_tag and title_tag.has_attr(
-                    'href') else '#'
-
-                # 現在価格
-                price_tag = card.find(
-                    'span', class_=re.compile(r'Product__priceValue'))
-                price = 0
-                if price_tag:
-                    price_text = price_tag.text
-                    price = int(
-                        re.sub(r'[^\d]+', '', price_text)) if price_text else 0
-
-                # 入札数
-                bid_tag = card.find('dd', class_=re.compile(r'Product__bid'))
-                bidding = 0
-                if bid_tag:
-                    bidding_text = bid_tag.text
-                    bidding = int(
-                        re.sub(r'[^\d]+', '', bidding_text)) if bidding_text else 0
-
-                # 残り時間
-                time_tag = card.find('dd', class_=re.compile(r'Product__time'))
-                remaining_time = time_tag.text.strip() if time_tag else 'N/A'
-
+            response = _request_with_retry(url, headers=headers)
+            items = _extract_listing_items(response.text)
+            for item in items:
+                normalized = _normalize_yahoo_item(item)
+                if not normalized:
+                    continue
                 scraped_data_list.append({
-                    'name': name,
-                    'currentPrice': price,
-                    'bidding': bidding,
-                    'remainingTime': remaining_time,
-                    'url': url_
+                    'name': normalized['name'],
+                    'currentPrice': normalized['price'],
+                    'bidding': normalized['bidding'],
+                    'remainingTime': _format_remaining_time(normalized['time']),
+                    'url': normalized['url']
                 })
 
+        except requests.RequestException as e:
+            logger.error(f"Request failed for URL {url}: {str(e)}")
+            continue
         except Exception as e:
             logger.error(f"Error processing URL {url}: {str(e)}")
             continue
 
-    return scraped_data_list[:200]  # 最大200件を返す
+    return scraped_data_list[:200]
 
 
 def save_to_database(searchname, scraped_data_list):

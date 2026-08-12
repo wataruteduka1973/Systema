@@ -5,6 +5,47 @@ let filteredData = [...currentData];
 let sortKey = null;
 let sortOrder = null;
 
+function fetchJsonWithRetry(url, options = {}, maxRetries = 3) {
+    return fetch(url, options).then(async (response) => {
+        if (!response.ok) {
+            if (response.status >= 500 || response.status === 429) {
+                throw new Error(`HTTP ${response.status}`);
+            }
+            throw new Error(`Request failed with status ${response.status}`);
+        }
+        const text = await response.text();
+        if (!text) {
+            return {};
+        }
+        try {
+            return JSON.parse(text);
+        } catch (error) {
+            return {};
+        }
+    }).catch(async (error) => {
+        if (maxRetries <= 0) {
+            throw error;
+        }
+        await new Promise(resolve => setTimeout(resolve, 500));
+        return fetchJsonWithRetry(url, options, maxRetries - 1);
+    });
+}
+
+function normalizeItemUrl(url) {
+    if (!url) return '#';
+    const value = String(url).trim();
+    if (!value || value === '#') return '#';
+    if (value.startsWith('http://') || value.startsWith('https://')) return value;
+    if (value.startsWith('//')) return `https:${value}`;
+    if (value.startsWith('/item/')) return `https://paypayfleamarket.yahoo.co.jp${value}`;
+    if (value.startsWith('/jp/auction/')) return `https://auctions.yahoo.co.jp${value}`;
+    if (value.startsWith('/')) return `https://auctions.yahoo.co.jp${value}`;
+    if (value.startsWith('auction/')) return `https://auctions.yahoo.co.jp/${value}`;
+    if (value.startsWith('jp/auction/')) return `https://auctions.yahoo.co.jp/${value}`;
+    if (value.includes('paypayfleamarket.yahoo.co.jp')) return value;
+    return value;
+}
+
 // 初期データの取得とテーブルの初期化
 document.addEventListener('DOMContentLoaded', function () {
     const sortButtons = document.querySelectorAll('.sort-btn');
@@ -29,8 +70,7 @@ document.addEventListener('DOMContentLoaded', function () {
     });
 
     // 人気ワードの取得と表示
-    fetch('/taskle/get_popular_words?top=10')
-        .then(res => res.json())
+    fetchJsonWithRetry('/taskle/get_popular_words?top=10')
         .then(data => {
             const area = document.getElementById('popularWordsBtnGroup');
             if (!area) return;
@@ -51,6 +91,9 @@ document.addEventListener('DOMContentLoaded', function () {
                 };
                 area.appendChild(btn);
             });
+        })
+        .catch(error => {
+            console.error('人気ワード取得エラー:', error);
         });
 });
 
@@ -65,33 +108,26 @@ function RealtimeSearch() {
         keyword: searchKeyword,
     });
 
-
     const spinner = document.getElementById('searchSpinner');
     const button = document.getElementById('button-search');
     spinner.style.display = 'inline-block';
     button.disabled = true;
-    fetch(`/taskle/RealtimeSearch?${params.toString()}`)
-        .then(response => {
-            if (!response.ok) {
-                if (response.status === 400 || response.status === 500) {
-                    return response.text().then(text => {
-                        document.open();
-                        document.write(text);
-                        document.close();
-                        throw new Error(`Error page rendered: ${response.status}`);
-                    });
-                }
-                throw new Error(`HTTP error! status: ${response.status}`);
-            }
-            return response.json();
-        })
 
+    fetchJsonWithRetry(`/taskle/RealtimeSearch?${params.toString()}`)
         .then(result => {
-            currentData = (result.data || []).map(item => ({
-                ...item,
-                currentPrice: parseFloat(item.currentPrice) || 0,
-                bidding: parseInt(item.bidding) || 0
-            }));
+            currentData = (result.data || []).map(item => {
+                const currentPrice = Number(item.currentPrice ?? item.price ?? 0) || 0;
+                const bidding = Number(item.bidding ?? item.bidCount ?? 0) || 0;
+                const remainingTime = item.remainingTime || item.time || 'N/A';
+                const url = normalizeItemUrl(item.url || item.link || '#');
+                return {
+                    ...item,
+                    currentPrice,
+                    bidding,
+                    remainingTime,
+                    url
+                };
+            });
             filteredData = [...currentData];
             if (Array.isArray(currentData) && currentData.length > 0) {
                 currentPage = 1;
@@ -106,13 +142,10 @@ function RealtimeSearch() {
                 document.getElementById('bid30_40').checked = false;
                 document.getElementById('bid40_50').checked = false;
                 document.getElementById('bid50_plus').checked = false;
-                // 中央値計算
                 const prices = currentData.map(item => item.currentPrice).filter(currentPrice => !isNaN(currentPrice));
                 const median = calculateMedian(prices);
-                // ±15%の範囲を計算
                 const lowerBound = Math.floor(median * 0.85);
                 const upperBound = Math.ceil(median * 1.15);
-                // テキスト更新
                 document.getElementById("medianPrice").textContent = `特に多い価格帯 ${lowerBound.toLocaleString()} 円から ${upperBound.toLocaleString()} 円`;
                 document.getElementById("medianPrice").style.display = "block";
             } else {
@@ -122,7 +155,7 @@ function RealtimeSearch() {
         })
         .catch(error => {
             console.error('検索エラー:', error);
-            alert('検索に失敗しました');
+            alert('検索に失敗しました。再試行しても取得できない場合は、しばらくしてから再度お試しください。');
         })
         .finally(() => {
             spinner.style.display = 'none';
@@ -190,16 +223,17 @@ function updateTable(data) {
         const productNameCell = row.insertCell(0);
         productNameCell.textContent = item.name || 'N/A';
         const currentPriceCell = row.insertCell(1);
-        currentPriceCell.textContent = item.currentPrice.toLocaleString();
+        currentPriceCell.textContent = Number(item.currentPrice || 0).toLocaleString();
         const biddingCell = row.insertCell(2);
-        biddingCell.textContent = item.bidding;
+        biddingCell.textContent = item.bidding ?? 0;
         const remainingTimeCell = row.insertCell(3);
         remainingTimeCell.textContent = item.remainingTime || 'N/A';
         const productURLCell = row.insertCell(4);
         const link = document.createElement("a");
-        link.href = item.url || '#';
+        link.href = normalizeItemUrl(item.url || '#');
         link.textContent = "商品リンクURL";
         link.target = "_blank";
+        link.rel = "noopener noreferrer";
         productURLCell.appendChild(link);
     });
 }
@@ -293,13 +327,14 @@ function clearFilters() {
 // 残り時間のパース
 function parseRemainingTime(str) {
     if (!str) return 0;
+    const value = String(str).replace(/\s+/g, '');
     let days = 0, hours = 0, minutes = 0;
-    const dayMatch = str.match(/(\d+)日/);
-    const hourMatch = str.match(/(\d+)時間/);
-    const minMatch = str.match(/(\d+)分/);
-    if (dayMatch) days = parseInt(dayMatch[1]);
-    if (hourMatch) hours = parseInt(hourMatch[1]);
-    if (minMatch) minutes = parseInt(minMatch[1]);
+    const dayMatch = value.match(/(\d+)日/);
+    const hourMatch = value.match(/(\d+)時間/);
+    const minMatch = value.match(/(\d+)分/);
+    if (dayMatch) days = parseInt(dayMatch[1], 10);
+    if (hourMatch) hours = parseInt(hourMatch[1], 10);
+    if (minMatch) minutes = parseInt(minMatch[1], 10);
     return days * 24 * 60 + hours * 60 + minutes;
 }
 //ソート処置

@@ -1,13 +1,13 @@
-beautifulsoup4==4.12.2
-Django==5.0.1
-requests==2.31.0
-numpy==2.2.5
-Sphinx==8.1.3
-sphinx-rtd-theme==3.0.2
-autopep8==2.3.2
-pytest==8.4.0
-pytest-django==4.11.1
-pytest-html==4.1.1
-whitenoise==6.9.0
-scikit-learn==1.7.0
-myst-parser == 4.0.1
+beautifulsoup4
+Django
+requests
+numpy
+Sphinx
+sphinx-rtd-theme
+autopep8
+pytest
+pytest-django
+pytest-html
+whitenoise
+scikit-learn
+myst-parser

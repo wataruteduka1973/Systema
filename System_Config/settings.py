@@ -2,6 +2,8 @@ from pathlib import Path
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
+LOG_DIR = BASE_DIR / 'logs'
+LOG_DIR.mkdir(exist_ok=True, parents=True)
 
 
 # Quick-start development settings - unsuitable for production
@@ -134,7 +136,7 @@ LOGGING = {
         'file': {
             'level': 'INFO',
             'class': 'logging.FileHandler',
-            'filename': str(BASE_DIR / 'logs/search.log'),
+            'filename': str(LOG_DIR / 'search.log'),
             'formatter': 'verbose',
             'encoding': 'utf-8',
         },
@@ -146,13 +148,13 @@ LOGGING = {
         'error_file': {
             'level': 'ERROR',
             'class': 'logging.FileHandler',
-            'filename': str(BASE_DIR / 'logs/error.log'),
+            'filename': str(LOG_DIR / 'error.log'),
             'formatter': 'verbose',
         },
         'server_file': {
             'level': 'INFO',
             'class': 'logging.FileHandler',
-            'filename': str(BASE_DIR / 'logs/server.log'),
+            'filename': str(LOG_DIR / 'server.log'),
             'formatter': 'verbose',
         },
     },

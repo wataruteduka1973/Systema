@@ -5,6 +5,38 @@ let filteredData = [...currentData];
 let sortKey = null;
 let sortOrder = null;
 
+function sleep(ms) {
+    return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+async function fetchJsonWithRetry(url, options = {}, retryConfig = {}) {
+    const { maxRetries = 3, delayMs = 1200, alertOnFailure = true } = retryConfig;
+    let lastError = null;
+
+    for (let attempt = 1; attempt <= maxRetries; attempt += 1) {
+        try {
+            const response = await fetch(url, options);
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}`);
+            }
+            return await response.json();
+        } catch (error) {
+            lastError = error;
+            if (attempt < maxRetries) {
+                console.warn(`[fetchJsonWithRetry] attempt ${attempt} failed, retrying:`, error);
+                await sleep(delayMs);
+                continue;
+            }
+            if (alertOnFailure) {
+                alert('データ取得に失敗しました。再試行しましたが取得できませんでした。\n時間をおいて再度お試しください。');
+            }
+            throw error;
+        }
+    }
+
+    throw lastError;
+}
+
 // 初期データの取得とテーブルの初期化
 document.addEventListener('DOMContentLoaded', function () {
     const sortButtons = document.querySelectorAll('.sort-btn');
@@ -12,6 +44,8 @@ document.addEventListener('DOMContentLoaded', function () {
         button.addEventListener('click', function () {
             const key = this.dataset.sort;
             const order = this.dataset.order;
+
+            if (!key || !order) return;
 
             sortData(key, order);
 
@@ -22,19 +56,19 @@ document.addEventListener('DOMContentLoaded', function () {
 
     const searchInput = document.getElementById('search');
 
-    // Enterキーで検索
-    searchInput.addEventListener('keydown', function (e) {
-        if (e.key === 'Enter') {
-            e.preventDefault();
-            performSearch();
-        }
-    });
+    if (searchInput) {
+        searchInput.addEventListener('keydown', function (e) {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                performSearch();
+            }
+        });
+    }
 
-    // 人気ワード取得・ボタン生成
-    fetch('/taskle/get_popular_words?top=10')
-        .then(res => res.json())
+    fetchJsonWithRetry('/taskle/get_popular_words?top=10', {}, { maxRetries: 2, delayMs: 1000, alertOnFailure: false })
         .then(data => {
             const area = document.getElementById('popularWordsBtnGroup');
+            if (!area) return;
             area.innerHTML = '';
             (data.words || []).forEach(word => {
                 const btn = document.createElement('button');
@@ -52,11 +86,13 @@ document.addEventListener('DOMContentLoaded', function () {
                 };
                 area.appendChild(btn);
             });
-
+        })
+        .catch(error => {
+            console.warn('人気ワードの取得に失敗しました:', error);
         });
 });
 // 検索ボタンのクリックイベントを設定
-function performSearch() {
+async function performSearch() {
     const searchKeyword = document.getElementById("search").value.trim();
     if (!searchKeyword) {
         alert('検索キーワードを入力してください');
@@ -68,58 +104,42 @@ function performSearch() {
 
     const spinner = document.getElementById('searchSpinner');
     const button = document.getElementById('button-search');
-    spinner.style.display = 'inline-block';
-    button.disabled = true;
-    fetch(`/taskle/perform_search?${params.toString()}`)
-        .then(response => {
-            if (!response.ok) {
-                if (response.status === 400 || response.status === 500) {
-                    return response.text().then(text => {
-                        document.open();
-                        document.write(text);
-                        document.close();
-                        throw new Error(`Error page rendered: ${response.status}`);
-                    });
-                }
-                throw new Error(`HTTP error! status: ${response.status}`);
-            }
-            return response.json();
-        })
+    if (spinner) spinner.style.display = 'inline-block';
+    if (button) button.disabled = true;
 
-        .then(result => {
-            currentData = result.data || [];
-            filteredData = [...currentData];
-            if (Array.isArray(currentData) && currentData.length > 0) {
-                currentPage = 1
-                updateTable(paginateData(currentData));
-                document.querySelector('.Main-Element').style.display = 'block';
-                const prices = currentData.map(item => item.price).filter(price => !isNaN(price));
-                const median = calculateMedian(prices);
-                updatePagination();
-                document.getElementById("medianPrice").textContent = `終了価格の中央値: ${median.toLocaleString()} 円`;
-                document.getElementById("medianPrice").style.display = "block";
-                document.getElementById('minPrice').value = '0';
-                document.getElementById('maxPrice').value = '';
-                document.getElementById('bid0_10').checked = false;
-                document.getElementById('bid10_20').checked = false;
-                document.getElementById('bid20_30').checked = false;
-                document.getElementById('bid30_40').checked = false;
-                document.getElementById('bid40_50').checked = false;
-                document.getElementById('bid50_plus').checked = false;
-            } else {
-                console.error('Error: Data is not a non-empty array');
-                document.getElementById("medianPrice").style.display = "none";
-                document.querySelector('.table-container').style.display = 'none';
-            }
-        })
-        .catch(error => {
-            console.error('検索エラー:', error);
-            alert('検索に失敗しました');
-        })
-        .finally(() => {
-            spinner.style.display = 'none';
-            button.disabled = false;
-        });
+    try {
+        const result = await fetchJsonWithRetry(`/taskle/perform_search?${params.toString()}`, {}, { maxRetries: 3, delayMs: 1500, alertOnFailure: true });
+        currentData = result.data || [];
+        filteredData = [...currentData];
+        if (Array.isArray(currentData) && currentData.length > 0) {
+            currentPage = 1;
+            updateTable(paginateData(filteredData));
+            document.querySelector('.Main-Element').style.display = 'block';
+            const prices = currentData.map(item => Number(item.price) || 0).filter(price => !isNaN(price));
+            const median = calculateMedian(prices);
+            updatePagination();
+            document.getElementById("medianPrice").textContent = `終了価格の中央値: ${median.toLocaleString()} 円`;
+            document.getElementById("medianPrice").style.display = "block";
+            document.getElementById('minPrice').value = '0';
+            document.getElementById('maxPrice').value = '';
+            document.getElementById('bid0_10').checked = false;
+            document.getElementById('bid10_20').checked = false;
+            document.getElementById('bid20_30').checked = false;
+            document.getElementById('bid30_40').checked = false;
+            document.getElementById('bid40_50').checked = false;
+            document.getElementById('bid50_plus').checked = false;
+        } else {
+            console.error('Error: Data is not a non-empty array');
+            document.getElementById("medianPrice").style.display = "none";
+            document.querySelector('.table-container').style.display = 'none';
+        }
+    } catch (error) {
+        console.error('検索エラー:', error);
+        alert('検索に失敗しました。再試行を実行しましたが、データを取得できませんでした。');
+    } finally {
+        if (spinner) spinner.style.display = 'none';
+        if (button) button.disabled = false;
+    }
 }
 
 // ページネーションのためのデータを取得
@@ -173,6 +193,42 @@ function calculateMedian(numbers) {
     return sorted[middle];
 }
 // テーブルの更新
+function normalizeItemUrl(url) {
+    if (!url || url === '#') return '#';
+    const value = String(url).trim();
+    if (/^https?:\/\//i.test(value)) return value;
+    if (value.startsWith('//')) return `https:${value}`;
+    if (value.startsWith('/')) return `https://auctions.yahoo.co.jp${value}`;
+    if (value.startsWith('jp/auction/') || value.startsWith('auction/')) return `https://auctions.yahoo.co.jp/${value}`;
+    return value;
+}
+
+function toSortableValue(value, key) {
+    if (key === 'time') {
+        if (!value) return 0;
+        const iso = String(value).trim();
+        if (!iso || iso === 'N/A') return 0;
+        const date = new Date(iso);
+        if (!isNaN(date.getTime())) return date.getTime();
+        const slash = iso.match(/(\d{1,2})\/(\d{1,2})\s+(\d{1,2}:\d{2})/);
+        if (slash) {
+            const currentYear = new Date().getFullYear();
+            const month = Number(slash[1]);
+            const day = Number(slash[2]);
+            const [hour, minute] = slash[3].split(':').map(Number);
+            return new Date(currentYear, month - 1, day, hour, minute).getTime();
+        }
+        return 0;
+    }
+
+    if (typeof value === 'string') {
+        const stripped = value.replace(/[^\d.-]/g, '');
+        return Number(stripped || 0);
+    }
+    if (typeof value === 'number') return value;
+    return 0;
+}
+
 function updateTable(data) {
     const tableBody = document.getElementById("dataTable").getElementsByTagName("tbody")[0];
     tableBody.innerHTML = "";
@@ -181,25 +237,28 @@ function updateTable(data) {
         const row = tableBody.insertRow();
 
         const productNameCell = row.insertCell(0);
-        productNameCell.textContent = item.name;
+        productNameCell.textContent = item.name || 'N/A';
 
         const endPriceCell = row.insertCell(1);
-        endPriceCell.textContent = item.price.toLocaleString();
+        endPriceCell.textContent = Number(item.price || 0).toLocaleString();
 
         const startPriceCell = row.insertCell(2);
-        startPriceCell.textContent = item.startPrice.toLocaleString();
+        startPriceCell.textContent = Number(item.startPrice || 0).toLocaleString();
 
-        const biddingCell = row.insertCell(3);
-        biddingCell.textContent = item.time;
+        const timeCell = row.insertCell(3);
+        timeCell.textContent = item.time || 'N/A';
 
-        const timeCell = row.insertCell(4);
-        timeCell.textContent = item.bidding;
+        const biddingCell = row.insertCell(4);
+        biddingCell.textContent = Number(item.bidding || 0).toLocaleString();
 
         const productURLCell = row.insertCell(5);
         const link = document.createElement("a");
-        link.href = item.url;
-        link.textContent = "商品リンクURL";
-        link.target = "_blank"
+        const href = normalizeItemUrl(item.url);
+        link.href = href;
+        link.textContent = href === '#' ? 'URLなし' : '商品リンクURL';
+        link.target = '_blank';
+        link.rel = 'noopener noreferrer';
+        link.style.color = href === '#' ? '#666' : '#0d6efd';
         productURLCell.appendChild(link);
     });
 }
@@ -209,10 +268,8 @@ function sortData(key, order) {
     sortKey = key;
     sortOrder = order;
     filteredData.sort((a, b) => {
-        let valueA = a[key];
-        let valueB = b[key];
-        if (typeof valueA === 'string') valueA = parseFloat(valueA.replace(/[^\d.-]/g, '')) || 0;
-        if (typeof valueB === 'string') valueB = parseFloat(valueB.replace(/[^\d.-]/g, '')) || 0;
+        const valueA = toSortableValue(a[key], key);
+        const valueB = toSortableValue(b[key], key);
         return order === 'asc' ? valueA - valueB : valueB - valueA;
     });
     currentPage = 1;

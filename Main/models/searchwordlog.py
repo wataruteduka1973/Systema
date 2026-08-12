@@ -2,6 +2,12 @@ from django.db import models
 
 
 class searchwordlog(models.Model):
+    '''
+    検索ワード履歴モデルs 
+    Attributes:
+        word (str): 検索ワード
+        searched_at (datetime): 検索日時
+    '''
     word = models.CharField(max_length=255, db_index=True)
     searched_at = models.DateTimeField(auto_now_add=True)
 
