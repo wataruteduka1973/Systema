@@ -1,4 +1,5 @@
 import json
+from datetime import datetime
 from pathlib import Path
 
 import pytest
@@ -209,6 +210,26 @@ class TestAPIUtils:
         assert response.status_code == 400
         data = json.loads(response.content)
         assert 'error' in data
+
+    def test_utils_prediction_market_logic_year_wraps_to_previous_year(self, monkeypatch):
+        fixed_now = datetime(2026, 1, 10, 12, 0, 0)
+        FakeDateTime = type('FakeDateTime', (datetime,), {
+            'now': classmethod(lambda cls, tz=None: fixed_now)
+        })
+        monkeypatch.setattr(utils, 'datetime', FakeDateTime)
+        monkeypatch.setattr(utils, 'scrape_data', lambda keyword: [
+            {'time': '12/31 23:59', 'price': 1000},
+            {'time': '01/05 12:00', 'price': 1500},
+            {'time': '10/01 09:00', 'price': 2000},
+        ])
+
+        request = self.factory.get('/taskle/prediction_market?keyword=test')
+        response = utils.prediction_market_logic(request)
+        assert response.status_code == 200
+        data = json.loads(response.content)
+        assert data['keyword'] == 'test'
+        assert 'predicted_price' in data
+        assert any(item['date'] == '12/31 23:59' for item in data['price_trends'])
 
     def test_utils_get_popular_words_logic_get(self):
         request = self.factory.get('/taskle/get_popular_words')

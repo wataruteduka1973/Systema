@@ -143,11 +143,12 @@ function RealtimeSearch() {
                 document.getElementById('bid40_50').checked = false;
                 document.getElementById('bid50_plus').checked = false;
                 const prices = currentData.map(item => item.currentPrice).filter(currentPrice => !isNaN(currentPrice));
-                const median = calculateMedian(prices);
-                const lowerBound = Math.floor(median * 0.85);
-                const upperBound = Math.ceil(median * 1.15);
-                document.getElementById("medianPrice").textContent = `特に多い価格帯 ${lowerBound.toLocaleString()} 円から ${upperBound.toLocaleString()} 円`;
-                document.getElementById("medianPrice").style.display = "block";
+                const band = findMostFrequentPriceBand(prices);
+                if (band) {
+                    document.getElementById("medianPrice").textContent =
+                        `特に多い価格帯 ${band.lower.toLocaleString()} 円から ${band.upper.toLocaleString()} 円`;
+                    document.getElementById("medianPrice").style.display = "block";
+                }
             } else {
                 console.error('Error: Data is not a non-empty array');
                 document.querySelector('.table-container').style.display = 'none';
@@ -173,6 +174,26 @@ function calculateMedian(numbers) {
 
     return sorted[middle];
 }
+
+function findMostFrequentPriceBand(prices, binCount = 10) {
+    if (!prices.length) return null;
+    const min = Math.min(...prices);
+    const max = Math.max(...prices);
+    if (min === max) {
+        return { lower: min, upper: max };
+    }
+    const binWidth = (max - min) / binCount;
+    const counts = new Array(binCount).fill(0);
+    prices.forEach(p => {
+        const idx = Math.min(Math.floor((p - min) / binWidth), binCount - 1);
+        counts[idx]++;
+    });
+    const modeIdx = counts.indexOf(Math.max(...counts));
+    return {
+        lower: Math.floor(min + modeIdx * binWidth),
+        upper: Math.ceil(min + (modeIdx + 1) * binWidth)
+    };
+}
 // ページネーションのデータを取得
 function paginateData(data) {
     const start = (currentPage - 1) * ITEMS_PER_PAGE;
@@ -181,7 +202,7 @@ function paginateData(data) {
 }
 // ページネーションの更新
 function updatePagination() {
-    const totalPages = Math.ceil(currentData.length / ITEMS_PER_PAGE);
+    const totalPages = Math.ceil(filteredData.length / ITEMS_PER_PAGE);
     const pagination = document.createElement('nav');
     pagination.innerHTML = `
         <ul class="pagination justify-content-center mt-3">

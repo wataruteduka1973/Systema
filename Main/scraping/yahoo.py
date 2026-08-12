@@ -28,39 +28,11 @@ class YahooAuctionParser:
         if re.match(r'^\d{4}-\d{2}-\d{2}[T\s]', text):
             return text
 
-        match = re.search(r'(\d+)\s*(日|時間|分|秒)', text)
-        if not match:
-            return text
-
-        largest_unit = match.group(2)
-        shortened = f'{match.group(1)}{largest_unit}'
-
-        if largest_unit == '日':
-            return shortened
-        if largest_unit == '時間':
-            return shortened
-        if largest_unit == '分':
-            return shortened
-        return shortened
-
-        now = datetime.now(timezone.utc)
-        total_seconds = 0
         tokens = re.findall(r'(\d+)\s*(日|時間|分|秒)', text)
-        for amount, unit in tokens:
-            amount_int = int(amount)
-            if unit == '日':
-                total_seconds += amount_int * 86400
-            elif unit == '時間':
-                total_seconds += amount_int * 3600
-            elif unit == '分':
-                total_seconds += amount_int * 60
-            elif unit == '秒':
-                total_seconds += amount_int
-
-        if total_seconds <= 0:
+        if not tokens:
             return text
 
-        return (now + timedelta(seconds=total_seconds)).isoformat()
+        return ''.join(f'{amount}{unit}' for amount, unit in tokens)
 
     @staticmethod
     def _is_valid_title_text(text):
@@ -70,13 +42,21 @@ class YahooAuctionParser:
         cleaned = re.sub(r'\s+', ' ', text).strip()
         if not cleaned or len(cleaned) < 2:
             return False
-        if re.fullmatch(r'(?i)(?:商品リンクURL|商品リンク|help|ヘルプ|ログイン|マイページ|検索|トップ|カテゴリ|お問い合わせ|規約|プライバシー)', cleaned):
+        if re.fullmatch(r'(?i)(?:商品リンクURL|商品リンク|help|ヘルプ|ログイン|マイページ|検索|トップ|カテゴリ|お問い合わせ|規約|プライバシー|検索条件)', cleaned):
             return False
         if re.fullmatch(r'(?i)(?:itemid|auctionid|id)[\s:：]*[a-z0-9]+', cleaned):
             return False
         if re.fullmatch(r'(?i)z\d+', cleaned):
             return False
-        if re.fullmatch(r'[\d\s\-_/]+', cleaned):
+        if re.fullmatch(r'[\d\s\-_/,]+', cleaned):
+            return False
+        # Exclude UI component names (Item prefix, camelCase patterns, common UI keywords)
+        if cleaned.startswith('Item '):
+            return False
+        if re.search(r'(?:Filter|Expand|Sort|Mode|Link|Controls|Conditions|Select|__next|wrapper|acls)', cleaned, re.IGNORECASE):
+            return False
+        # Exclude pure camelCase identifiers without proper nouns (likely internal class/ID names)
+        if re.fullmatch(r'[a-z][a-zA-Z0-9]*$', cleaned) and len(cleaned) < 5:
             return False
         return True
 
@@ -93,6 +73,11 @@ class YahooAuctionParser:
                 return tag
             if tag and YahooAuctionParser._is_valid_title_text(tag.get_text(' ', strip=True)):
                 return tag
+
+        # Fallback for generic product card markup that does not use Product__titleLink
+        fallback = card.select_one('a[href*="/jp/auction/"], a[href*="/item/"], a[href*="yahoo.co.jp/jp/auction/"], a[href*="paypayfleamarket.yahoo.co.jp/item/"], h3, h4, span.title, .title, .item-name')
+        if fallback and YahooAuctionParser._is_valid_title_text(fallback.get_text(' ', strip=True)):
+            return fallback
         return None
 
     @staticmethod

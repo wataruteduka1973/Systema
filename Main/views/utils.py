@@ -55,10 +55,13 @@ def _normalize_yahoo_item(item):
 
 
 def _format_remaining_time(end_time):
-    if not end_time:
+    if not end_time or end_time == 'N/A':
         return 'N/A'
+    text = str(end_time)
+    if re.search(r'[日時分秒]', text):
+        return text
     try:
-        dt = datetime.fromisoformat(str(end_time).replace('Z', '+00:00'))
+        dt = datetime.fromisoformat(text.replace('Z', '+00:00'))
         now = datetime.now(dt.tzinfo or timezone.utc)
         remaining_seconds = max(int((dt - now).total_seconds()), 0)
         days, remainder = divmod(remaining_seconds, 86400)
@@ -394,6 +397,8 @@ def prediction_market_logic(request):
                     year = current_date.year
                     full_date = f"{year}-{month.zfill(2)}-{day.zfill(2)} {time_part}"
                     item_date = datetime.strptime(full_date, '%Y-%m-%d %H:%M')
+                    if item_date > current_date:
+                        item_date = item_date.replace(year=year - 1)
                     if item_date >= past_90_days:
                         filtered_data.append(item)
                 except Exception as e:

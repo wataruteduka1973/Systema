@@ -150,7 +150,7 @@ function paginateData(data) {
 }
 // ページネーションの更新
 function updatePagination() {
-    const totalPages = Math.ceil(currentData.length / ITEMS_PER_PAGE);
+    const totalPages = Math.ceil(filteredData.length / ITEMS_PER_PAGE);
     const pagination = document.createElement('nav');
     pagination.innerHTML = `
         <ul class="pagination justify-content-center mt-3">
@@ -210,7 +210,7 @@ function toSortableValue(value, key) {
         if (!iso || iso === 'N/A') return 0;
         const date = new Date(iso);
         if (!isNaN(date.getTime())) return date.getTime();
-        const slash = iso.match(/(\d{1,2})\/(\d{1,2})\s+(\d{1,2}:\d{2})/);
+        const slash = iso.match(/(\d{1,2})\/(\d{1,2})(?:\([^)]{1,3}\))?\s+(\d{1,2}:\d{2})/);
         if (slash) {
             const currentYear = new Date().getFullYear();
             const month = Number(slash[1]);

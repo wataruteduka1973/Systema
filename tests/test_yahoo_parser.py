@@ -7,6 +7,24 @@ from Main.scraping.yahoo import YahooAuctionParser
 FIXTURE_DIR = Path(__file__).resolve().parent / 'fixtures' / 'yahoo'
 
 
+def test_yahoo_parser_rejects_ui_component_titles():
+    assert not YahooAuctionParser._is_valid_title_text('Item acls')
+    assert not YahooAuctionParser._is_valid_title_text('Item searchSortSelect')
+    assert not YahooAuctionParser._is_valid_title_text('Item searchModeLink')
+    assert not YahooAuctionParser._is_valid_title_text('Item searchListControls')
+    assert not YahooAuctionParser._is_valid_title_text('Item optionFilterExpand')
+    assert not YahooAuctionParser._is_valid_title_text('Item categoryFilterExpand')
+    assert not YahooAuctionParser._is_valid_title_text('Item brandFilterExpand')
+    assert not YahooAuctionParser._is_valid_title_text('検索条件')
+    assert not YahooAuctionParser._is_valid_title_text('__next')
+    assert not YahooAuctionParser._is_valid_title_text('wrapper')
+    assert not YahooAuctionParser._is_valid_title_text('searchSortSelect')
+    assert not YahooAuctionParser._is_valid_title_text('mediumSearchConditions')
+    # Valid product titles should still pass
+    assert YahooAuctionParser._is_valid_title_text('iPhone 13 Pro')
+    assert YahooAuctionParser._is_valid_title_text('新品 未使用')
+
+
 def test_yahoo_parser_extracts_normal_listing_from_fixture():
     html = (FIXTURE_DIR / 'closed_search_sample.html').read_text(encoding='utf-8')
 
@@ -54,21 +72,33 @@ def test_yahoo_parser_extracts_product_fields_from_product_cards():
     assert items[0]['url'].endswith('/jp/auction/z123456789')
 
 
-def test_yahoo_parser_converts_relative_time_to_datetime_string():
+def test_yahoo_parser_preserves_relative_time_units():
     html = '''
     <div class="Product" data-auction-id="z987654321">
       <a class="Product__titleLink" href="/jp/auction/z987654321">残り時間商品</a>
       <span class="Product__priceValue u-textRed">2,000円</span>
       <dd class="Product__bid">5</dd>
-      <span class="Product__time">2日</span>
+      <span class="Product__time">2日5時間20分</span>
     </div>
     '''
 
     items = YahooAuctionParser.extract_listing_items(html)
 
     assert len(items) == 1
-    assert items[0]['time'] != '2日'
-    assert '202' in items[0]['time'] or 'T' in items[0]['time'] or items[0]['time'] == 'N/A'
+    assert items[0]['time'] == '2日5時間20分'
+
+
+def test_yahoo_parser_normalizes_compound_remaining_time_units():
+    assert YahooAuctionParser._normalize_time_value('3日5時間20分') == '3日5時間20分'
+    assert YahooAuctionParser._normalize_time_value('5時間20分') == '5時間20分'
+    assert YahooAuctionParser._normalize_time_value('1日 2時間 30分') == '1日2時間30分'
+
+
+def test_format_remaining_time_returns_japanese_duration_unchanged():
+    from Main.views.utils import _format_remaining_time
+
+    assert _format_remaining_time('3日5時間20分') == '3日5時間20分'
+    assert _format_remaining_time('0分') == '0分'
 
 
 def test_yahoo_parser_handles_paypay_flea_market_urls():
