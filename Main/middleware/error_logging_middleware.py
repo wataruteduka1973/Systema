@@ -1,5 +1,6 @@
 import logging
 import traceback
+
 from ..models.errorlog import ErrorLog
 
 
@@ -15,7 +16,7 @@ class ErrorLoggingMiddleware:
         初期化メソッド。ミドルウェアのインスタンスを初期化します。
         """
         self.get_response = get_response
-        self.logger = logging.getLogger('error_logger')
+        self.logger = logging.getLogger("error_logger")
 
     def __call__(self, request):
         """
@@ -29,13 +30,14 @@ class ErrorLoggingMiddleware:
             line_number = None
 
             self.logger.error(
-                f"Error Code: {error_code}, Message: {error_message}, Path: {file_path}")
+                f"Error Code: {error_code}, Message: {error_message}, Path: {file_path}"
+            )
 
             ErrorLog.objects.create(
                 error_code=str(error_code),
                 error_message=error_message,
                 file_path=file_path,
-                line_number=line_number
+                line_number=line_number,
             )
         return response
 
@@ -44,17 +46,16 @@ class ErrorLoggingMiddleware:
         例外が発生した場合に呼び出され、エラーログを記録します。
         """
         tb = traceback.format_exc()
-        error_code = getattr(exception, 'status_code', 500)
+        error_code = getattr(exception, "status_code", 500)
         error_message = str(exception)
         file_path = traceback.extract_tb(exception.__traceback__)[-1].filename
         line_number = traceback.extract_tb(exception.__traceback__)[-1].lineno
-        self.logger.error(
-            f"Error Code: {error_code}, Message: {error_message}, Traceback: {tb}")
+        self.logger.error(f"Error Code: {error_code}, Message: {error_message}, Traceback: {tb}")
 
         ErrorLog.objects.create(
             error_code=str(error_code),
             error_message=error_message,
             file_path=file_path,
-            line_number=line_number
+            line_number=line_number,
         )
         return None

@@ -12,6 +12,15 @@ This project is a Django-based Yahoo! Auction market analysis tool. It fetches a
 - `Main/templates/` and `Main/static/`: UI assets used by the Django views
 - `System_Config/settings.py`: project configuration and logging
 
+## Responsibility layers
+
+- `Main/domain/`: 外部I/Oに依存しない値変換・判定ロジック
+- `Main/services/`: ユースケースとアプリケーション固有例外
+- `Main/infrastructure/`: HTTP、DBなど外部I/Oの実装
+- `Main/views/`: HTTP入力とレスポンスへの変換
+
+既存のDjango app label、migration、importパスを維持するため、現時点ではリポジトリ全体を`src/`へ移していません。まず上記境界へロジックを移し、`views/utils.py`を段階的に薄くする方針です。
+
 ## Data flow
 
 1. Client requests a search or market API.

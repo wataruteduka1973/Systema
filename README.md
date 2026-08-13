@@ -44,6 +44,21 @@
 
 `main` ブランチへpushすると、GitHub ActionsがSphinxドキュメントをビルドしてGitHub Pagesへ公開します。初回のみリポジトリの **Settings → Pages → Source** を **GitHub Actions** に設定してください。
 
+## ✅ 品質チェック
+
+```powershell
+python -m pip install -r requirements-dev.txt
+ruff check .
+black --check Main System_Config tests
+mypy
+coverage run -m pytest
+coverage report
+```
+
+pytest・Ruff・Black・mypy・SphinxはpushとPull RequestごとにGitHub Actionsでも検証されます。
+本アプリケーションのドキュメントは以下より閲覧できます
+https://wataruteduka1973.github.io/Systema/
+
 ## 🤝 貢献
 バグ報告や機能リクエストは [GitHub Issues](https://github.com/wataruteduka1973/Systema/issues) へ。  
 ご質問は [agtmpdd992@gmail.com](mailto:agtmpdd992@gmail.com)まで

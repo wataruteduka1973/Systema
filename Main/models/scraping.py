@@ -8,6 +8,7 @@ class scraping(models.Model):
     各商品は、検索ワード、検索日、入札数、終了価格、開始価格、
     商品名、URLを含みます。
     """
+
     SearchWord = models.TextField(help_text="検索ワード")
     SearchDay = models.TextField(help_text="検索日")
     Bidding = models.TextField(help_text="入札数")

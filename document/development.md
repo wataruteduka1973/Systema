@@ -23,9 +23,26 @@ python manage.py runserver --insecure
 ## テストと検査
 
 ```powershell
-python -m pytest -q
+python -m pip install -r requirements-dev.txt
+ruff check .
+black --check Main System_Config tests
+mypy
+coverage run -m pytest
+coverage report
 python manage.py check
 ```
+
+設定は`pyproject.toml`へ集約しています。テストは`tests/unit/`、`tests/integration/`、`tests/e2e/`に分類します。
+
+## CIとマージ保護
+
+pushとPull Requestごとに、`.github/workflows/ci.yml`がlint・型検査・テスト・Sphinxビルドを実行します。GitHubの **Settings → Branches → Branch protection rules** で`main`を対象にし、次のRequired status checksを指定してください。
+
+- `Lint and type check`
+- `Tests`
+- `Documentation`
+
+このリポジトリ設定を有効にすると、いずれかが失敗したPull Requestはマージできません。
 
 Yahoo!オークションのHTML変更へ対応するときは、ライブ通信を使う大規模なテストではなく、`tests/fixtures/yahoo/` のfixtureと `tests/test_yahoo_parser.py` を更新します。
 

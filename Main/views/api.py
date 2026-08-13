@@ -1,23 +1,22 @@
+import logging
+
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 
-
-import logging
-
 from .utils import (
-    scrape_data,
-    scrape_current_listings,
-    save_to_database,
-    get_search_words_logic,
-    get_market_data_logic,
-    update_market_data_logic,
-    delete_market_data_logic,
     complex_market_data_logic,
-    prediction_market_logic,
+    delete_market_data_logic,
+    get_market_data_logic,
     get_popular_words_logic,
+    get_search_words_logic,
+    prediction_market_logic,
+    save_to_database,
+    scrape_current_listings,
+    scrape_data,
+    update_market_data_logic,
 )
 
-logger = logging.getLogger('search_logger')
+logger = logging.getLogger("search_logger")
 
 
 def handle_search_response(request, data_fetch_func, save_func=None):
@@ -25,28 +24,27 @@ def handle_search_response(request, data_fetch_func, save_func=None):
     共通の検索処理を行うヘルパー関数。
     """
     logger.info("Logger initialized")
-    if request.method != 'GET':
+    if request.method != "GET":
         logger.warning("Invalid request method received")
-        return JsonResponse({'error': 'Invalid request method'}, status=400)
+        return JsonResponse({"error": "Invalid request method"}, status=400)
 
-    searchname = request.GET.get('keyword', '')
+    searchname = request.GET.get("keyword", "")
     logger.info(f"Search started for keyword: {searchname}")
     if not searchname:
-        return JsonResponse({'error': 'Keyword is required'}, status=400)
-    if request.method not in ['GET', 'POST', 'DELETE']:
-        return JsonResponse({'error': 'Method not allowed'}, status=405)
+        return JsonResponse({"error": "Keyword is required"}, status=400)
+    if request.method not in ["GET", "POST", "DELETE"]:
+        return JsonResponse({"error": "Method not allowed"}, status=405)
 
     try:
         scraped_data_list = data_fetch_func(searchname)
-        logger.info(
-            f"Scraped {len(scraped_data_list)} items for keyword: {searchname}")
+        logger.info(f"Scraped {len(scraped_data_list)} items for keyword: {searchname}")
         if save_func:
             save_func(searchname, scraped_data_list)
             logger.info(f"Data saved to database for keyword: {searchname}")
-        return JsonResponse({'data': scraped_data_list})
+        return JsonResponse({"data": scraped_data_list})
     except Exception as e:
         logger.error(f"Error during search for keyword {searchname}: {str(e)}")
-        return JsonResponse({'error': str(e)}, status=500)
+        return JsonResponse({"error": str(e)}, status=500)
 
 
 def perform_search(request):

@@ -1,0 +1,6 @@
+-r requirements.txt
+black==25.1.0
+coverage[toml]==7.10.2
+mypy==1.17.1
+ruff==0.12.8
+types-requests==2.32.4.20250809

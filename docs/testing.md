@@ -2,14 +2,22 @@
 
 ## Test structure
 
-- `tests/api_test.py`: API contract and validation checks
-- `tests/test_yahoo_parser.py`: parser and normalization regression checks
+- `tests/unit/`: 外部I/Oを使用しないドメイン・パーサーの単体テスト
+- `tests/integration/`: Django、DB、API契約の結合テスト
+- `tests/e2e/`: 起動済みアプリケーションを対象にするE2Eテスト
 - `tests/fixtures/yahoo/`: representative HTML fixtures for external HTML changes
 
 ## Run tests
 
 ```bash
 pytest -q
+```
+
+Coverageを含むCI相当の実行:
+
+```bash
+coverage run -m pytest
+coverage report
 ```
 
 ## Fixture strategy
