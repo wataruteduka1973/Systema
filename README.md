@@ -1,6 +1,6 @@
 # 情報分析ツール システマ
 
-![Version](https://img.shields.io/badge/Version-1.0.0-blue) ![Build](https://img.shields.io/badge/Build-Passing-green)
+![Version](https://img.shields.io/badge/Version-1.0.0-blue) [![Documentation](https://github.com/wataruteduka1973/Systema/actions/workflows/docs.yml/badge.svg)](https://github.com/wataruteduka1973/Systema/actions/workflows/docs.yml)
 
 このツールは、ヤフオクの**購入**や**出品**に関する商品の価格や傾向を分析し、ユーザーに最適な意思決定をサポートします。相場データや現在出品中の商品を活用し、市場動向を可視化します。
 
@@ -26,15 +26,23 @@
 
 1. リポジトリをクローン:
    ```bash
-   git clone https://github.com/wataruteduka1973/taskle.git
-   cd taskle
+   git clone https://github.com/wataruteduka1973/Systema.git
+   cd Systema
+   ```
 
-2. 依存関係をインストール
-    pip install -r requirements.txt
+2. Windowsでは `run_systema.bat` を実行
 
-3. サーバーを起動
-    python manage.py migrate
-    python manage.py runserver
+3. `http://127.0.0.1:8000/taskle/` を開く
+
+## 📚 ドキュメント
+
+ローカルでは次のコマンドで生成できます。
+
+```powershell
+.\document\make.bat clean html
+```
+
+`main` ブランチへpushすると、GitHub ActionsがSphinxドキュメントをビルドしてGitHub Pagesへ公開します。初回のみリポジトリの **Settings → Pages → Source** を **GitHub Actions** に設定してください。
 
 ## 🤝 貢献
 バグ報告や機能リクエストは [GitHub Issues](https://github.com/wataruteduka1973/Systema/issues) へ。  

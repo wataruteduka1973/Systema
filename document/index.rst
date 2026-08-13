@@ -1,17 +1,23 @@
 情報分析ツール システマ
-======================
+========================
 
-ヤフオクのデータを自動で収集・分析し、グラフやワードクラウドで「今の相場」や「狙い目商品」「価格予測」を分かりやすく提供します。
+Systemaは、Yahoo!オークションの終了商品と現在出品中の商品を検索し、相場、傾向、狙い目商品、価格推移を確認するDjango製ウェブアプリケーションです。
+
+このドキュメントでは、利用方法から開発・保守、HTTPエンドポイント、Pythonモジュールまでを説明します。
 
 .. toctree::
    :maxdepth: 2
    :caption: 目次:
 
-   introduction.md
-   models       
-   utils          
-   api              
-   errorlog        
+   introduction
+   user-guide
+   development
+   architecture
+   endpoints
+   api
+   utils
+   models
+   errorlog
    
 索引
 ====

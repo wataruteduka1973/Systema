@@ -6,16 +6,16 @@
   <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>情報分析ツール システマ &mdash; systema 1.0.0 ドキュメント</title>
+  <title>情報分析ツール システマ &mdash; Systema Documentation</title>
       <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=b86133f3" />
-      <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=e59714d7" />
+      <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=9edc463e" />
 
   
       <script src="_static/jquery.js?v=5d32c60e"></script>
       <script src="_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
       <script src="_static/documentation_options.js?v=144c8c96"></script>
-      <script src="_static/doctools.js?v=9bcbadda"></script>
-      <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
+      <script src="_static/doctools.js?v=fd6eb6e6"></script>
+      <script src="_static/sphinx_highlight.js?v=6ffebe34"></script>
       <script src="_static/translations.js?v=4755f45a"></script>
     <script src="_static/js/theme.js"></script>
     <link rel="index" title="索引" href="genindex.html" />
@@ -32,7 +32,7 @@
           
           
           <a href="#" class="icon icon-home">
-            systema
+            Systema
           </a>
 <div role="search">
   <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
@@ -45,9 +45,13 @@
               <p class="caption" role="heading"><span class="caption-text">目次:</span></p>
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="introduction.html">情報分析ツール システマ</a></li>
-<li class="toctree-l1"><a class="reference internal" href="models.html">データベース</a></li>
-<li class="toctree-l1"><a class="reference internal" href="utils.html">ユーティリティ</a></li>
+<li class="toctree-l1"><a class="reference internal" href="user-guide.html">画面・機能ガイド</a></li>
+<li class="toctree-l1"><a class="reference internal" href="development.html">開発ガイド</a></li>
+<li class="toctree-l1"><a class="reference internal" href="architecture.html">アーキテクチャ</a></li>
+<li class="toctree-l1"><a class="reference internal" href="endpoints.html">HTTPエンドポイント</a></li>
 <li class="toctree-l1"><a class="reference internal" href="api.html">API</a></li>
+<li class="toctree-l1"><a class="reference internal" href="utils.html">ユーティリティ</a></li>
+<li class="toctree-l1"><a class="reference internal" href="models.html">データベース</a></li>
 <li class="toctree-l1"><a class="reference internal" href="errorlog.html">エラーログ設定</a></li>
 </ul>
 
@@ -57,7 +61,7 @@
 
     <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
           <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
-          <a href="#">systema</a>
+          <a href="#">Systema</a>
       </nav>
 
       <div class="wy-nav-content">
@@ -77,7 +81,8 @@
              
   <section id="id1">
 <h1>情報分析ツール システマ<a class="headerlink" href="#id1" title="Link to this heading"></a></h1>
-<p>ヤフオクのデータを自動で収集・分析し、グラフやワードクラウドで「今の相場」や「狙い目商品」「価格予測」を分かりやすく提供します。</p>
+<p>Systemaは、Yahoo!オークションの終了商品と現在出品中の商品を検索し、相場、傾向、狙い目商品、価格推移を確認するDjango製ウェブアプリケーションです。</p>
+<p>このドキュメントでは、利用方法から開発・保守、HTTPエンドポイント、Pythonモジュールまでを説明します。</p>
 <div class="toctree-wrapper compound">
 <p class="caption" role="heading"><span class="caption-text">目次:</span></p>
 <ul>
@@ -88,9 +93,44 @@
 <li class="toctree-l2"><a class="reference internal" href="introduction.html#id5">🤝 貢献</a></li>
 </ul>
 </li>
-<li class="toctree-l1"><a class="reference internal" href="models.html">データベース</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="models.html#Main.models.errorlog.ErrorLog"><code class="docutils literal notranslate"><span class="pre">ErrorLog</span></code></a></li>
-<li class="toctree-l2"><a class="reference internal" href="models.html#Main.models.scraping.scraping"><code class="docutils literal notranslate"><span class="pre">scraping</span></code></a></li>
+<li class="toctree-l1"><a class="reference internal" href="user-guide.html">画面・機能ガイド</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="user-guide.html#id2">画面一覧</a></li>
+<li class="toctree-l2"><a class="reference internal" href="user-guide.html#id3">相場検索</a></li>
+<li class="toctree-l2"><a class="reference internal" href="user-guide.html#id4">現在価格検索</a></li>
+<li class="toctree-l2"><a class="reference internal" href="user-guide.html#id5">保存データと分析</a></li>
+<li class="toctree-l2"><a class="reference internal" href="user-guide.html#id6">注意事項</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="development.html">開発ガイド</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="development.html#id2">必要環境</a></li>
+<li class="toctree-l2"><a class="reference internal" href="development.html#windows">Windowsでの起動</a></li>
+<li class="toctree-l2"><a class="reference internal" href="development.html#id3">手動セットアップ</a></li>
+<li class="toctree-l2"><a class="reference internal" href="development.html#id4">テストと検査</a></li>
+<li class="toctree-l2"><a class="reference internal" href="development.html#sphinx">Sphinxドキュメント</a></li>
+<li class="toctree-l2"><a class="reference internal" href="development.html#github-pages">GitHub Pages公開</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="architecture.html">アーキテクチャ</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="architecture.html#id2">構成</a></li>
+<li class="toctree-l2"><a class="reference internal" href="architecture.html#id3">データフロー</a></li>
+<li class="toctree-l2"><a class="reference internal" href="architecture.html#id4">保守境界</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="endpoints.html">HTTPエンドポイント</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="endpoints.html#id1">検索レスポンスの基本形</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="api.html">API</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="api.html#Main.views.api.RealtimeSearch"><code class="docutils literal notranslate"><span class="pre">RealtimeSearch()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="api.html#Main.views.api.complex_market_data"><code class="docutils literal notranslate"><span class="pre">complex_market_data()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="api.html#Main.views.api.delete_market_data"><code class="docutils literal notranslate"><span class="pre">delete_market_data()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="api.html#Main.views.api.get_market_data"><code class="docutils literal notranslate"><span class="pre">get_market_data()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="api.html#Main.views.api.get_popular_words"><code class="docutils literal notranslate"><span class="pre">get_popular_words()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="api.html#Main.views.api.get_search_words"><code class="docutils literal notranslate"><span class="pre">get_search_words()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="api.html#Main.views.api.handle_search_response"><code class="docutils literal notranslate"><span class="pre">handle_search_response()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="api.html#Main.views.api.perform_search"><code class="docutils literal notranslate"><span class="pre">perform_search()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="api.html#Main.views.api.prediction_market"><code class="docutils literal notranslate"><span class="pre">prediction_market()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="api.html#Main.views.api.update_market_data"><code class="docutils literal notranslate"><span class="pre">update_market_data()</span></code></a></li>
 </ul>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="utils.html">ユーティリティ</a><ul>
@@ -106,17 +146,9 @@
 <li class="toctree-l2"><a class="reference internal" href="utils.html#Main.views.utils.update_market_data_logic"><code class="docutils literal notranslate"><span class="pre">update_market_data_logic()</span></code></a></li>
 </ul>
 </li>
-<li class="toctree-l1"><a class="reference internal" href="api.html">API</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="api.html#Main.views.api.RealtimeSearch"><code class="docutils literal notranslate"><span class="pre">RealtimeSearch()</span></code></a></li>
-<li class="toctree-l2"><a class="reference internal" href="api.html#Main.views.api.complex_market_data"><code class="docutils literal notranslate"><span class="pre">complex_market_data()</span></code></a></li>
-<li class="toctree-l2"><a class="reference internal" href="api.html#Main.views.api.delete_market_data"><code class="docutils literal notranslate"><span class="pre">delete_market_data()</span></code></a></li>
-<li class="toctree-l2"><a class="reference internal" href="api.html#Main.views.api.get_market_data"><code class="docutils literal notranslate"><span class="pre">get_market_data()</span></code></a></li>
-<li class="toctree-l2"><a class="reference internal" href="api.html#Main.views.api.get_popular_words"><code class="docutils literal notranslate"><span class="pre">get_popular_words()</span></code></a></li>
-<li class="toctree-l2"><a class="reference internal" href="api.html#Main.views.api.get_search_words"><code class="docutils literal notranslate"><span class="pre">get_search_words()</span></code></a></li>
-<li class="toctree-l2"><a class="reference internal" href="api.html#Main.views.api.handle_search_response"><code class="docutils literal notranslate"><span class="pre">handle_search_response()</span></code></a></li>
-<li class="toctree-l2"><a class="reference internal" href="api.html#Main.views.api.perform_search"><code class="docutils literal notranslate"><span class="pre">perform_search()</span></code></a></li>
-<li class="toctree-l2"><a class="reference internal" href="api.html#Main.views.api.prediction_market"><code class="docutils literal notranslate"><span class="pre">prediction_market()</span></code></a></li>
-<li class="toctree-l2"><a class="reference internal" href="api.html#Main.views.api.update_market_data"><code class="docutils literal notranslate"><span class="pre">update_market_data()</span></code></a></li>
+<li class="toctree-l1"><a class="reference internal" href="models.html">データベース</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="models.html#Main.models.errorlog.ErrorLog"><code class="docutils literal notranslate"><span class="pre">ErrorLog</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="models.html#Main.models.scraping.scraping"><code class="docutils literal notranslate"><span class="pre">scraping</span></code></a></li>
 </ul>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="errorlog.html">エラーログ設定</a><ul>
@@ -145,7 +177,7 @@
   <hr/>
 
   <div role="contentinfo">
-    <p>&#169; Copyright 2025, WataruTezuka.</p>
+    <p>&#169; Copyright 2025-2026, Wataru Tezuka.</p>
   </div>
 
   Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a

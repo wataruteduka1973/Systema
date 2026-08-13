@@ -6,21 +6,21 @@
   <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>情報分析ツール システマ &mdash; systema 1.0.0 ドキュメント</title>
+  <title>情報分析ツール システマ &mdash; Systema Documentation</title>
       <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=b86133f3" />
-      <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=e59714d7" />
+      <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=9edc463e" />
 
   
       <script src="_static/jquery.js?v=5d32c60e"></script>
       <script src="_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
       <script src="_static/documentation_options.js?v=144c8c96"></script>
-      <script src="_static/doctools.js?v=9bcbadda"></script>
-      <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
+      <script src="_static/doctools.js?v=fd6eb6e6"></script>
+      <script src="_static/sphinx_highlight.js?v=6ffebe34"></script>
       <script src="_static/translations.js?v=4755f45a"></script>
     <script src="_static/js/theme.js"></script>
     <link rel="index" title="索引" href="genindex.html" />
     <link rel="search" title="検索" href="search.html" />
-    <link rel="next" title="データベース" href="models.html" />
+    <link rel="next" title="画面・機能ガイド" href="user-guide.html" />
     <link rel="prev" title="情報分析ツール システマ" href="index.html" /> 
 </head>
 
@@ -33,7 +33,7 @@
           
           
           <a href="index.html" class="icon icon-home">
-            systema
+            Systema
           </a>
 <div role="search">
   <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
@@ -52,9 +52,13 @@
 <li class="toctree-l2"><a class="reference internal" href="#id5">🤝 貢献</a></li>
 </ul>
 </li>
-<li class="toctree-l1"><a class="reference internal" href="models.html">データベース</a></li>
-<li class="toctree-l1"><a class="reference internal" href="utils.html">ユーティリティ</a></li>
+<li class="toctree-l1"><a class="reference internal" href="user-guide.html">画面・機能ガイド</a></li>
+<li class="toctree-l1"><a class="reference internal" href="development.html">開発ガイド</a></li>
+<li class="toctree-l1"><a class="reference internal" href="architecture.html">アーキテクチャ</a></li>
+<li class="toctree-l1"><a class="reference internal" href="endpoints.html">HTTPエンドポイント</a></li>
 <li class="toctree-l1"><a class="reference internal" href="api.html">API</a></li>
+<li class="toctree-l1"><a class="reference internal" href="utils.html">ユーティリティ</a></li>
+<li class="toctree-l1"><a class="reference internal" href="models.html">データベース</a></li>
 <li class="toctree-l1"><a class="reference internal" href="errorlog.html">エラーログ設定</a></li>
 </ul>
 
@@ -64,7 +68,7 @@
 
     <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
           <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
-          <a href="index.html">systema</a>
+          <a href="index.html">Systema</a>
       </nav>
 
       <div class="wy-nav-content">
@@ -84,14 +88,14 @@
              
   <section id="id1">
 <h1>情報分析ツール システマ<a class="headerlink" href="#id1" title="Link to this heading"></a></h1>
-<p><img alt="Version" src="https://img.shields.io/badge/Version-1.0.0-blue" /> <img alt="Build" src="https://img.shields.io/badge/Build-Passing-green" /></p>
-<p>このツールは、ヤフオクの<strong>購入</strong>や<strong>出品</strong>に関する商品の価格や傾向を分析し、ユーザーに最適な意思決定をサポートします。相場データや現在出品中の商品を活用し、市場動向を可視化します。</p>
+<p>このツールは、Yahoo!オークションの<strong>購入</strong>や<strong>出品</strong>に関する価格と傾向を分析し、意思決定を支援します。終了商品、現在出品中の商品、ローカルに保存した検索結果を用途別の画面で扱います。</p>
 <section id="id2">
 <h2>✨ 特徴<a class="headerlink" href="#id2" title="Link to this heading"></a></h2>
 <ul class="simple">
-<li><p><strong>リアルタイムデータ</strong>: 最新の市場動向を即座に把握。</p></li>
+<li><p><strong>終了商品検索</strong>: 終了価格、開始価格、入札数、終了時間を確認・並べ替え。</p></li>
+<li><p><strong>現在出品検索</strong>: 現在価格、入札数、残り時間を確認。</p></li>
 <li><p><strong>データ可視化</strong>: グラフやワードクラウドでトレンドを視覚化。</p></li>
-<li><p><strong>価格予測</strong>: AIを活用した将来の価格予測。</p></li>
+<li><p><strong>価格分析</strong>: 保存済みデータから価格推移や予測値を算出。</p></li>
 </ul>
 </section>
 <section id="id3">
@@ -106,8 +110,8 @@
 </thead>
 <tbody>
 <tr class="row-even"><td><p><strong>相場検索</strong></p></td>
-<td><p>過去180日間の落札データを取得</p></td>
-<td><p>落札金額・入札数確認、フィルタリング</p></td>
+<td><p>終了商品のデータを取得</p></td>
+<td><p>終了金額・入札数確認、フィルタリング</p></td>
 <td><p>購入・出品戦略の策定</p></td>
 </tr>
 <tr class="row-odd"><td><p><strong>現在価格検索</strong></p></td>
@@ -115,8 +119,8 @@
 <td><p>リアルタイム金額・入札数確認</p></td>
 <td><p>市場価格の把握</p></td>
 </tr>
-<tr class="row-even"><td><p><strong>相場再検索</strong></p></td>
-<td><p>取得データを再度確認</p></td>
+<tr class="row-even"><td><p><strong>過去情報参照</strong></p></td>
+<td><p>保存済みの取得データを確認</p></td>
 <td><p>データ更新・削除</p></td>
 <td><p>データ管理</p></td>
 </tr>
@@ -125,14 +129,14 @@
 <td><p>ワードクラウド、棒グラフ</p></td>
 <td><p>市場トレンドの理解</p></td>
 </tr>
-<tr class="row-even"><td><p><strong>市場分析</strong></p></td>
+<tr class="row-even"><td><p><strong>ターゲット分析</strong></p></td>
 <td><p>注目商品をピックアップ</p></td>
 <td><p>相場との比較、お買い得商品特定</p></td>
-<td><p>競争優位性の確保</p></td>
+<td><p>購入候補の選定</p></td>
 </tr>
 <tr class="row-odd"><td><p><strong>相場予想</strong></p></td>
 <td><p>今後の商品価格を予想</p></td>
-<td><p>過去データベースのマーケット予想</p></td>
+<td><p>保存データによる価格推移と予測</p></td>
 <td><p>落札価格の推測・出品分析</p></td>
 </tr>
 </tbody>
@@ -141,23 +145,21 @@
 <section id="id4">
 <h2>🚀 インストール<a class="headerlink" href="#id4" title="Link to this heading"></a></h2>
 <ol class="arabic">
-<li><p>リポジトリをクローン:</p>
-<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>git<span class="w"> </span>clone<span class="w"> </span>https://github.com/wataruteduka1973/taskle.git
-<span class="nb">cd</span><span class="w"> </span>taskle
+<li><p>リポジトリをクローンします。</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>git<span class="w"> </span>clone<span class="w"> </span>https://github.com/wataruteduka1973/Systema.git
+<span class="nb">cd</span><span class="w"> </span>Systema
 </pre></div>
 </div>
 </li>
-<li><p>依存関係をインストール
-pip install -r requirements.txt</p></li>
-<li><p>サーバーを起動
-python manage.py migrate
-python manage.py runserver</p></li>
+<li><p>Windowsでは <code class="docutils literal notranslate"><span class="pre">run_systema.bat</span></code> を実行します。<code class="docutils literal notranslate"><span class="pre">.venv</span></code> の作成、依存関係の導入、マイグレーション、開発サーバー起動が行われます。</p></li>
+<li><p>ブラウザで <a class="reference external" href="http://127.0.0.1:8000/taskle/">http://127.0.0.1:8000/taskle/</a> を開きます。</p></li>
 </ol>
+<p>手動セットアップや開発コマンドは<a class="reference internal" href="development.html"><span class="std std-doc">開発ガイド</span></a>を参照してください。</p>
 </section>
 <section id="id5">
 <h2>🤝 貢献<a class="headerlink" href="#id5" title="Link to this heading"></a></h2>
 <p>バグ報告や機能リクエストは <a class="reference external" href="https://github.com/wataruteduka1973/Systema/issues">GitHub Issues</a> へ。<br />
-ご質問は <a class="reference external" href="mailto:agtmpdd992&#37;&#52;&#48;gmail&#46;com">agtmpdd992<span>&#64;</span>gmail<span>&#46;</span>com</a>まで</p>
+ご質問は <a class="reference external" href="mailto:agtmpwd992&#37;&#52;&#48;gmail&#46;com">agtmpwd992<span>&#64;</span>gmail<span>&#46;</span>com</a> まで。</p>
 <p>2025 WataruTezuka. All Rights Reserved.</p>
 </section>
 </section>
@@ -167,13 +169,13 @@ python manage.py runserver</p></li>
           </div>
           <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
         <a href="index.html" class="btn btn-neutral float-left" title="情報分析ツール システマ" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
-        <a href="models.html" class="btn btn-neutral float-right" title="データベース" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+        <a href="user-guide.html" class="btn btn-neutral float-right" title="画面・機能ガイド" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
     </div>
 
   <hr/>
 
   <div role="contentinfo">
-    <p>&#169; Copyright 2025, WataruTezuka.</p>
+    <p>&#169; Copyright 2025-2026, Wataru Tezuka.</p>
   </div>
 
   Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a

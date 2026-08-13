@@ -9,14 +9,16 @@ django.setup()
 language = 'ja'
 
 
-project = 'systema'
-copyright = '2025, WataruTezuka'
+project = 'Systema'
+copyright = '2025-2026, Wataru Tezuka'
 author = 'WataruTezuka'
 release = '1.0.0'
 
 templates_path = ['_templates']
-exclude_patterns = []
+exclude_patterns = ['build', 'Thumbs.db', '.DS_Store']
 html_theme = 'sphinx_rtd_theme'
+html_title = 'Systema Documentation'
+html_static_path = []
 
 extensions = [
     'sphinx.ext.autodoc',
@@ -30,6 +32,3 @@ source_suffix = {
     '.md': 'markdown',
 }
 master_doc = 'index'
-source_dir = '.'
-
-# ドキュメント生成のコマンドsphinx-build -b html document/ document/build/html

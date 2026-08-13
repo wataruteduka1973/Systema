@@ -6,22 +6,22 @@
   <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>データベース &mdash; systema 1.0.0 ドキュメント</title>
+  <title>データベース &mdash; Systema Documentation</title>
       <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=b86133f3" />
-      <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=e59714d7" />
+      <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=9edc463e" />
 
   
       <script src="_static/jquery.js?v=5d32c60e"></script>
       <script src="_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
       <script src="_static/documentation_options.js?v=144c8c96"></script>
-      <script src="_static/doctools.js?v=9bcbadda"></script>
-      <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
+      <script src="_static/doctools.js?v=fd6eb6e6"></script>
+      <script src="_static/sphinx_highlight.js?v=6ffebe34"></script>
       <script src="_static/translations.js?v=4755f45a"></script>
     <script src="_static/js/theme.js"></script>
     <link rel="index" title="索引" href="genindex.html" />
     <link rel="search" title="検索" href="search.html" />
-    <link rel="next" title="ユーティリティ" href="utils.html" />
-    <link rel="prev" title="情報分析ツール システマ" href="introduction.html" /> 
+    <link rel="next" title="エラーログ設定" href="errorlog.html" />
+    <link rel="prev" title="ユーティリティ" href="utils.html" /> 
 </head>
 
 <body class="wy-body-for-nav"> 
@@ -33,7 +33,7 @@
           
           
           <a href="index.html" class="icon icon-home">
-            systema
+            Systema
           </a>
 <div role="search">
   <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
@@ -46,10 +46,17 @@
               <p class="caption" role="heading"><span class="caption-text">目次:</span></p>
 <ul class="current">
 <li class="toctree-l1"><a class="reference internal" href="introduction.html">情報分析ツール システマ</a></li>
+<li class="toctree-l1"><a class="reference internal" href="user-guide.html">画面・機能ガイド</a></li>
+<li class="toctree-l1"><a class="reference internal" href="development.html">開発ガイド</a></li>
+<li class="toctree-l1"><a class="reference internal" href="architecture.html">アーキテクチャ</a></li>
+<li class="toctree-l1"><a class="reference internal" href="endpoints.html">HTTPエンドポイント</a></li>
+<li class="toctree-l1"><a class="reference internal" href="api.html">API</a></li>
+<li class="toctree-l1"><a class="reference internal" href="utils.html">ユーティリティ</a></li>
 <li class="toctree-l1 current"><a class="current reference internal" href="#">データベース</a><ul>
 <li class="toctree-l2"><a class="reference internal" href="#Main.models.errorlog.ErrorLog"><code class="docutils literal notranslate"><span class="pre">ErrorLog</span></code></a><ul>
 <li class="toctree-l3"><a class="reference internal" href="#Main.models.errorlog.ErrorLog.DoesNotExist"><code class="docutils literal notranslate"><span class="pre">ErrorLog.DoesNotExist</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="#Main.models.errorlog.ErrorLog.MultipleObjectsReturned"><code class="docutils literal notranslate"><span class="pre">ErrorLog.MultipleObjectsReturned</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#Main.models.errorlog.ErrorLog.NotUpdated"><code class="docutils literal notranslate"><span class="pre">ErrorLog.NotUpdated</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="#Main.models.errorlog.ErrorLog.error_code"><code class="docutils literal notranslate"><span class="pre">ErrorLog.error_code</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="#Main.models.errorlog.ErrorLog.error_message"><code class="docutils literal notranslate"><span class="pre">ErrorLog.error_message</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="#Main.models.errorlog.ErrorLog.file_path"><code class="docutils literal notranslate"><span class="pre">ErrorLog.file_path</span></code></a></li>
@@ -67,6 +74,7 @@
 <li class="toctree-l3"><a class="reference internal" href="#Main.models.scraping.scraping.EndPrice"><code class="docutils literal notranslate"><span class="pre">scraping.EndPrice</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="#Main.models.scraping.scraping.MultipleObjectsReturned"><code class="docutils literal notranslate"><span class="pre">scraping.MultipleObjectsReturned</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="#Main.models.scraping.scraping.Name"><code class="docutils literal notranslate"><span class="pre">scraping.Name</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#Main.models.scraping.scraping.NotUpdated"><code class="docutils literal notranslate"><span class="pre">scraping.NotUpdated</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="#Main.models.scraping.scraping.SearchDay"><code class="docutils literal notranslate"><span class="pre">scraping.SearchDay</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="#Main.models.scraping.scraping.SearchWord"><code class="docutils literal notranslate"><span class="pre">scraping.SearchWord</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="#Main.models.scraping.scraping.StartPrice"><code class="docutils literal notranslate"><span class="pre">scraping.StartPrice</span></code></a></li>
@@ -77,8 +85,6 @@
 </li>
 </ul>
 </li>
-<li class="toctree-l1"><a class="reference internal" href="utils.html">ユーティリティ</a></li>
-<li class="toctree-l1"><a class="reference internal" href="api.html">API</a></li>
 <li class="toctree-l1"><a class="reference internal" href="errorlog.html">エラーログ設定</a></li>
 </ul>
 
@@ -88,7 +94,7 @@
 
     <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
           <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
-          <a href="index.html">systema</a>
+          <a href="index.html">Systema</a>
       </nav>
 
       <div class="wy-nav-content">
@@ -110,7 +116,7 @@
 <span id="id1"></span><h1>データベース<a class="headerlink" href="#module-Main.models.errorlog" title="Link to this heading"></a></h1>
 <dl class="py class">
 <dt class="sig sig-object py" id="Main.models.errorlog.ErrorLog">
-<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">Main.models.errorlog.</span></span><span class="sig-name descname"><span class="pre">ErrorLog</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">args</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/Main/models/errorlog.html#ErrorLog"><span class="viewcode-link"><span class="pre">[ソース]</span></span></a><a class="headerlink" href="#Main.models.errorlog.ErrorLog" title="Link to this definition"></a></dt>
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">Main.models.errorlog.</span></span><span class="sig-name descname"><span class="pre">ErrorLog</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">args</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/Main/models/errorlog.html#ErrorLog"><span class="viewcode-link"><span class="pre">[ソース]</span></span></a><a class="headerlink" href="#Main.models.errorlog.ErrorLog" title="Link to this definition"></a></dt>
 <dd><p>ベースクラス: <code class="xref py py-class docutils literal notranslate"><span class="pre">Model</span></code></p>
 <p>エラーログを取得し記録するテーブル
 このモデルは、アプリケーションのエラーや例外を記録するために使用されます。
@@ -119,14 +125,20 @@
 エラーログは、アプリケーションのデバッグやトラブルシューティングに役立ちます。</p>
 <dl class="py exception">
 <dt class="sig sig-object py" id="Main.models.errorlog.ErrorLog.DoesNotExist">
-<em class="property"><span class="pre">exception</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">DoesNotExist</span></span><a class="headerlink" href="#Main.models.errorlog.ErrorLog.DoesNotExist" title="Link to this definition"></a></dt>
+<span class="property"><span class="k"><span class="pre">exception</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">DoesNotExist</span></span><a class="headerlink" href="#Main.models.errorlog.ErrorLog.DoesNotExist" title="Link to this definition"></a></dt>
 <dd><p>ベースクラス: <code class="xref py py-class docutils literal notranslate"><span class="pre">ObjectDoesNotExist</span></code></p>
 </dd></dl>
 
 <dl class="py exception">
 <dt class="sig sig-object py" id="Main.models.errorlog.ErrorLog.MultipleObjectsReturned">
-<em class="property"><span class="pre">exception</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">MultipleObjectsReturned</span></span><a class="headerlink" href="#Main.models.errorlog.ErrorLog.MultipleObjectsReturned" title="Link to this definition"></a></dt>
+<span class="property"><span class="k"><span class="pre">exception</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">MultipleObjectsReturned</span></span><a class="headerlink" href="#Main.models.errorlog.ErrorLog.MultipleObjectsReturned" title="Link to this definition"></a></dt>
 <dd><p>ベースクラス: <code class="xref py py-class docutils literal notranslate"><span class="pre">MultipleObjectsReturned</span></code></p>
+</dd></dl>
+
+<dl class="py exception">
+<dt class="sig sig-object py" id="Main.models.errorlog.ErrorLog.NotUpdated">
+<span class="property"><span class="k"><span class="pre">exception</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">NotUpdated</span></span><a class="headerlink" href="#Main.models.errorlog.ErrorLog.NotUpdated" title="Link to this definition"></a></dt>
+<dd><p>ベースクラス: <code class="xref py py-class docutils literal notranslate"><span class="pre">ObjectNotUpdated</span></code>, <code class="xref py py-class docutils literal notranslate"><span class="pre">DatabaseError</span></code></p>
 </dd></dl>
 
 <dl class="py attribute">
@@ -152,12 +164,12 @@ object the first time, the query is executed.</p>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="Main.models.errorlog.ErrorLog.get_next_by_timestamp">
-<span class="sig-name descname"><span class="pre">get_next_by_timestamp</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">*</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">field=&lt;django.db.models.fields.DateTimeField:</span> <span class="pre">timestamp&gt;</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">is_next=True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">**kwargs</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#Main.models.errorlog.ErrorLog.get_next_by_timestamp" title="Link to this definition"></a></dt>
+<span class="sig-name descname"><span class="pre">get_next_by_timestamp</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">*</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">field</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">&lt;django.db.models.fields.DateTimeField:</span> <span class="pre">timestamp&gt;</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">is_next</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">**kwargs</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#Main.models.errorlog.ErrorLog.get_next_by_timestamp" title="Link to this definition"></a></dt>
 <dd></dd></dl>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="Main.models.errorlog.ErrorLog.get_previous_by_timestamp">
-<span class="sig-name descname"><span class="pre">get_previous_by_timestamp</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">*</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">field=&lt;django.db.models.fields.DateTimeField:</span> <span class="pre">timestamp&gt;</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">is_next=False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">**kwargs</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#Main.models.errorlog.ErrorLog.get_previous_by_timestamp" title="Link to this definition"></a></dt>
+<span class="sig-name descname"><span class="pre">get_previous_by_timestamp</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">*</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">field</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">&lt;django.db.models.fields.DateTimeField:</span> <span class="pre">timestamp&gt;</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">is_next</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">**kwargs</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#Main.models.errorlog.ErrorLog.get_previous_by_timestamp" title="Link to this definition"></a></dt>
 <dd></dd></dl>
 
 <dl class="py attribute">
@@ -176,7 +188,7 @@ object the first time, the query is executed.</p>
 
 <dl class="py attribute">
 <dt class="sig sig-object py" id="Main.models.errorlog.ErrorLog.objects">
-<span class="sig-name descname"><span class="pre">objects</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">&lt;django.db.models.manager.Manager</span> <span class="pre">object&gt;</span></em><a class="headerlink" href="#Main.models.errorlog.ErrorLog.objects" title="Link to this definition"></a></dt>
+<span class="sig-name descname"><span class="pre">objects</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">&lt;django.db.models.manager.Manager</span> <span class="pre">object&gt;</span></span><a class="headerlink" href="#Main.models.errorlog.ErrorLog.objects" title="Link to this definition"></a></dt>
 <dd></dd></dl>
 
 <dl class="py attribute">
@@ -190,7 +202,7 @@ object the first time, the query is executed.</p>
 
 <dl class="py class" id="module-Main.models.scraping">
 <dt class="sig sig-object py" id="Main.models.scraping.scraping">
-<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">Main.models.scraping.</span></span><span class="sig-name descname"><span class="pre">scraping</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">args</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/Main/models/scraping.html#scraping"><span class="viewcode-link"><span class="pre">[ソース]</span></span></a><a class="headerlink" href="#Main.models.scraping.scraping" title="Link to this definition"></a></dt>
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">Main.models.scraping.</span></span><span class="sig-name descname"><span class="pre">scraping</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">args</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/Main/models/scraping.html#scraping"><span class="viewcode-link"><span class="pre">[ソース]</span></span></a><a class="headerlink" href="#Main.models.scraping.scraping" title="Link to this definition"></a></dt>
 <dd><p>ベースクラス: <code class="xref py py-class docutils literal notranslate"><span class="pre">Model</span></code></p>
 <p>相場のデータを格納するテーブル
 このモデルは、相場のデータを格納するために使用されます。
@@ -205,7 +217,7 @@ object the first time, the query is executed.</p>
 
 <dl class="py exception">
 <dt class="sig sig-object py" id="Main.models.scraping.scraping.DoesNotExist">
-<em class="property"><span class="pre">exception</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">DoesNotExist</span></span><a class="headerlink" href="#Main.models.scraping.scraping.DoesNotExist" title="Link to this definition"></a></dt>
+<span class="property"><span class="k"><span class="pre">exception</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">DoesNotExist</span></span><a class="headerlink" href="#Main.models.scraping.scraping.DoesNotExist" title="Link to this definition"></a></dt>
 <dd><p>ベースクラス: <code class="xref py py-class docutils literal notranslate"><span class="pre">ObjectDoesNotExist</span></code></p>
 </dd></dl>
 
@@ -218,7 +230,7 @@ object the first time, the query is executed.</p>
 
 <dl class="py exception">
 <dt class="sig sig-object py" id="Main.models.scraping.scraping.MultipleObjectsReturned">
-<em class="property"><span class="pre">exception</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">MultipleObjectsReturned</span></span><a class="headerlink" href="#Main.models.scraping.scraping.MultipleObjectsReturned" title="Link to this definition"></a></dt>
+<span class="property"><span class="k"><span class="pre">exception</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">MultipleObjectsReturned</span></span><a class="headerlink" href="#Main.models.scraping.scraping.MultipleObjectsReturned" title="Link to this definition"></a></dt>
 <dd><p>ベースクラス: <code class="xref py py-class docutils literal notranslate"><span class="pre">MultipleObjectsReturned</span></code></p>
 </dd></dl>
 
@@ -227,6 +239,12 @@ object the first time, the query is executed.</p>
 <span class="sig-name descname"><span class="pre">Name</span></span><a class="headerlink" href="#Main.models.scraping.scraping.Name" title="Link to this definition"></a></dt>
 <dd><p>A wrapper for a deferred-loading field. When the value is read from this
 object the first time, the query is executed.</p>
+</dd></dl>
+
+<dl class="py exception">
+<dt class="sig sig-object py" id="Main.models.scraping.scraping.NotUpdated">
+<span class="property"><span class="k"><span class="pre">exception</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">NotUpdated</span></span><a class="headerlink" href="#Main.models.scraping.scraping.NotUpdated" title="Link to this definition"></a></dt>
+<dd><p>ベースクラス: <code class="xref py py-class docutils literal notranslate"><span class="pre">ObjectNotUpdated</span></code>, <code class="xref py py-class docutils literal notranslate"><span class="pre">DatabaseError</span></code></p>
 </dd></dl>
 
 <dl class="py attribute">
@@ -266,7 +284,7 @@ object the first time, the query is executed.</p>
 
 <dl class="py attribute">
 <dt class="sig sig-object py" id="Main.models.scraping.scraping.objects">
-<span class="sig-name descname"><span class="pre">objects</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">&lt;django.db.models.manager.Manager</span> <span class="pre">object&gt;</span></em><a class="headerlink" href="#Main.models.scraping.scraping.objects" title="Link to this definition"></a></dt>
+<span class="sig-name descname"><span class="pre">objects</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">&lt;django.db.models.manager.Manager</span> <span class="pre">object&gt;</span></span><a class="headerlink" href="#Main.models.scraping.scraping.objects" title="Link to this definition"></a></dt>
 <dd></dd></dl>
 
 </dd></dl>
@@ -277,14 +295,14 @@ object the first time, the query is executed.</p>
            </div>
           </div>
           <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
-        <a href="introduction.html" class="btn btn-neutral float-left" title="情報分析ツール システマ" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
-        <a href="utils.html" class="btn btn-neutral float-right" title="ユーティリティ" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+        <a href="utils.html" class="btn btn-neutral float-left" title="ユーティリティ" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="errorlog.html" class="btn btn-neutral float-right" title="エラーログ設定" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
     </div>
 
   <hr/>
 
   <div role="contentinfo">
-    <p>&#169; Copyright 2025, WataruTezuka.</p>
+    <p>&#169; Copyright 2025-2026, Wataru Tezuka.</p>
   </div>
 
   Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
