@@ -203,22 +203,58 @@ function normalizeItemUrl(url) {
     return value;
 }
 
+function parseAuctionTime(value, now = new Date()) {
+    if (!value) return null;
+    const text = String(value).trim();
+    if (!text || text === 'N/A') return null;
+
+    const absolute = text.match(/(?:(\d{4})[年/-])?(\d{1,2})[月/-](\d{1,2})日?(?:\([^)]{1,3}\))?\s+(\d{1,2}):(\d{2})/);
+    if (absolute) {
+        const hasYear = Boolean(absolute[1]);
+        const year = Number(absolute[1] || now.getFullYear());
+        const result = new Date(year, Number(absolute[2]) - 1, Number(absolute[3]), Number(absolute[4]), Number(absolute[5]));
+        // 年が省略された終了日時が未来になる場合は、前年の結果として扱う。
+        if (!hasYear && result.getTime() > now.getTime()) result.setFullYear(year - 1);
+        return result.getTime();
+    }
+
+    const parsed = new Date(text);
+    if (!isNaN(parsed.getTime())) return parsed.getTime();
+
+    const days = Number(text.match(/(\d+)日/)?.[1] || 0);
+    const hours = Number(text.match(/(\d+)時間/)?.[1] || 0);
+    const minutes = Number(text.match(/(\d+)分/)?.[1] || 0);
+    if (days || hours || minutes) {
+        const difference = (days * 24 * 60 + hours * 60 + minutes) * 60 * 1000;
+        return now.getTime() + (text.includes('前') ? -difference : difference);
+    }
+    return null;
+}
+
+function formatAuctionTime(value, now = new Date()) {
+    const text = String(value || '').trim();
+    if (text && /\d+\s*(?:日|時間|分)/.test(text) && !/[年月/]\d{1,2}/.test(text)) {
+        return text.replace(/\s+/g, '');
+    }
+    const timestamp = parseAuctionTime(value, now);
+    if (timestamp === null) return value || 'N/A';
+
+    const isPast = timestamp <= now.getTime();
+    let totalMinutes = Math.max(Math.floor(Math.abs(timestamp - now.getTime()) / 60000), 0);
+    const days = Math.floor(totalMinutes / (24 * 60));
+    totalMinutes %= 24 * 60;
+    const hours = Math.floor(totalMinutes / 60);
+    const minutes = totalMinutes % 60;
+    const parts = [];
+    if (days) parts.push(`${days}日`);
+    if (hours) parts.push(`${hours}時間`);
+    if (minutes || parts.length === 0) parts.push(`${minutes}分`);
+    return `${parts.join('')}${isPast ? '前' : ''}`;
+}
+
 function toSortableValue(value, key) {
     if (key === 'time') {
-        if (!value) return 0;
-        const iso = String(value).trim();
-        if (!iso || iso === 'N/A') return 0;
-        const date = new Date(iso);
-        if (!isNaN(date.getTime())) return date.getTime();
-        const slash = iso.match(/(\d{1,2})\/(\d{1,2})(?:\([^)]{1,3}\))?\s+(\d{1,2}:\d{2})/);
-        if (slash) {
-            const currentYear = new Date().getFullYear();
-            const month = Number(slash[1]);
-            const day = Number(slash[2]);
-            const [hour, minute] = slash[3].split(':').map(Number);
-            return new Date(currentYear, month - 1, day, hour, minute).getTime();
-        }
-        return 0;
+        return parseAuctionTime(value) ?? 0;
     }
 
     if (typeof value === 'string') {
@@ -246,7 +282,7 @@ function updateTable(data) {
         startPriceCell.textContent = Number(item.startPrice || 0).toLocaleString();
 
         const timeCell = row.insertCell(3);
-        timeCell.textContent = item.time || 'N/A';
+        timeCell.textContent = formatAuctionTime(item.time);
 
         const biddingCell = row.insertCell(4);
         biddingCell.textContent = Number(item.bidding || 0).toLocaleString();

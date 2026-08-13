@@ -12,15 +12,6 @@ document.addEventListener("DOMContentLoaded", function () {
         }
     });
 
-
-    // Enterキーで検索
-    searchInput.addEventListener('keydown', function (e) {
-        if (e.key === 'Enter') {
-            e.preventDefault();
-            Prediction_Search();
-        }
-    });
-
     // 人気ワード取得・ボタン生成
     fetch('/taskle/get_popular_words?top=10')
         .then(res => res.json())

@@ -72,6 +72,25 @@ def test_yahoo_parser_extracts_product_fields_from_product_cards():
     assert items[0]['url'].endswith('/jp/auction/z123456789')
 
 
+def test_yahoo_parser_does_not_extract_nested_product_badges_as_items():
+    html = '''
+    <div class="Product" data-auction-id="z123456789">
+      <a class="Product__titleLink" href="/jp/auction/z123456789">HG ザクII</a>
+      <span class="Product__priceValue">1,234円</span>
+      <span class="Product__badge">
+        <a href="/jp/auction/z123456789">送料無料</a>
+      </span>
+      <span class="Product__time">2日</span>
+    </div>
+    '''
+
+    items = YahooAuctionParser.extract_listing_items(html)
+
+    assert len(items) == 1
+    assert items[0]['title'] == 'HG ザクII'
+    assert items[0]['price'] == 1234
+
+
 def test_yahoo_parser_preserves_relative_time_units():
     html = '''
     <div class="Product" data-auction-id="z987654321">

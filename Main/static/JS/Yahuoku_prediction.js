@@ -97,9 +97,7 @@ function Prediction_Search() {
 
             // 日付順にソート
             currentData.price_trends.sort((a, b) => {
-                const dateA = new Date(`${new Date().getFullYear()}-${a.date.split('/')[0]}-${a.date.split('/')[1].split(' ')[0]} ${a.date.split(' ')[1]}`);
-                const dateB = new Date(`${new Date().getFullYear()}-${b.date.split('/')[0]}-${b.date.split('/')[1].split(' ')[0]} ${b.date.split(' ')[1]}`);
-                return dateA - dateB;
+                return parsePredictionDate(a.date) - parsePredictionDate(b.date);
             });
 
             updatePredictionChart();
@@ -143,10 +141,21 @@ function calculateMedian(arr) {
         : (sorted[mid - 1] + sorted[mid]) / 2;
 }
 // グラフの更新
+function parsePredictionDate(value) {
+    const text = String(value || '').trim();
+    if (/^\d{4}-\d{2}-\d{2}[T\s]/.test(text)) {
+        return new Date(text);
+    }
+
+    const match = text.match(/^(\d{1,2})\/(\d{1,2})\s+(\d{1,2}:\d{2})$/);
+    if (!match) return new Date(0);
+    return new Date(`${new Date().getFullYear()}-${match[1].padStart(2, '0')}-${match[2].padStart(2, '0')}T${match[3]}:00`);
+}
+
 function updatePredictionChart() {
     if (!window.Chart) return;
 
-    const labels = currentData.price_trends.map(item => item.date.split(' ')[0]);
+    const labels = currentData.price_trends.map(item => String(item.date).split(/[T\s]/)[0]);
     const prices = currentData.price_trends.map(item => item.price);
     const movingAverages = currentData.price_trends.map(item => item.moving_avg);
     const predictedPrice = currentData.predicted_price || 0;

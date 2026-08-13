@@ -231,6 +231,25 @@ class TestAPIUtils:
         assert 'predicted_price' in data
         assert any(item['date'] == '12/31 23:59' for item in data['price_trends'])
 
+    def test_utils_prediction_market_logic_accepts_iso_dates(self, monkeypatch):
+        fixed_now = datetime(2026, 8, 13, 12, 0, 0)
+        FakeDateTime = type('FakeDateTime', (datetime,), {
+            'now': classmethod(lambda cls, tz=None: fixed_now)
+        })
+        monkeypatch.setattr(utils, 'datetime', FakeDateTime)
+        monkeypatch.setattr(utils, 'scrape_data', lambda keyword: [
+            {'time': '2026-08-12T10:00:00+09:00', 'price': 1000},
+            {'time': '2026-08-11T10:00:00+09:00', 'price': 1500},
+        ])
+
+        request = self.factory.get('/taskle/prediction_market?keyword=test')
+        response = utils.prediction_market_logic(request)
+
+        assert response.status_code == 200
+        data = json.loads(response.content)
+        assert len(data['price_trends']) == 2
+        assert data['predicted_price'] > 0
+
     def test_utils_get_popular_words_logic_get(self):
         request = self.factory.get('/taskle/get_popular_words')
         response = utils.get_popular_words_logic(request)

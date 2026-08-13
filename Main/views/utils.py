@@ -392,13 +392,21 @@ def prediction_market_logic(request):
         for item in closed_data:
             if item['time'] != 'N/A':
                 try:
-                    month_day, time_part = item['time'].split()
-                    month, day = month_day.split('/')
-                    year = current_date.year
-                    full_date = f"{year}-{month.zfill(2)}-{day.zfill(2)} {time_part}"
-                    item_date = datetime.strptime(full_date, '%Y-%m-%d %H:%M')
-                    if item_date > current_date:
-                        item_date = item_date.replace(year=year - 1)
+                    time_text = str(item['time']).strip()
+                    if re.match(r'^\d{4}-\d{2}-\d{2}[T\s]', time_text):
+                        item_date = datetime.fromisoformat(
+                            time_text.replace('Z', '+00:00')
+                        )
+                        if item_date.tzinfo is not None:
+                            item_date = item_date.replace(tzinfo=None)
+                    else:
+                        month_day, time_part = time_text.split()
+                        month, day = month_day.split('/')
+                        year = current_date.year
+                        full_date = f"{year}-{month.zfill(2)}-{day.zfill(2)} {time_part}"
+                        item_date = datetime.strptime(full_date, '%Y-%m-%d %H:%M')
+                        if item_date > current_date:
+                            item_date = item_date.replace(year=year - 1)
                     if item_date >= past_90_days:
                         filtered_data.append(item)
                 except Exception as e:

@@ -1,7 +1,7 @@
 from django.contrib import admin
 from django.urls import path, include
 from django.conf import settings
-from django.conf.urls.static import static
+from django.contrib.staticfiles.urls import staticfiles_urlpatterns
 from django.conf.urls import handler404, handler500, handler400, handler403
 
 urlpatterns = [
@@ -18,5 +18,4 @@ handler403 = 'Main.views.Error.custom_403'
 
 # 静的ファイル設定（開発環境用）
 if settings.DEBUG:
-    urlpatterns += static(settings.STATIC_URL,
-                          document_root=settings.STATIC_ROOT)
+    urlpatterns += staticfiles_urlpatterns()

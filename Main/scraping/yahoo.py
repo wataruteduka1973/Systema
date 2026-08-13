@@ -121,7 +121,10 @@ class YahooAuctionParser:
         extracted = []
         seen_ids = set()
 
-        product_cards = soup.select('.Product, li.Product, article.Product, [class*="Product"]')
+        # Match product containers only.  ``[class*="Product"]`` also matches
+        # nested elements such as Product__badge and Product__titleLink, which
+        # can turn promotional labels into duplicate, zero-price listings.
+        product_cards = soup.select('.Product, [data-auction-id], [data-item-id]')
         if product_cards:
             for card in product_cards:
                 if card.name in {'nav', 'header', 'footer', 'aside', 'script', 'style'}:
