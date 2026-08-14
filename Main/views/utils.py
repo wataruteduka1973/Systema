@@ -9,11 +9,14 @@ from django.views.decorators.csrf import csrf_exempt
 from sklearn.cluster import KMeans
 
 from Main.domain.auction_time import format_remaining_time, parse_duration_seconds
+from Main.domain.buying_opportunity import evaluate_buying_opportunity
+from Main.domain.product_condition import enrich_market_items
 from Main.infrastructure.http import get_with_retry
 from Main.models.scraping import scraping
 from Main.models.searchwordlog import searchwordlog
 from Main.scraping.yahoo import YahooAuctionParser
 from Main.services.exceptions import ExternalServiceError
+from Main.services.watchlist import refresh_watched_item
 
 logger = logging.getLogger("search_logger")
 
@@ -299,13 +302,24 @@ def complex_market_data_logic(request):
         else:
             median_price = 0
 
-        def score(item):
-            price = item["price"] if isinstance(item["price"], (int, float)) else 0
-            price_diff = abs(price - median_price)
-            remaining = item["remainingSeconds"]
-            return price_diff + (remaining / 300)
+        enriched_now_items = enrich_market_items(now_items)
+        for item in enriched_now_items:
+            item["marketMedian"] = median_price
+            item["buyDecision"] = evaluate_buying_opportunity(
+                item["price"],
+                median_price,
+                item["condition"],
+                item["remainingSeconds"],
+            )
+            refresh_watched_item(item)
 
-        now_items_sorted = sorted(now_items, key=score)[:30]
+        now_items_sorted = sorted(
+            enriched_now_items,
+            key=lambda item: (
+                -item["buyDecision"]["score"],
+                item["remainingSeconds"],
+            ),
+        )[:30]
 
         response_items = [
             {
@@ -313,7 +327,14 @@ def complex_market_data_logic(request):
                 "name": item["name"],
                 "url": item["url"],
                 "remainingTime": item["remainingTime"],
+                "remainingSeconds": item["remainingSeconds"],
                 "bidding": item["bidding"],
+                "marketMedian": median_price,
+                "condition": item["condition"],
+                "conditionLabel": item["conditionLabel"],
+                "attributes": item["attributes"],
+                "attributeLabels": item["attributeLabels"],
+                "buyDecision": item["buyDecision"],
             }
             for item in now_items_sorted
         ]

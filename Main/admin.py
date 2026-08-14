@@ -3,6 +3,7 @@ from django.utils.html import format_html
 
 from .models.errorlog import ErrorLog
 from .models.scraping import scraping
+from .models.watchitem import WatchItem
 
 # スクレイピングモデル
 
@@ -40,3 +41,18 @@ class ErrorLogAdmin(admin.ModelAdmin):
     list_filter = ("timestamp",)
     ordering = ("-timestamp",)
     list_per_page = 25
+
+
+@admin.register(WatchItem)
+class WatchItemAdmin(admin.ModelAdmin):
+    list_display = (
+        "name",
+        "current_price",
+        "added_price",
+        "buy_label",
+        "buy_score",
+        "last_checked_at",
+    )
+    search_fields = ("name", "search_keyword", "url")
+    list_filter = ("buy_status", "condition", "last_checked_at")
+    ordering = ("-buy_score", "-updated_at")

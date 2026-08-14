@@ -4,6 +4,7 @@ let currentPage = 1;
 let filteredData = [...currentData];
 let sortKey = null;
 let sortOrder = null;
+let conditionSummary = null;
 
 function fetchJsonWithRetry(url, options = {}, maxRetries = 3) {
     return fetch(url, options).then(async (response) => {
@@ -115,6 +116,7 @@ function RealtimeSearch() {
 
     fetchJsonWithRetry(`/taskle/RealtimeSearch?${params.toString()}`)
         .then(result => {
+            conditionSummary = result.conditionSummary || null;
             currentData = (result.data || []).map(item => {
                 const currentPrice = Number(item.currentPrice ?? item.price ?? 0) || 0;
                 const bidding = Number(item.bidding ?? item.bidCount ?? 0) || 0;
@@ -142,6 +144,9 @@ function RealtimeSearch() {
                 document.getElementById('bid30_40').checked = false;
                 document.getElementById('bid40_50').checked = false;
                 document.getElementById('bid50_plus').checked = false;
+                document.querySelectorAll('.condition-filter').forEach(input => { input.checked = false; });
+                document.getElementById('excludeJunk').checked = false;
+                renderConditionSummary(conditionSummary);
                 const prices = currentData.map(item => item.currentPrice).filter(currentPrice => !isNaN(currentPrice));
                 const band = findMostFrequentPriceBand(prices);
                 if (band) {
@@ -152,6 +157,7 @@ function RealtimeSearch() {
             } else {
                 console.error('Error: Data is not a non-empty array');
                 document.querySelector('.table-container').style.display = 'none';
+                renderConditionSummary(null);
             }
         })
         .catch(error => {
@@ -243,13 +249,24 @@ function updateTable(data) {
         const row = tableBody.insertRow();
         const productNameCell = row.insertCell(0);
         productNameCell.textContent = item.name || 'N/A';
-        const currentPriceCell = row.insertCell(1);
+        const conditionCell = row.insertCell(1);
+        const conditionBadge = document.createElement('span');
+        conditionBadge.className = `badge ${item.condition === 'junk' ? 'bg-danger' : item.condition === 'new' ? 'bg-success' : item.condition === 'used' ? 'bg-primary' : 'bg-secondary'}`;
+        conditionBadge.textContent = item.conditionLabel || '未分類';
+        conditionCell.appendChild(conditionBadge);
+        if (Array.isArray(item.attributeLabels) && item.attributeLabels.length) {
+            const attributes = document.createElement('div');
+            attributes.className = 'small text-muted mt-1';
+            attributes.textContent = item.attributeLabels.join('・');
+            conditionCell.appendChild(attributes);
+        }
+        const currentPriceCell = row.insertCell(2);
         currentPriceCell.textContent = Number(item.currentPrice || 0).toLocaleString();
-        const biddingCell = row.insertCell(2);
+        const biddingCell = row.insertCell(3);
         biddingCell.textContent = item.bidding ?? 0;
-        const remainingTimeCell = row.insertCell(3);
+        const remainingTimeCell = row.insertCell(4);
         remainingTimeCell.textContent = item.remainingTime || 'N/A';
-        const productURLCell = row.insertCell(4);
+        const productURLCell = row.insertCell(5);
         const link = document.createElement("a");
         link.href = normalizeItemUrl(item.url || '#');
         link.textContent = "商品リンクURL";
@@ -304,6 +321,10 @@ function filterData() {
     const bid30_40 = document.getElementById('bid30_40').checked;
     const bid40_50 = document.getElementById('bid40_50').checked;
     const bid50_plus = document.getElementById('bid50_plus').checked;
+    const selectedConditions = new Set(
+        Array.from(document.querySelectorAll('.condition-filter:checked')).map(input => input.value)
+    );
+    const excludeJunk = document.getElementById('excludeJunk').checked;
     const minPrice = minPriceInput ? parseFloat(minPriceInput) : 0;
     const maxPrice = maxPriceInput ? parseFloat(maxPriceInput) : Infinity;
 
@@ -321,6 +342,8 @@ function filterData() {
         const bidding = Number(item.bidding) || 0;
 
         if (price < minPrice || price > maxPrice) return false;
+        if (excludeJunk && item.condition === 'junk') return false;
+        if (selectedConditions.size > 0 && !selectedConditions.has(item.condition || 'unknown')) return false;
         const noBidFilter = !bid0_10 && !bid10_20 && !bid20_30 && !bid30_40 && !bid40_50 && !bid50_plus;
         if (noBidFilter) return true;
         if (bid0_10 && bidding >= 0 && bidding < 10) return true;
@@ -333,6 +356,7 @@ function filterData() {
     });
 
     currentPage = 1;
+    updateVisibleMarketSummary();
     updateTable(paginateData(filteredData));
     updatePagination();
 }
@@ -340,6 +364,8 @@ function filterData() {
 function clearFilters() {
     document.getElementById('minPrice').value = '0';
     document.getElementById('maxPrice').value = '';
+    document.querySelectorAll('.condition-filter').forEach(input => { input.checked = false; });
+    document.getElementById('excludeJunk').checked = false;
     filterData();
     currentPage = 1;
     updateTable(paginateData(filteredData));
@@ -372,4 +398,77 @@ function validateAndFilterData() {
         return;
     }
     filterData();
+}
+
+function renderConditionSummary(summary) {
+    const container = document.getElementById('conditionSummary');
+    if (!container) return;
+    container.innerHTML = '';
+    if (!summary || !Array.isArray(summary.conditions)) return;
+
+    summary.conditions.forEach(item => {
+        const column = document.createElement('div');
+        column.className = 'col-6 col-md-3';
+        const card = document.createElement('div');
+        card.className = 'border rounded bg-light p-2 h-100';
+        const label = document.createElement('div');
+        label.className = 'fw-bold small';
+        label.textContent = item.label;
+        const value = document.createElement('div');
+        value.textContent = item.medianPrice == null
+            ? `${item.count}件 / 中央値なし`
+            : `${item.count}件 / 中央値 ${Number(item.medianPrice).toLocaleString()}円`;
+        card.append(label, value);
+        column.appendChild(card);
+        container.appendChild(column);
+    });
+
+    if (summary.medianPriceExcludingJunk != null) {
+        const note = document.createElement('div');
+        note.className = 'col-12 text-muted small';
+        note.textContent = `ジャンクを除く中央値: ${Number(summary.medianPriceExcludingJunk).toLocaleString()}円（分類済み ${summary.classifiedCount}/${summary.totalCount}件）`;
+        container.appendChild(note);
+    }
+}
+
+function summarizeVisibleItems(items) {
+    const definitions = [
+        ['new', '新品・未使用'],
+        ['used', '中古・動作品'],
+        ['junk', 'ジャンク・故障品'],
+        ['unknown', '未分類'],
+    ];
+    const conditions = definitions.map(([condition, label]) => {
+        const matching = items.filter(item => (item.condition || 'unknown') === condition);
+        const prices = matching.map(item => Number(item.currentPrice)).filter(price => price > 0);
+        return {
+            condition,
+            label,
+            count: matching.length,
+            medianPrice: prices.length ? calculateMedian(prices) : null,
+        };
+    });
+    const regularPrices = items
+        .filter(item => item.condition !== 'junk')
+        .map(item => Number(item.currentPrice))
+        .filter(price => price > 0);
+    return {
+        conditions,
+        medianPriceExcludingJunk: regularPrices.length ? calculateMedian(regularPrices) : null,
+        classifiedCount: items.filter(item => ['new', 'used', 'junk'].includes(item.condition)).length,
+        totalCount: items.length,
+    };
+}
+
+function updateVisibleMarketSummary() {
+    const prices = filteredData.map(item => Number(item.currentPrice)).filter(price => price > 0);
+    const priceArea = document.getElementById('medianPrice');
+    if (priceArea) {
+        const band = findMostFrequentPriceBand(prices);
+        priceArea.textContent = band
+            ? `絞り込み結果で特に多い価格帯 ${band.lower.toLocaleString()} 円から ${band.upper.toLocaleString()} 円（${filteredData.length}件）`
+            : '条件に一致する価格データがありません';
+        priceArea.style.display = 'block';
+    }
+    renderConditionSummary(summarizeVisibleItems(filteredData));
 }

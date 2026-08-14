@@ -10,6 +10,8 @@ from Main.views.api import (
     perform_search,
     prediction_market,
     update_market_data,
+    watchlist,
+    watchlist_item,
 )
 from Main.views.urls import (
     Deep_Analysis,
@@ -40,4 +42,6 @@ urlpatterns = [
     path("complex_market_data", complex_market_data, name="complex_market_data"),
     path("prediction_market", prediction_market, name="prediction_market"),
     path("get_popular_words", get_popular_words, name="get_popular_words"),
+    path("watchlist", watchlist, name="watchlist"),
+    path("watchlist/<int:item_id>", watchlist_item, name="watchlist_item"),
 ]

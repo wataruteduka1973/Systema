@@ -89,11 +89,14 @@
 <span class="kn">from</span><span class="w"> </span><span class="nn">sklearn.cluster</span><span class="w"> </span><span class="kn">import</span> <span class="n">KMeans</span>
 
 <span class="kn">from</span><span class="w"> </span><span class="nn">Main.domain.auction_time</span><span class="w"> </span><span class="kn">import</span> <span class="n">format_remaining_time</span><span class="p">,</span> <span class="n">parse_duration_seconds</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">Main.domain.buying_opportunity</span><span class="w"> </span><span class="kn">import</span> <span class="n">evaluate_buying_opportunity</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">Main.domain.product_condition</span><span class="w"> </span><span class="kn">import</span> <span class="n">enrich_market_items</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">Main.infrastructure.http</span><span class="w"> </span><span class="kn">import</span> <span class="n">get_with_retry</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">Main.models.scraping</span><span class="w"> </span><span class="kn">import</span> <span class="n">scraping</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">Main.models.searchwordlog</span><span class="w"> </span><span class="kn">import</span> <span class="n">searchwordlog</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">Main.scraping.yahoo</span><span class="w"> </span><span class="kn">import</span> <span class="n">YahooAuctionParser</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">Main.services.exceptions</span><span class="w"> </span><span class="kn">import</span> <span class="n">ExternalServiceError</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">Main.services.watchlist</span><span class="w"> </span><span class="kn">import</span> <span class="n">refresh_watched_item</span>
 
 <span class="n">logger</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="s2">&quot;search_logger&quot;</span><span class="p">)</span>
 
@@ -402,13 +405,24 @@
         <span class="k">else</span><span class="p">:</span>
             <span class="n">median_price</span> <span class="o">=</span> <span class="mi">0</span>
 
-        <span class="k">def</span><span class="w"> </span><span class="nf">score</span><span class="p">(</span><span class="n">item</span><span class="p">):</span>
-            <span class="n">price</span> <span class="o">=</span> <span class="n">item</span><span class="p">[</span><span class="s2">&quot;price&quot;</span><span class="p">]</span> <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">item</span><span class="p">[</span><span class="s2">&quot;price&quot;</span><span class="p">],</span> <span class="p">(</span><span class="nb">int</span><span class="p">,</span> <span class="nb">float</span><span class="p">))</span> <span class="k">else</span> <span class="mi">0</span>
-            <span class="n">price_diff</span> <span class="o">=</span> <span class="nb">abs</span><span class="p">(</span><span class="n">price</span> <span class="o">-</span> <span class="n">median_price</span><span class="p">)</span>
-            <span class="n">remaining</span> <span class="o">=</span> <span class="n">item</span><span class="p">[</span><span class="s2">&quot;remainingSeconds&quot;</span><span class="p">]</span>
-            <span class="k">return</span> <span class="n">price_diff</span> <span class="o">+</span> <span class="p">(</span><span class="n">remaining</span> <span class="o">/</span> <span class="mi">300</span><span class="p">)</span>
+        <span class="n">enriched_now_items</span> <span class="o">=</span> <span class="n">enrich_market_items</span><span class="p">(</span><span class="n">now_items</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">item</span> <span class="ow">in</span> <span class="n">enriched_now_items</span><span class="p">:</span>
+            <span class="n">item</span><span class="p">[</span><span class="s2">&quot;marketMedian&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">median_price</span>
+            <span class="n">item</span><span class="p">[</span><span class="s2">&quot;buyDecision&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">evaluate_buying_opportunity</span><span class="p">(</span>
+                <span class="n">item</span><span class="p">[</span><span class="s2">&quot;price&quot;</span><span class="p">],</span>
+                <span class="n">median_price</span><span class="p">,</span>
+                <span class="n">item</span><span class="p">[</span><span class="s2">&quot;condition&quot;</span><span class="p">],</span>
+                <span class="n">item</span><span class="p">[</span><span class="s2">&quot;remainingSeconds&quot;</span><span class="p">],</span>
+            <span class="p">)</span>
+            <span class="n">refresh_watched_item</span><span class="p">(</span><span class="n">item</span><span class="p">)</span>
 
-        <span class="n">now_items_sorted</span> <span class="o">=</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">now_items</span><span class="p">,</span> <span class="n">key</span><span class="o">=</span><span class="n">score</span><span class="p">)[:</span><span class="mi">30</span><span class="p">]</span>
+        <span class="n">now_items_sorted</span> <span class="o">=</span> <span class="nb">sorted</span><span class="p">(</span>
+            <span class="n">enriched_now_items</span><span class="p">,</span>
+            <span class="n">key</span><span class="o">=</span><span class="k">lambda</span> <span class="n">item</span><span class="p">:</span> <span class="p">(</span>
+                <span class="o">-</span><span class="n">item</span><span class="p">[</span><span class="s2">&quot;buyDecision&quot;</span><span class="p">][</span><span class="s2">&quot;score&quot;</span><span class="p">],</span>
+                <span class="n">item</span><span class="p">[</span><span class="s2">&quot;remainingSeconds&quot;</span><span class="p">],</span>
+            <span class="p">),</span>
+        <span class="p">)[:</span><span class="mi">30</span><span class="p">]</span>
 
         <span class="n">response_items</span> <span class="o">=</span> <span class="p">[</span>
             <span class="p">{</span>
@@ -416,7 +430,14 @@
                 <span class="s2">&quot;name&quot;</span><span class="p">:</span> <span class="n">item</span><span class="p">[</span><span class="s2">&quot;name&quot;</span><span class="p">],</span>
                 <span class="s2">&quot;url&quot;</span><span class="p">:</span> <span class="n">item</span><span class="p">[</span><span class="s2">&quot;url&quot;</span><span class="p">],</span>
                 <span class="s2">&quot;remainingTime&quot;</span><span class="p">:</span> <span class="n">item</span><span class="p">[</span><span class="s2">&quot;remainingTime&quot;</span><span class="p">],</span>
+                <span class="s2">&quot;remainingSeconds&quot;</span><span class="p">:</span> <span class="n">item</span><span class="p">[</span><span class="s2">&quot;remainingSeconds&quot;</span><span class="p">],</span>
                 <span class="s2">&quot;bidding&quot;</span><span class="p">:</span> <span class="n">item</span><span class="p">[</span><span class="s2">&quot;bidding&quot;</span><span class="p">],</span>
+                <span class="s2">&quot;marketMedian&quot;</span><span class="p">:</span> <span class="n">median_price</span><span class="p">,</span>
+                <span class="s2">&quot;condition&quot;</span><span class="p">:</span> <span class="n">item</span><span class="p">[</span><span class="s2">&quot;condition&quot;</span><span class="p">],</span>
+                <span class="s2">&quot;conditionLabel&quot;</span><span class="p">:</span> <span class="n">item</span><span class="p">[</span><span class="s2">&quot;conditionLabel&quot;</span><span class="p">],</span>
+                <span class="s2">&quot;attributes&quot;</span><span class="p">:</span> <span class="n">item</span><span class="p">[</span><span class="s2">&quot;attributes&quot;</span><span class="p">],</span>
+                <span class="s2">&quot;attributeLabels&quot;</span><span class="p">:</span> <span class="n">item</span><span class="p">[</span><span class="s2">&quot;attributeLabels&quot;</span><span class="p">],</span>
+                <span class="s2">&quot;buyDecision&quot;</span><span class="p">:</span> <span class="n">item</span><span class="p">[</span><span class="s2">&quot;buyDecision&quot;</span><span class="p">],</span>
             <span class="p">}</span>
             <span class="k">for</span> <span class="n">item</span> <span class="ow">in</span> <span class="n">now_items_sorted</span>
         <span class="p">]</span>

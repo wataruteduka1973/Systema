@@ -17,7 +17,7 @@ class scraping(models.Model):
     Name = models.TextField(help_text="商品名")
     URL = models.TextField(help_text="URL")
 
-    def __str__(self):
+    def __str__(self) -> str:
         return f"{self.Name} - {self.SearchDay}"
 
     class Meta:

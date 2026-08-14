@@ -35,6 +35,39 @@ class TestAPIUtils:
         data = json.loads(response.content)
         assert "error" in data
 
+    def test_perform_search_adds_condition_analysis(self, monkeypatch):
+        monkeypatch.setattr(
+            api,
+            "scrape_data",
+            lambda keyword: [
+                {
+                    "name": "中古 動作確認済み 商品",
+                    "price": 2000,
+                    "startPrice": 1000,
+                    "bidding": 3,
+                    "time": "2026-08-12T10:00:00+09:00",
+                    "url": "#",
+                },
+                {
+                    "name": "ジャンク 商品",
+                    "price": 500,
+                    "startPrice": 1,
+                    "bidding": 1,
+                    "time": "2026-08-11T10:00:00+09:00",
+                    "url": "#",
+                },
+            ],
+        )
+        monkeypatch.setattr(api, "save_to_database", lambda keyword, items: None)
+
+        response = api.perform_search(self.factory.get("/taskle/perform_search?keyword=test"))
+
+        assert response.status_code == 200
+        data = json.loads(response.content)
+        assert data["data"][0]["condition"] == "used"
+        assert data["data"][0]["conditionLabel"] == "中古・動作品"
+        assert data["conditionSummary"]["medianPriceExcludingJunk"] == 2000
+
     # RealtimeSearch
     def test_realtime_search_get_no_keyword(self):
         request = self.factory.get("/taskle/realtime_search")
@@ -49,6 +82,24 @@ class TestAPIUtils:
         assert response.status_code == 400
         data = json.loads(response.content)
         assert "error" in data
+
+    def test_realtime_search_adds_condition_analysis(self, monkeypatch):
+        monkeypatch.setattr(
+            api,
+            "scrape_current_listings",
+            lambda keyword: [
+                {"name": "新品 未開封 商品", "currentPrice": 3000},
+                {"name": "ジャンク 商品", "currentPrice": 500},
+            ],
+        )
+
+        response = api.RealtimeSearch(self.factory.get("/taskle/RealtimeSearch?keyword=test"))
+
+        assert response.status_code == 200
+        data = json.loads(response.content)
+        assert data["data"][0]["condition"] == "new"
+        assert data["data"][1]["condition"] == "junk"
+        assert data["conditionSummary"]["medianPriceExcludingJunk"] == 3000
 
     # get_search_words
     def test_get_search_words_get(self):
@@ -154,6 +205,95 @@ class TestAPIUtils:
         assert response.status_code == 400
         data = json.loads(response.content)
         assert "error" in data
+
+    def test_watchlist_create_list_update_and_delete(self):
+        payload = {
+            "name": "中古 動作確認済み 商品",
+            "url": "https://auctions.yahoo.co.jp/jp/auction/test123",
+            "currentPrice": 7000,
+            "bidding": 3,
+            "remainingTime": "30分",
+            "remainingSeconds": 1800,
+            "condition": "used",
+            "conditionLabel": "中古・動作品",
+            "marketMedian": 10000,
+            "searchKeyword": "test",
+        }
+        create_response = api.watchlist(
+            self.factory.post(
+                "/taskle/watchlist",
+                data=json.dumps(payload),
+                content_type="application/json",
+            )
+        )
+        assert create_response.status_code == 201
+        created = json.loads(create_response.content)["item"]
+        assert created["addedPrice"] == 7000
+        assert created["buyDecision"]["status"] == "strong_buy"
+
+        payload["currentPrice"] = 6500
+        update_response = api.watchlist(
+            self.factory.post(
+                "/taskle/watchlist",
+                data=json.dumps(payload),
+                content_type="application/json",
+            )
+        )
+        updated = json.loads(update_response.content)["item"]
+        assert update_response.status_code == 200
+        assert updated["addedPrice"] == 7000
+        assert updated["priceChange"] == -500
+
+        list_response = api.watchlist(self.factory.get("/taskle/watchlist"))
+        assert len(json.loads(list_response.content)["items"]) == 1
+
+        delete_response = api.watchlist_item(
+            self.factory.delete(f"/taskle/watchlist/{created['id']}"), created["id"]
+        )
+        assert delete_response.status_code == 200
+
+    def test_watchlist_rejects_non_yahoo_url(self):
+        response = api.watchlist(
+            self.factory.post(
+                "/taskle/watchlist",
+                data=json.dumps({"name": "商品", "url": "https://example.com/item"}),
+                content_type="application/json",
+            )
+        )
+        assert response.status_code == 400
+
+    def test_complex_market_data_adds_buy_decision(self, monkeypatch):
+        monkeypatch.setattr(
+            utils,
+            "scrape_data",
+            lambda keyword: [
+                {"name": "落札商品1", "price": 10000},
+                {"name": "落札商品2", "price": 12000},
+            ],
+        )
+        monkeypatch.setattr(utils, "save_to_database", lambda keyword, items: None)
+        monkeypatch.setattr(
+            utils,
+            "scrape_current_listings",
+            lambda keyword: [
+                {
+                    "name": "中古 動作確認済み 商品",
+                    "currentPrice": 7000,
+                    "bidding": 2,
+                    "remainingTime": "30分",
+                    "url": "https://auctions.yahoo.co.jp/jp/auction/target123",
+                }
+            ],
+        )
+
+        response = api.complex_market_data(
+            self.factory.get("/taskle/complex_market_data?keyword=test")
+        )
+
+        assert response.status_code == 200
+        item = json.loads(response.content)["recommend_items"][0]
+        assert item["condition"] == "used"
+        assert item["buyDecision"]["status"] == "strong_buy"
 
     # --- UTILS LOGIC 追加 ---
     def test_utils_get_search_words_logic_get(self):

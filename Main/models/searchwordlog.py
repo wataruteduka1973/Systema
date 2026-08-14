@@ -12,7 +12,7 @@ class searchwordlog(models.Model):
     word = models.CharField(max_length=255, db_index=True)
     searched_at = models.DateTimeField(auto_now_add=True)
 
-    def __str__(self):
+    def __str__(self) -> str:
         return self.word
 
     class Meta:

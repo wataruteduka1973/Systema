@@ -21,6 +21,10 @@ This project is a Django-based Yahoo! Auction market analysis tool. It fetches a
 
 既存のDjango app label、migration、importパスを維持するため、現時点ではリポジトリ全体を`src/`へ移していません。まず上記境界へロジックを移し、`views/utils.py`を段階的に薄くする方針です。
 
+商品コンディション分類と状態別相場集計は`Main/domain/product_condition.py`に置き、スクレイピングやDjangoへ依存しない純粋ロジックとしてテストします。相場検索APIは既存の商品項目を維持し、分類項目と`conditionSummary`を追加する形で拡張します。
+
+買い時判定は`Main/domain/buying_opportunity.py`に置き、相場中央値との価格比率、商品状態、残り時間から説明可能な判定結果を生成します。Systema内のウォッチ商品は`WatchItem`へURL単位で保存し、保存・更新・シリアライズは`Main/services/watchlist.py`へ分離します。ターゲット分析で登録済み商品を再取得した場合は、追加時価格を維持したまま現在価格と判定を更新します。
+
 ## Data flow
 
 1. Client requests a search or market API.

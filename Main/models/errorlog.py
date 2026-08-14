@@ -16,7 +16,7 @@ class ErrorLog(models.Model):
     file_path = models.CharField(max_length=255, blank=True, help_text="発生ファイルパス")
     line_number = models.IntegerField(null=True, blank=True, help_text="発生行番号")
 
-    def __str__(self):
+    def __str__(self) -> str:
         return f"{self.error_code} - {self.timestamp}"
 
     class Meta:
