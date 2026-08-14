@@ -5,6 +5,7 @@ let filteredData = [...currentData];
 let sortKey = null;
 let sortOrder = null;
 let conditionSummary = null;
+let marketStatistics = null;
 
 function fetchJsonWithRetry(url, options = {}, maxRetries = 3) {
     return fetch(url, options).then(async (response) => {
@@ -117,6 +118,7 @@ function RealtimeSearch() {
     fetchJsonWithRetry(`/taskle/RealtimeSearch?${params.toString()}`)
         .then(result => {
             conditionSummary = result.conditionSummary || null;
+            marketStatistics = result.marketStatistics || null;
             currentData = (result.data || []).map(item => {
                 const currentPrice = Number(item.currentPrice ?? item.price ?? 0) || 0;
                 const bidding = Number(item.bidding ?? item.bidCount ?? 0) || 0;
@@ -131,6 +133,9 @@ function RealtimeSearch() {
                 };
             });
             filteredData = [...currentData];
+            if (window.MarketComparison) {
+                window.MarketComparison.configure({ statistics: marketStatistics });
+            }
             if (Array.isArray(currentData) && currentData.length > 0) {
                 currentPage = 1;
                 updateTable(paginateData(currentData));
@@ -247,9 +252,11 @@ function updateTable(data) {
 
     data.forEach(item => {
         const row = tableBody.insertRow();
-        const productNameCell = row.insertCell(0);
+        const compareCell = row.insertCell(0);
+        if (window.MarketComparison) compareCell.appendChild(window.MarketComparison.createSelector(item));
+        const productNameCell = row.insertCell(1);
         productNameCell.textContent = item.name || 'N/A';
-        const conditionCell = row.insertCell(1);
+        const conditionCell = row.insertCell(2);
         const conditionBadge = document.createElement('span');
         conditionBadge.className = `badge ${item.condition === 'junk' ? 'bg-danger' : item.condition === 'new' ? 'bg-success' : item.condition === 'used' ? 'bg-primary' : 'bg-secondary'}`;
         conditionBadge.textContent = item.conditionLabel || '未分類';
@@ -260,13 +267,13 @@ function updateTable(data) {
             attributes.textContent = item.attributeLabels.join('・');
             conditionCell.appendChild(attributes);
         }
-        const currentPriceCell = row.insertCell(2);
+        const currentPriceCell = row.insertCell(3);
         currentPriceCell.textContent = Number(item.currentPrice || 0).toLocaleString();
-        const biddingCell = row.insertCell(3);
+        const biddingCell = row.insertCell(4);
         biddingCell.textContent = item.bidding ?? 0;
-        const remainingTimeCell = row.insertCell(4);
+        const remainingTimeCell = row.insertCell(5);
         remainingTimeCell.textContent = item.remainingTime || 'N/A';
-        const productURLCell = row.insertCell(5);
+        const productURLCell = row.insertCell(6);
         const link = document.createElement("a");
         link.href = normalizeItemUrl(item.url || '#');
         link.textContent = "商品リンクURL";

@@ -6,6 +6,10 @@ from django.views.decorators.csrf import csrf_exempt
 
 from Main.domain.product_condition import enrich_market_items, summarize_condition_market
 from Main.models.watchitem import WatchItem
+from Main.services.market_statistics import (
+    analyze_market_prices,
+    enrich_items_with_market_comparison,
+)
 from Main.services.watchlist import (
     list_watch_items,
     save_watch_item,
@@ -55,9 +59,14 @@ def handle_search_response(
         response_data = {"data": scraped_data_list}
         if include_condition_analysis:
             enriched_items = enrich_market_items(scraped_data_list)
+            market_statistics = analyze_market_prices(enriched_items)
+            enriched_items = enrich_items_with_market_comparison(
+                enriched_items, market_statistics["median"]
+            )
             response_data = {
                 "data": enriched_items,
                 "conditionSummary": summarize_condition_market(enriched_items),
+                "marketStatistics": market_statistics,
             }
         return JsonResponse(response_data)
     except Exception as e:

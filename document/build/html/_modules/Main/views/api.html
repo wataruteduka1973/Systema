@@ -86,6 +86,10 @@
 
 <span class="kn">from</span><span class="w"> </span><span class="nn">Main.domain.product_condition</span><span class="w"> </span><span class="kn">import</span> <span class="n">enrich_market_items</span><span class="p">,</span> <span class="n">summarize_condition_market</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">Main.models.watchitem</span><span class="w"> </span><span class="kn">import</span> <span class="n">WatchItem</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">Main.services.market_statistics</span><span class="w"> </span><span class="kn">import</span> <span class="p">(</span>
+    <span class="n">analyze_market_prices</span><span class="p">,</span>
+    <span class="n">enrich_items_with_market_comparison</span><span class="p">,</span>
+<span class="p">)</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">Main.services.watchlist</span><span class="w"> </span><span class="kn">import</span> <span class="p">(</span>
     <span class="n">list_watch_items</span><span class="p">,</span>
     <span class="n">save_watch_item</span><span class="p">,</span>
@@ -137,9 +141,14 @@
         <span class="n">response_data</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;data&quot;</span><span class="p">:</span> <span class="n">scraped_data_list</span><span class="p">}</span>
         <span class="k">if</span> <span class="n">include_condition_analysis</span><span class="p">:</span>
             <span class="n">enriched_items</span> <span class="o">=</span> <span class="n">enrich_market_items</span><span class="p">(</span><span class="n">scraped_data_list</span><span class="p">)</span>
+            <span class="n">market_statistics</span> <span class="o">=</span> <span class="n">analyze_market_prices</span><span class="p">(</span><span class="n">enriched_items</span><span class="p">)</span>
+            <span class="n">enriched_items</span> <span class="o">=</span> <span class="n">enrich_items_with_market_comparison</span><span class="p">(</span>
+                <span class="n">enriched_items</span><span class="p">,</span> <span class="n">market_statistics</span><span class="p">[</span><span class="s2">&quot;median&quot;</span><span class="p">]</span>
+            <span class="p">)</span>
             <span class="n">response_data</span> <span class="o">=</span> <span class="p">{</span>
                 <span class="s2">&quot;data&quot;</span><span class="p">:</span> <span class="n">enriched_items</span><span class="p">,</span>
                 <span class="s2">&quot;conditionSummary&quot;</span><span class="p">:</span> <span class="n">summarize_condition_market</span><span class="p">(</span><span class="n">enriched_items</span><span class="p">),</span>
+                <span class="s2">&quot;marketStatistics&quot;</span><span class="p">:</span> <span class="n">market_statistics</span><span class="p">,</span>
             <span class="p">}</span>
         <span class="k">return</span> <span class="n">JsonResponse</span><span class="p">(</span><span class="n">response_data</span><span class="p">)</span>
     <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>

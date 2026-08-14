@@ -5,6 +5,7 @@ let filteredData = [...currentData];
 let sortKey = null;
 let sortOrder = null;
 let conditionSummary = null;
+let marketStatistics = null;
 
 function sleep(ms) {
     return new Promise(resolve => setTimeout(resolve, ms));
@@ -112,7 +113,11 @@ async function performSearch() {
         const result = await fetchJsonWithRetry(`/taskle/perform_search?${params.toString()}`, {}, { maxRetries: 3, delayMs: 1500, alertOnFailure: true });
         currentData = result.data || [];
         conditionSummary = result.conditionSummary || null;
+        marketStatistics = result.marketStatistics || null;
         filteredData = [...currentData];
+        if (window.MarketComparison) {
+            window.MarketComparison.configure({ statistics: marketStatistics });
+        }
         if (Array.isArray(currentData) && currentData.length > 0) {
             currentPage = 1;
             updateTable(paginateData(filteredData));
@@ -348,10 +353,13 @@ function updateTable(data) {
     data.forEach(item => {
         const row = tableBody.insertRow();
 
-        const productNameCell = row.insertCell(0);
+        const compareCell = row.insertCell(0);
+        if (window.MarketComparison) compareCell.appendChild(window.MarketComparison.createSelector(item));
+
+        const productNameCell = row.insertCell(1);
         productNameCell.textContent = item.name || 'N/A';
 
-        const conditionCell = row.insertCell(1);
+        const conditionCell = row.insertCell(2);
         const conditionBadge = document.createElement('span');
         conditionBadge.className = `badge ${item.condition === 'junk' ? 'bg-danger' : item.condition === 'new' ? 'bg-success' : item.condition === 'used' ? 'bg-primary' : 'bg-secondary'}`;
         conditionBadge.textContent = item.conditionLabel || '未分類';
@@ -363,19 +371,19 @@ function updateTable(data) {
             conditionCell.appendChild(attributes);
         }
 
-        const endPriceCell = row.insertCell(2);
+        const endPriceCell = row.insertCell(3);
         endPriceCell.textContent = Number(item.price || 0).toLocaleString();
 
-        const startPriceCell = row.insertCell(3);
+        const startPriceCell = row.insertCell(4);
         startPriceCell.textContent = Number(item.startPrice || 0).toLocaleString();
 
-        const timeCell = row.insertCell(4);
+        const timeCell = row.insertCell(5);
         timeCell.textContent = formatAuctionTime(item.time);
 
-        const biddingCell = row.insertCell(5);
+        const biddingCell = row.insertCell(6);
         biddingCell.textContent = Number(item.bidding || 0).toLocaleString();
 
-        const productURLCell = row.insertCell(6);
+        const productURLCell = row.insertCell(7);
         const link = document.createElement("a");
         const href = normalizeItemUrl(item.url);
         link.href = href;

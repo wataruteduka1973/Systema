@@ -67,6 +67,8 @@ class TestAPIUtils:
         assert data["data"][0]["condition"] == "used"
         assert data["data"][0]["conditionLabel"] == "中古・動作品"
         assert data["conditionSummary"]["medianPriceExcludingJunk"] == 2000
+        assert data["marketStatistics"]["median"] == 1250
+        assert data["data"][0]["marketComparison"]["position"] == "above"
 
     # RealtimeSearch
     def test_realtime_search_get_no_keyword(self):
@@ -100,6 +102,8 @@ class TestAPIUtils:
         assert data["data"][0]["condition"] == "new"
         assert data["data"][1]["condition"] == "junk"
         assert data["conditionSummary"]["medianPriceExcludingJunk"] == 3000
+        assert data["marketStatistics"]["median"] == 1750
+        assert data["data"][1]["marketComparison"]["position"] == "below"
 
     # get_search_words
     def test_get_search_words_get(self):
@@ -374,6 +378,8 @@ class TestAPIUtils:
         data = json.loads(response.content)
         assert data["keyword"] == "test"
         assert "predicted_price" in data
+        assert "daily_trends" in data
+        assert "quality" in data
         assert any(item["date"] == "12/31 23:59" for item in data["price_trends"])
 
     def test_utils_prediction_market_logic_accepts_iso_dates(self, monkeypatch):
@@ -398,6 +404,7 @@ class TestAPIUtils:
         data = json.loads(response.content)
         assert len(data["price_trends"]) == 2
         assert data["predicted_price"] > 0
+        assert data["quality"]["sampleCount"] == 2
 
     def test_utils_get_popular_words_logic_get(self):
         request = self.factory.get("/taskle/get_popular_words")

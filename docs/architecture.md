@@ -25,6 +25,10 @@ This project is a Django-based Yahoo! Auction market analysis tool. It fetches a
 
 買い時判定は`Main/domain/buying_opportunity.py`に置き、相場中央値との価格比率、商品状態、残り時間から説明可能な判定結果を生成します。Systema内のウォッチ商品は`WatchItem`へURL単位で保存し、保存・更新・シリアライズは`Main/services/watchlist.py`へ分離します。ターゲット分析で登録済み商品を再取得した場合は、追加時価格を維持したまま現在価格と判定を更新します。
 
+価格統計は`Main/services/market_statistics.py`でpandasを使って集計します。DataFrameやSeriesはサービス内部に閉じ、APIではJSONへ変換した中央値、四分位範囲、標準偏差、変動係数、外れ値候補数、ヒストグラムだけを返します。検索結果の比較UIは`Main/static/JS/MarketComparison.js`を相場検索と現在価格検索で共有します。
+
+時系列集計と短期予測は`Main/services/time_series_analysis.py`へ分離します。IQRで外れ値候補を識別し、日次中央値、14日移動中央値、30日後予測と予測範囲を生成します。従来の予測APIフィールドは維持し、新しい日次推移と品質情報を追加します。
+
 ## Data flow
 
 1. Client requests a search or market API.
@@ -38,7 +42,7 @@ This project is a Django-based Yahoo! Auction market analysis tool. It fetches a
 
 - Yahoo! Auction pages are scraped over HTTP.
 - HTML parsing is done with BeautifulSoup.
-- Data analysis uses NumPy and scikit-learn.
+- Data analysis uses pandas and NumPy. scikit-learn remains available for other analysis features.
 - SQLite is the default database backend.
 
 ## AI-agent-friendly boundaries

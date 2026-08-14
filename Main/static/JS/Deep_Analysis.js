@@ -19,8 +19,12 @@ document.addEventListener('DOMContentLoaded', () => {
                 const names = data.data.map(item => item.Name);
                 const searchDay = data.searchDay;
 
-                generateBarChart(prices);
+                if (data.error) throw new Error(data.error);
+                generateBarChart(prices, data.analysis?.summary?.histogram);
                 generateWordCloud(names);
+                renderMarketSummary(data.analysis?.summary || {});
+                renderPriceTrend(data.analysis?.timeSeries || []);
+                renderConditionStats(data.analysis?.conditionMarket || {});
 
                 document.getElementById('searchDay').textContent = searchDay || '';
             })
@@ -63,6 +67,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 refreshSearchWordDropdown();
                 document.getElementById('priceChart').innerHTML = '';
                 document.getElementById('wordcloud').innerHTML = '';
+                document.getElementById('marketSummaryCards').innerHTML = '';
+                document.getElementById('priceTrendChart').innerHTML = '';
+                document.getElementById('conditionStats').innerHTML = '';
                 document.getElementById('searchDay').textContent = '';
             })
             .catch(error => alert('削除に失敗しました: ' + error));
@@ -155,12 +162,13 @@ function calculateStandardDeviation(numbers, mean) {
     return Math.sqrt(variance);
 }
 
-function generateBarChart(prices) {
+function generateBarChart(prices, serverBins = null) {
     const chartContainer = document.getElementById('priceChart');
     chartContainer.innerHTML = '';
 
+    if (!prices.length) return;
     const median = calculateMedian(prices);
-    const bins = [
+    const fallbackBins = [
         { range: `(${Math.floor(median * 0)}円 - ${Math.floor(median * 0.2)}円)`, count: prices.filter(price => price >= median * 0 && price < median * 0.2).length },
         { range: `(${Math.floor(median * 0.2)}円 - ${Math.floor(median * 0.4)}円)`, count: prices.filter(price => price >= median * 0.2 && price < median * 0.4).length },
         { range: `(${Math.floor(median * 0.4)}円 - ${Math.floor(median * 0.6)}円)`, count: prices.filter(price => price >= median * 0.4 && price < median * 0.6).length },
@@ -172,6 +180,9 @@ function generateBarChart(prices) {
         { range: `(${Math.ceil(median * 1.6)}円 - ${Math.ceil(median * 1.8)}円)`, count: prices.filter(price => price > median * 1.6 && price <= median * 1.8).length },
         { range: `(${Math.ceil(median * 1.8)}円~)`, count: prices.filter(price => price > median * 1.8).length }
     ];
+    const bins = Array.isArray(serverBins) && serverBins.length
+        ? serverBins.map(bin => ({ range: `${bin.lower.toLocaleString()}～${bin.upper.toLocaleString()}円`, count: bin.count }))
+        : fallbackBins;
 
     const margin = { top: 30, right: 50, bottom: 150, left: 60 };
     const width = 1300 - margin.left - margin.right;
@@ -243,4 +254,62 @@ function generateBarChart(prices) {
         .attr('text-anchor', 'middle')
         .style('font-size', '16px')
         .text('商品数 (個)');
+}
+
+function formatYen(value) {
+    return Number.isFinite(Number(value)) ? `${Number(value).toLocaleString()}円` : '—';
+}
+
+function renderMarketSummary(summary) {
+    const values = [
+        ['商品数', `${summary.count || 0}件`],
+        ['中央値', formatYen(summary.median)],
+        ['平均価格', formatYen(summary.mean)],
+        ['価格変動', summary.coefficientOfVariation == null ? '—' : `${summary.coefficientOfVariation}%`],
+        ['中央50%の幅', formatYen(summary.iqr)],
+        ['外れ値候補', `${summary.outlierCount || 0}件`]
+    ];
+    document.getElementById('marketSummaryCards').innerHTML = values.map(([label, value]) => `
+        <div class="col-6 col-lg-2"><div class="analysis-card">
+            <div class="text-muted small">${label}</div><div class="value">${value}</div>
+        </div></div>`).join('');
+}
+
+function renderConditionStats(market) {
+    const rows = market.conditions || [];
+    const target = document.getElementById('conditionStats');
+    if (!rows.length) {
+        target.innerHTML = '<p class="text-muted">状態別に集計できるデータがありません。</p>';
+        return;
+    }
+    target.innerHTML = `<table class="table table-striped align-middle mb-0">
+        <thead><tr><th>商品状態</th><th>件数</th><th>中央値</th></tr></thead>
+        <tbody>${rows.map(row => `<tr><td>${row.label}</td><td>${row.count}件</td><td>${formatYen(row.medianPrice)}</td></tr>`).join('')}</tbody>
+    </table>`;
+}
+
+function renderPriceTrend(series) {
+    const target = document.getElementById('priceTrendChart');
+    target.innerHTML = '';
+    if (!series.length) {
+        target.innerHTML = '<p class="text-muted">日付を解析できるデータがありません。</p>';
+        return;
+    }
+    const data = series.map(item => ({ ...item, parsedDate: new Date(`${item.date}T00:00:00`) }));
+    const margin = { top: 20, right: 30, bottom: 50, left: 75 };
+    const width = 1000 - margin.left - margin.right;
+    const height = 340 - margin.top - margin.bottom;
+    const svg = d3.select(target).append('svg').attr('viewBox', '0 0 1000 340')
+        .append('g').attr('transform', `translate(${margin.left},${margin.top})`);
+    const x = d3.scaleTime().domain(d3.extent(data, d => d.parsedDate)).range([0, width]);
+    const y = d3.scaleLinear().domain([0, d3.max(data, d => d.q3) * 1.08]).nice().range([height, 0]);
+    svg.append('path').datum(data).attr('fill', 'rgba(59,130,246,.2)')
+        .attr('d', d3.area().x(d => x(d.parsedDate)).y0(d => y(d.q1)).y1(d => y(d.q3)));
+    svg.append('path').datum(data).attr('fill', 'none').attr('stroke', '#dc2626').attr('stroke-width', 2.5)
+        .attr('d', d3.line().x(d => x(d.parsedDate)).y(d => y(d.median)));
+    svg.selectAll('.median-point').data(data).enter().append('circle').attr('class', 'median-point')
+        .attr('cx', d => x(d.parsedDate)).attr('cy', d => y(d.median)).attr('r', 3).attr('fill', '#dc2626')
+        .append('title').text(d => `${d.date}: ${d.median.toLocaleString()}円 (${d.count}件)`);
+    svg.append('g').attr('transform', `translate(0,${height})`).call(d3.axisBottom(x).ticks(7).tickFormat(d3.timeFormat('%m/%d')));
+    svg.append('g').call(d3.axisLeft(y).ticks(6).tickFormat(value => `${Number(value).toLocaleString()}円`));
 }
