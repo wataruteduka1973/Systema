@@ -1,11 +1,20 @@
+from django.conf import settings
 from django.db import models
 
 
 class WatchItem(models.Model):
     """Systema内で追跡する出品中の商品。"""
 
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        blank=True,
+        null=True,
+        on_delete=models.CASCADE,
+        related_name="watch_items",
+    )
+    session_key = models.CharField(max_length=40, blank=True, db_index=True)
     name = models.TextField()
-    url = models.CharField(max_length=1000, unique=True)
+    url = models.CharField(max_length=1000)
     search_keyword = models.CharField(max_length=255, blank=True)
     current_price = models.PositiveBigIntegerField(default=0)
     added_price = models.PositiveBigIntegerField(default=0)
@@ -29,3 +38,15 @@ class WatchItem(models.Model):
         ordering = ("-buy_score", "-updated_at")
         verbose_name = "ウォッチ商品"
         verbose_name_plural = "ウォッチリスト"
+        constraints = [
+            models.UniqueConstraint(
+                fields=("user", "url"),
+                condition=models.Q(user__isnull=False),
+                name="unique_user_watch_url",
+            ),
+            models.UniqueConstraint(
+                fields=("session_key", "url"),
+                condition=models.Q(user__isnull=True) & ~models.Q(session_key=""),
+                name="unique_session_watch_url",
+            ),
+        ]

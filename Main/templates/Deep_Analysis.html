@@ -158,16 +158,7 @@
                 <h3>関連項目</h3>
                 <a href="{% url 'yahuoku' %}" class="btn btn-danger">相場検索</a>
                 <a href="{% url 'yahuoku_history' %}" class="btn btn-danger">過去データ参照</a>
-            </div>
-            <div id="marketSummaryCards" class="row g-3 mt-3" aria-live="polite"></div>
-            <div class="analysis-panel">
-                <h3>価格推移（日次中央値・IQR帯）</h3>
-                <p class="text-muted">帯は中央50%の価格範囲、線は日ごとの中央値です。</p>
-                <div id="priceTrendChart"></div>
-            </div>
-            <div class="analysis-panel">
-                <h3>商品状態別の相場</h3>
-                <div id="conditionStats" class="table-responsive"></div>
+
             </div>
             <h2>過去の検索ワード</h2>
             <div class="form-group">
@@ -176,7 +167,7 @@
                     <option value="">選択してください</option>
                 </select>
             </div>
-            <div class="form-group mt-4 d-flex gap-2 align-items-center">
+                        <div class="form-group mt-4 d-flex gap-2 align-items-center">
                 <button id="analyzeMarketPrice" class="btn btn-info">相場の分析</button>
                 <button id="updateMarketData" class="btn btn-success">
                     相場データの更新
@@ -184,6 +175,16 @@
                         role="status"></span>
                 </button>
                 <button id="deleteMarketData" class="btn btn-warning">相場データの削除</button>
+            </div>
+            <div id="marketSummaryCards" class="row g-3 mt-3" aria-live="polite"></div>
+            <div class="analysis-panel">
+                <h3>価格推移（更新別中央値・IQRレンジ）</h3>
+                <p class="text-muted">更新履歴を等間隔に表示します。青い棒は中央50%の価格範囲、赤い線は更新時点の中央値です。</p>
+                <div id="priceTrendChart"></div>
+            </div>
+            <div class="analysis-panel">
+                <h3>商品状態別の相場</h3>
+                <div id="conditionStats" class="table-responsive"></div>
             </div>
             <div class="mt-5 text-center">
                 <h2>よく用いられるキーワード</h2>

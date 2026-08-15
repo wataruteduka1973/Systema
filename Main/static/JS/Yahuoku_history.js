@@ -4,6 +4,8 @@ let sortKey = null;
 let sortOrder = null;
 let marketData = [];
 let filteredData = [...marketData];
+let conditionSummary = null;
+let marketStatistics = null;
 //ソートした際のアイコン表示
 document.addEventListener('DOMContentLoaded', function () {
     const sortButtons = document.querySelectorAll('.sort-btn');
@@ -29,6 +31,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const updateMarketDataButton = document.getElementById('updateMarketData');
     const deleteMarketDataButton = document.getElementById('deleteMarketData');
     const spinner = document.getElementById('updateSpinner');
+    document.querySelectorAll('.condition-filter').forEach(input => input.addEventListener('change', filterData));
+    document.getElementById('historyExcludeJunk').addEventListener('change', filterData);
 
     SearchDBButton.addEventListener('click', () => {
         const searchWord = dropdown.value;
@@ -41,6 +45,11 @@ document.addEventListener('DOMContentLoaded', () => {
             .then(result => {
                 marketData = result.data || [];
                 filteredData = [...marketData];
+                conditionSummary = result.analysis?.conditionMarket || null;
+                marketStatistics = result.analysis?.summary || null;
+                if (window.MarketComparison) {
+                    window.MarketComparison.configure({ statistics: marketStatistics });
+                }
                 currentPage = 1;
                 const EndPrices = marketData.map(item => item.EndPrice).filter(EndPrice => !isNaN(EndPrice));
                 const median = calculateMedian(EndPrices);
@@ -56,6 +65,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 document.getElementById('bid30_40').checked = false;
                 document.getElementById('bid40_50').checked = false;
                 document.getElementById('bid50_plus').checked = false;
+                clearConditionFilters();
+                renderConditionSummary(conditionSummary);
             })
             .catch(error => {
                 console.error('検索エラー:', error);
@@ -124,7 +135,7 @@ function calculateMedian(numbers) {
 }
 // テーブルとページネーションを更新する関数
 function updatePagination() {
-    const totalPages = Math.ceil(marketData.length / ITEMS_PER_PAGE);
+    const totalPages = Math.ceil(filteredData.length / ITEMS_PER_PAGE);
     const pagination = document.createElement('nav');
     pagination.innerHTML = `
         <ul class="pagination justify-content-center mt-3">
@@ -163,19 +174,34 @@ function updateTable(data) {
     data.forEach(item => {
         const row = tableBody.insertRow();
 
-        const productNameCell = row.insertCell(0);
-        productNameCell.textContent = item.Name;
+        const compareCell = row.insertCell(0);
+        if (window.MarketComparison) compareCell.appendChild(window.MarketComparison.createSelector(item));
 
-        const endPriceCell = row.insertCell(1);
+        const productNameCell = row.insertCell(1);
+        productNameCell.textContent = item.name || item.Name;
+
+        const conditionCell = row.insertCell(2);
+        const badge = document.createElement('span');
+        badge.className = `badge ${item.condition === 'junk' ? 'bg-danger' : item.condition === 'new' ? 'bg-success' : item.condition === 'used' ? 'bg-primary' : 'bg-secondary'}`;
+        badge.textContent = item.conditionLabel || '未分類';
+        conditionCell.appendChild(badge);
+        if (Array.isArray(item.attributeLabels) && item.attributeLabels.length) {
+            const attributes = document.createElement('div');
+            attributes.className = 'small text-muted mt-1';
+            attributes.textContent = item.attributeLabels.join('・');
+            conditionCell.appendChild(attributes);
+        }
+
+        const endPriceCell = row.insertCell(3);
         endPriceCell.textContent = item.EndPrice.toLocaleString();
 
-        const startPriceCell = row.insertCell(2);
+        const startPriceCell = row.insertCell(4);
         startPriceCell.textContent = item.StartPrice.toLocaleString();
 
-        const biddingCell = row.insertCell(3);
+        const biddingCell = row.insertCell(5);
         biddingCell.textContent = item.Bidding;
 
-        const productURLCell = row.insertCell(4);
+        const productURLCell = row.insertCell(6);
         const link = document.createElement("a");
         link.href = item.URL || "#";
         link.textContent = "商品リンクURL";
@@ -223,6 +249,8 @@ function filterData() {
     const bid30_40 = document.getElementById('bid30_40').checked;
     const bid40_50 = document.getElementById('bid40_50').checked;
     const bid50_plus = document.getElementById('bid50_plus').checked;
+    const selectedConditions = Array.from(document.querySelectorAll('.condition-filter:checked')).map(input => input.value);
+    const excludeJunk = document.getElementById('historyExcludeJunk').checked;
     const minPrice = minPriceInput ? parseFloat(minPriceInput) : 0;
     const maxPrice = maxPriceInput ? parseFloat(maxPriceInput) : Infinity;
 
@@ -241,6 +269,9 @@ function filterData() {
         const bidding = parseInt(item.Bidding) || 0;
 
         if (price < minPrice || price > maxPrice) return false;
+        const condition = item.condition || 'unknown';
+        if (excludeJunk && condition === 'junk') return false;
+        if (selectedConditions.length && !selectedConditions.includes(condition)) return false;
         const noBidFilter = !bid0_10 && !bid10_20 && !bid20_30 && !bid30_40 && !bid40_50 && !bid50_plus;
         if (noBidFilter) return true;
         if (bid0_10 && bidding >= 0 && bidding < 10) return true;
@@ -255,26 +286,38 @@ function filterData() {
     currentPage = 1;
     updateTable(paginateData(filteredData));
     updatePagination();
+    updateVisibleSummary();
 }
 // フィルタリングのためのイベントリスナーを設定
 function clearFilters() {
     document.getElementById('minPrice').value = '0';
     document.getElementById('maxPrice').value = '';
+    ['bid0_10', 'bid10_20', 'bid20_30', 'bid30_40', 'bid40_50', 'bid50_plus']
+        .forEach(id => { document.getElementById(id).checked = false; });
+    clearConditionFilters();
     filterData();
     currentPage = 1;
     updateTable(paginateData(filteredData));
     updatePagination();
 }
+
+function clearConditionFilters() {
+    document.querySelectorAll('.condition-filter').forEach(input => { input.checked = false; });
+    const excludeJunk = document.getElementById('historyExcludeJunk');
+    if (excludeJunk) excludeJunk.checked = false;
+}
 // 価格フィルタリングのためのイベントリスナーを設定
 function validateAndFilterData() {
-    const minPrice = parseInt(document.getElementById('minPrice').value, 10);
-    const maxPrice = parseInt(document.getElementById('maxPrice').value, 10);
+    const minText = document.getElementById('minPrice').value;
+    const maxText = document.getElementById('maxPrice').value;
+    const minPrice = minText ? parseInt(minText, 10) : 0;
+    const maxPrice = maxText ? parseInt(maxText, 10) : null;
 
-    if (minPrice > maxPrice) {
+    if (maxPrice !== null && minPrice > maxPrice) {
         alert('最低価格は最高価格以下である必要があります。');
         return;
     }
-    if (isNaN(minPrice) || isNaN(maxPrice)) {
+    if (isNaN(minPrice) || (maxPrice !== null && isNaN(maxPrice))) {
         alert('価格は数値で入力してください。');
         return;
     }
@@ -296,5 +339,50 @@ function refreshSearchWordDropdown(selectedValue = "") {
             if (selectedValue) dropdown.value = selectedValue;
         })
         .catch(error => console.error('Error fetching search words:', error));
+}
+
+function renderConditionSummary(summary) {
+    const container = document.getElementById('conditionSummary');
+    container.innerHTML = '';
+    if (!summary || !Array.isArray(summary.conditions)) return;
+    summary.conditions.forEach(item => {
+        const column = document.createElement('div');
+        column.className = 'col-6 col-md-3';
+        column.innerHTML = `<div class="border rounded bg-light p-2 h-100">
+            <div class="fw-bold small">${item.label}</div>
+            <div>${item.count}件 / ${item.medianPrice == null ? '中央値なし' : `中央値 ${Number(item.medianPrice).toLocaleString()}円`}</div>
+        </div>`;
+        container.appendChild(column);
+    });
+}
+
+function summarizeConditions(items) {
+    const definitions = [
+        ['new', '新品・未使用'],
+        ['used', '中古・動作品'],
+        ['junk', 'ジャンク・故障品'],
+        ['unknown', '未分類'],
+    ];
+    return {
+        conditions: definitions.map(([condition, label]) => {
+            const matching = items.filter(item => (item.condition || 'unknown') === condition);
+            const prices = matching.map(item => Number(item.EndPrice)).filter(price => price > 0);
+            return {
+                condition,
+                label,
+                count: matching.length,
+                medianPrice: prices.length ? calculateMedian(prices) : null,
+            };
+        }),
+    };
+}
+
+function updateVisibleSummary() {
+    const prices = filteredData.map(item => Number(item.EndPrice)).filter(price => price > 0);
+    const medianArea = document.getElementById('medianPrice');
+    medianArea.textContent = prices.length
+        ? `絞り込み結果の終了価格中央値: ${calculateMedian(prices).toLocaleString()} 円（${filteredData.length}件）`
+        : '条件に一致する価格データがありません';
+    renderConditionSummary(summarizeConditions(filteredData));
 }
 

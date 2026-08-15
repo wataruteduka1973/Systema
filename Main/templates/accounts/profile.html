@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>ユーザーページ | Systema</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        .profile-stat { border: 0; box-shadow: 0 .2rem .8rem rgba(0, 0, 0, .08); }
+        .profile-table td, .profile-table th { vertical-align: middle; }
+        .product-name { min-width: 18rem; }
+    </style>
+</head>
+<body class="bg-light">
+    {% include 'header.html' %}
+    <main class="container py-4">
+        {% for message in messages %}<div class="alert alert-info">{{ message }}</div>{% endfor %}
+
+        <div class="d-flex flex-wrap justify-content-between align-items-start gap-3 mb-4">
+            <div>
+                <h1 class="h2 mb-1">{{ request.user.username }}さんのユーザーページ</h1>
+                <p class="text-muted mb-0">検索履歴、取得商品、ウォッチ商品をまとめて確認できます。</p>
+            </div>
+            <a class="btn btn-outline-primary" href="{% url 'password_change' %}">パスワードを変更</a>
+        </div>
+
+        <section class="card mb-4">
+            <div class="card-body">
+                <h2 class="h5">アカウント情報</h2>
+                <div class="row g-3">
+                    <div class="col-md-4"><span class="text-muted d-block">ユーザー名</span>{{ request.user.username }}</div>
+                    <div class="col-md-4"><span class="text-muted d-block">メールアドレス</span>{{ request.user.email|default:'未設定' }}</div>
+                    <div class="col-md-4"><span class="text-muted d-block">権限</span>{% if request.user.is_superuser %}管理者{% elif request.user.is_staff %}スタッフ{% else %}一般ユーザー{% endif %}</div>
+                    <div class="col-md-4"><span class="text-muted d-block">登録日時</span>{{ request.user.date_joined|date:'Y-m-d H:i' }}</div>
+                    <div class="col-md-4"><span class="text-muted d-block">最終ログイン</span>{% if request.user.last_login %}{{ request.user.last_login|date:'Y-m-d H:i' }}{% else %}記録なし{% endif %}</div>
+                </div>
+                {% if request.user.is_staff %}
+                <div class="border-top mt-3 pt-3">
+                    <span class="text-muted me-2">管理者メニュー</span>
+                    <a class="btn btn-sm btn-outline-dark me-2" href="{% url 'developer_dashboard' %}">開発者画面</a>
+                    <a class="btn btn-sm btn-outline-dark" href="{% url 'admin:index' %}">Django管理画面</a>
+                </div>
+                {% endif %}
+            </div>
+        </section>
+
+        <section class="row row-cols-1 row-cols-sm-3 g-3 mb-4" aria-label="利用状況">
+            <div class="col"><div class="card profile-stat h-100"><div class="card-body"><div class="text-muted">検索実行</div><div class="fs-2 fw-bold">{{ search_count }}</div></div></div></div>
+            <div class="col"><div class="card profile-stat h-100"><div class="card-body"><div class="text-muted">取得商品</div><div class="fs-2 fw-bold">{{ scraped_item_count }}</div></div></div></div>
+            <div class="col"><div class="card profile-stat h-100"><div class="card-body"><div class="text-muted">ウォッチ商品</div><div class="fs-2 fw-bold">{{ watch_count }}</div></div></div></div>
+        </section>
+
+        <section class="card mb-4">
+            <div class="card-header fw-bold">よく使う検索ワード</div>
+            <div class="card-body">
+                {% for item in keyword_summary %}
+                <span class="badge bg-primary me-2 mb-2">{{ item.keyword }} × {{ item.search_count }}</span>
+                {% empty %}<p class="text-muted mb-0">検索履歴はまだありません。</p>{% endfor %}
+            </div>
+        </section>
+
+        <section class="card mb-4">
+            <div class="card-header fw-bold">最近の検索履歴</div>
+            <div class="table-responsive">
+                <table class="table table-hover profile-table mb-0">
+                    <thead><tr><th>日時</th><th>検索ワード</th><th>種類</th><th>取得件数</th><th>保存件数</th><th>詳細</th></tr></thead>
+                    <tbody>
+                    {% for run in search_runs %}
+                    <tr{% if selected_run.pk == run.pk %} class="table-primary"{% endif %}>
+                        <td>{{ run.created_at|date:'Y-m-d H:i' }}</td>
+                        <td>{{ run.keyword }}</td>
+                        <td>{{ run.get_search_type_display }}</td>
+                        <td>{{ run.item_count }}</td>
+                        <td>{{ run.saved_item_count }}</td>
+                        <td><a class="btn btn-sm btn-outline-primary" href="{% url 'profile' %}?run={{ run.pk }}#search-items">商品を見る</a></td>
+                    </tr>
+                    {% empty %}<tr><td colspan="6" class="text-muted">検索履歴はまだありません。</td></tr>{% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <section id="search-items" class="card mb-4">
+            <div class="card-header fw-bold">{% if selected_run %}「{{ selected_run.keyword }}」で取得した商品（最新50件）{% else %}取得商品{% endif %}</div>
+            <div class="table-responsive">
+                <table class="table table-striped profile-table mb-0">
+                    <thead><tr><th>商品名</th><th>終了／現在価格</th><th>開始価格</th><th>入札</th><th>取得日時</th><th>URL</th></tr></thead>
+                    <tbody>
+                    {% for item in selected_items %}
+                    <tr><td class="product-name">{{ item.Name }}</td><td>{{ item.EndPrice|floatformat:0 }}円</td><td>{{ item.StartPrice|floatformat:0 }}円</td><td>{{ item.Bidding }}</td><td>{{ item.SearchDay }}</td><td><a href="{{ item.URL }}" target="_blank" rel="noopener noreferrer">商品</a></td></tr>
+                    {% empty %}<tr><td colspan="6" class="text-muted">表示できる取得商品はありません。</td></tr>{% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <section class="card mb-4">
+            <div class="card-header fw-bold">ウォッチ商品（上位20件）</div>
+            <div class="table-responsive">
+                <table class="table table-hover profile-table mb-0">
+                    <thead><tr><th>商品名</th><th>現在価格</th><th>追加時価格</th><th>状態</th><th>買い時判定</th><th>更新日時</th></tr></thead>
+                    <tbody>
+                    {% for item in watch_items %}
+                    <tr><td class="product-name"><a href="{{ item.url }}" target="_blank" rel="noopener noreferrer">{{ item.name }}</a></td><td>{{ item.current_price }}円</td><td>{{ item.added_price }}円</td><td>{{ item.condition_label }}</td><td>{{ item.buy_label }}（{{ item.buy_score }}）</td><td>{{ item.updated_at|date:'Y-m-d H:i' }}</td></tr>
+                    {% empty %}<tr><td colspan="6" class="text-muted">ウォッチ商品はありません。</td></tr>{% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </section>
+    </main>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

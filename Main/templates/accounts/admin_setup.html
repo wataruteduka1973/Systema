@@ -1,0 +1,2 @@
+{% url 'login' as secondary_url %}
+{% include 'accounts/_account_form.html' with page_title='初回管理者セットアップ' page_description='最初の管理者だけを作成する一度限りの画面です。作成後は自動的に無効になります。' submit_label='管理者を作成' secondary_url=secondary_url secondary_label='ログイン画面へ戻る' %}

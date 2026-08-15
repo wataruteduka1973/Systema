@@ -1,0 +1,2 @@
+{% url 'login' as secondary_url %}
+{% include 'accounts/_account_form.html' with page_title='アカウント作成' page_description='一般ユーザーとして登録します。管理権限は付与されません。' submit_label='登録する' secondary_url=secondary_url secondary_label='既存アカウントでログイン' %}

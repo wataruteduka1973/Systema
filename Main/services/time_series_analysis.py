@@ -45,6 +45,39 @@ def analyze_stored_market(items: list[dict[str, Any]], reference: datetime) -> d
     }
 
 
+def analyze_snapshot_history(items: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """検索実行時刻ごとの価格中央値とIQRを履歴グラフ用に集計する。"""
+    rows = [
+        {"snapshot": item.get("SearchDay"), "price": _positive_number(item.get("EndPrice"))}
+        for item in items
+    ]
+    frame = pd.DataFrame(rows)
+    if frame.empty:
+        return []
+    frame["snapshot"] = pd.to_datetime(frame["snapshot"], errors="coerce")
+    frame = frame.dropna(subset=["snapshot", "price"])
+    if frame.empty:
+        return []
+    points = []
+    for snapshot, group in frame.groupby("snapshot"):
+        prices = group["price"].astype("float64")
+        q1, q3 = float(prices.quantile(0.25)), float(prices.quantile(0.75))
+        iqr = q3 - q1
+        inliers = prices[(prices >= max(0.0, q1 - 1.5 * iqr)) & (prices <= q3 + 1.5 * iqr)]
+        if inliers.empty:
+            inliers = prices
+        points.append(
+            {
+                "date": snapshot.isoformat(),
+                "median": int(round(inliers.median())),
+                "q1": int(round(inliers.quantile(0.25))),
+                "q3": int(round(inliers.quantile(0.75))),
+                "count": int(inliers.count()),
+            }
+        )
+    return points
+
+
 def predict_market_prices(
     items: list[dict[str, Any]], reference: datetime, lookback_days: int = 90
 ) -> dict[str, Any] | None:

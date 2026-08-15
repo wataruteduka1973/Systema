@@ -43,7 +43,7 @@ def analyze_market_prices(items: Iterable[Mapping[str, Any]]) -> dict[str, Any]:
         "lowerFence": _rounded(lower_fence),
         "upperFence": _rounded(upper_fence),
         "outlierCount": int(((prices < lower_fence) | (prices > upper_fence)).sum()),
-        "histogram": _histogram(prices),
+        "histogram": _histogram(prices[(prices >= lower_fence) & (prices <= upper_fence)]),
     }
 
 

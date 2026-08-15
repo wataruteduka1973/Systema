@@ -4,9 +4,12 @@ from pathlib import Path
 
 import pytest
 from django.conf import settings
+from django.contrib.auth import get_user_model
 from django.test import RequestFactory
 
 from Main.views import api, utils
+from Main.models.searchrun import SearchRun
+from Main.services.ownership import get_request_owner
 
 # テスト開始、レポート生成
 # pytest tests/api_test.py --html=tests/report.html
@@ -16,6 +19,12 @@ from Main.views import api, utils
 class TestAPIUtils:
     def setup_method(self):
         self.factory = RequestFactory()
+
+    def authenticated(self, request, username="watch-user"):
+        request.user = get_user_model().objects.create_user(
+            username=f"{username}-{get_user_model().objects.count()}"
+        )
+        return request
 
     def test_log_directory_exists(self):
         assert (Path(settings.BASE_DIR) / "logs").is_dir()
@@ -58,7 +67,7 @@ class TestAPIUtils:
                 },
             ],
         )
-        monkeypatch.setattr(api, "save_to_database", lambda keyword, items: None)
+        monkeypatch.setattr(api, "save_to_database", lambda keyword, items, run=None: None)
 
         response = api.perform_search(self.factory.get("/taskle/perform_search?keyword=test"))
 
@@ -210,6 +219,34 @@ class TestAPIUtils:
         data = json.loads(response.content)
         assert "error" in data
 
+    def test_get_market_data_adds_condition_and_comparison_fields(self):
+        request = self.factory.get("/taskle/get_market_data?keyword=history-test")
+        owner = get_request_owner(request)
+        run = SearchRun.objects.create(
+            **owner.model_values,
+            keyword="history-test",
+            search_type=SearchRun.CLOSED,
+            item_count=1,
+        )
+        utils.scraping.objects.create(
+            search_run=run,
+            SearchWord="history-test",
+            SearchDay="2026-08-15 10:00:00",
+            Name="中古 動作確認済み 商品",
+            EndPrice=8000,
+            StartPrice=1000,
+            Bidding="3",
+            URL="https://auctions.yahoo.co.jp/jp/auction/x123456789",
+        )
+        response = api.get_market_data(request)
+
+        assert response.status_code == 200
+        data = json.loads(response.content)
+        item = data["data"][0]
+        assert item["condition"] == "used"
+        assert item["conditionLabel"] == "中古・動作品"
+        assert item["marketComparison"]["position"] == "near"
+
     def test_watchlist_create_list_update_and_delete(self):
         payload = {
             "name": "中古 動作確認済み 商品",
@@ -224,11 +261,11 @@ class TestAPIUtils:
             "searchKeyword": "test",
         }
         create_response = api.watchlist(
-            self.factory.post(
+            self.authenticated(self.factory.post(
                 "/taskle/watchlist",
                 data=json.dumps(payload),
                 content_type="application/json",
-            )
+            ))
         )
         assert create_response.status_code == 201
         created = json.loads(create_response.content)["item"]
@@ -237,32 +274,44 @@ class TestAPIUtils:
 
         payload["currentPrice"] = 6500
         update_response = api.watchlist(
-            self.factory.post(
+            self.authenticated(self.factory.post(
                 "/taskle/watchlist",
                 data=json.dumps(payload),
                 content_type="application/json",
-            )
+            ), username="watch-user-update")
         )
+        assert update_response.status_code == 201
+
+        user = get_user_model().objects.get(username="watch-user-0")
+        update_request = self.factory.post(
+            "/taskle/watchlist", data=json.dumps(payload), content_type="application/json"
+        )
+        update_request.user = user
+        update_response = api.watchlist(update_request)
         updated = json.loads(update_response.content)["item"]
         assert update_response.status_code == 200
         assert updated["addedPrice"] == 7000
         assert updated["priceChange"] == -500
 
-        list_response = api.watchlist(self.factory.get("/taskle/watchlist"))
+        list_request = self.factory.get("/taskle/watchlist")
+        list_request.user = user
+        list_response = api.watchlist(list_request)
         assert len(json.loads(list_response.content)["items"]) == 1
 
+        delete_request = self.factory.delete(f"/taskle/watchlist/{created['id']}")
+        delete_request.user = user
         delete_response = api.watchlist_item(
-            self.factory.delete(f"/taskle/watchlist/{created['id']}"), created["id"]
+            delete_request, created["id"]
         )
         assert delete_response.status_code == 200
 
     def test_watchlist_rejects_non_yahoo_url(self):
         response = api.watchlist(
-            self.factory.post(
+            self.authenticated(self.factory.post(
                 "/taskle/watchlist",
                 data=json.dumps({"name": "商品", "url": "https://example.com/item"}),
                 content_type="application/json",
-            )
+            ))
         )
         assert response.status_code == 400
 
@@ -275,7 +324,7 @@ class TestAPIUtils:
                 {"name": "落札商品2", "price": 12000},
             ],
         )
-        monkeypatch.setattr(utils, "save_to_database", lambda keyword, items: None)
+        monkeypatch.setattr(utils, "save_to_database", lambda keyword, items, run=None: None)
         monkeypatch.setattr(
             utils,
             "scrape_current_listings",
@@ -298,6 +347,36 @@ class TestAPIUtils:
         item = json.loads(response.content)["recommend_items"][0]
         assert item["condition"] == "used"
         assert item["buyDecision"]["status"] == "strong_buy"
+
+    def test_complex_market_data_serializes_unknown_remaining_time_as_null(self, monkeypatch):
+        monkeypatch.setattr(
+            utils,
+            "scrape_data",
+            lambda keyword: [{"name": "落札商品", "price": 10000}],
+        )
+        monkeypatch.setattr(utils, "save_to_database", lambda keyword, items, run=None: None)
+        monkeypatch.setattr(
+            utils,
+            "scrape_current_listings",
+            lambda keyword: [
+                {
+                    "name": "現在商品",
+                    "currentPrice": 7000,
+                    "bidding": 0,
+                    "remainingTime": "N/A",
+                    "url": "https://auctions.yahoo.co.jp/jp/auction/x123456789",
+                }
+            ],
+        )
+
+        response = api.complex_market_data(
+            self.factory.get("/taskle/complex_market_data?keyword=test")
+        )
+        text = response.content.decode("utf-8")
+        item = json.loads(text)["recommend_items"][0]
+
+        assert "Infinity" not in text
+        assert item["remainingSeconds"] is None
 
     # --- UTILS LOGIC 追加 ---
     def test_utils_get_search_words_logic_get(self):

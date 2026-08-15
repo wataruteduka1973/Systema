@@ -1,10 +1,39 @@
 from datetime import datetime, timedelta
 
 from Main.services.time_series_analysis import (
+    analyze_snapshot_history,
     analyze_stored_market,
     parse_auction_date,
     predict_market_prices,
 )
+
+
+def test_snapshot_history_keeps_each_update_as_a_separate_point():
+    history = [
+        {"SearchDay": "2026-08-14 10:00:00", "EndPrice": 1000},
+        {"SearchDay": "2026-08-14 10:00:00", "EndPrice": 2000},
+        {"SearchDay": "2026-08-15 10:00:00", "EndPrice": 3000},
+        {"SearchDay": "2026-08-15 10:00:00", "EndPrice": 5000},
+    ]
+
+    points = analyze_snapshot_history(history)
+
+    assert len(points) == 2
+    assert points[0]["median"] == 1500
+    assert points[1]["median"] == 4000
+
+
+def test_snapshot_history_excludes_extreme_price_from_chart_range():
+    history = [
+        {"SearchDay": "2026-08-15 10:00:00", "EndPrice": price}
+        for price in [1000, 1200, 1400, 1600, 1_000_000_000]
+    ]
+
+    point = analyze_snapshot_history(history)[0]
+
+    assert point["count"] == 4
+    assert point["median"] == 1300
+    assert point["q3"] < 1_000_000_000
 
 
 def test_parse_auction_date_wraps_future_month_to_previous_year():

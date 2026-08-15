@@ -9,6 +9,13 @@ class scraping(models.Model):
     商品名、URLを含みます。
     """
 
+    search_run = models.ForeignKey(
+        "Main.SearchRun",
+        blank=True,
+        null=True,
+        on_delete=models.CASCADE,
+        related_name="items",
+    )
     SearchWord = models.TextField(help_text="検索ワード")
     SearchDay = models.TextField(help_text="検索日")
     Bidding = models.TextField(help_text="入札数")

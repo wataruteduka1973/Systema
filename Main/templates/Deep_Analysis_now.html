@@ -88,7 +88,7 @@
     }
 </style>
 
-<body>
+<body data-authenticated="{{ request.user.is_authenticated|yesno:'true,false' }}">
     {% include 'header.html' %}
     <main role="main">
         <section class="hero-section">
@@ -163,7 +163,7 @@
             <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
                 <div>
                     <h2 id="watchlistHeading" class="mb-1">Systema ウォッチリスト</h2>
-                    <p class="text-muted mb-0">追加時価格との変化と、最新の買い時判定を確認できます。</p>
+                    <p class="text-muted mb-0">追加時価格との変化と最新の買い時判定を確認できます。未ログイン時はブラウザーのセッションへ保存され、ログインするとアカウントへ引き継がれます。</p>
                 </div>
                 <button type="button" class="btn btn-outline-secondary" onclick="loadWatchlist()">再読み込み</button>
             </div>
@@ -189,7 +189,7 @@
     {% include 'footer.html' %}
     <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.9.2/dist/umd/popper.min.js"></script>
-    <script src="{% static 'JS/Deep_Analysis_now.js' %}?v=20260814-watchlist-fix1"></script>
+    <script src="{% static 'JS/Deep_Analysis_now.js' %}?v=20260815-session-owner"></script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 

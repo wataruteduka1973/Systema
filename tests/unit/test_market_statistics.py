@@ -17,7 +17,8 @@ def test_analyze_market_prices_returns_variability_metrics():
     assert result["priceRange"] == 9000
     assert result["iqr"] == 2000
     assert result["outlierCount"] == 1
-    assert sum(item["count"] for item in result["histogram"]) == 5
+    assert sum(item["count"] for item in result["histogram"]) == 4
+    assert max(item["upper"] for item in result["histogram"]) < 10000
 
 
 @pytest.mark.unit

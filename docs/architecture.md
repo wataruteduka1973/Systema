@@ -17,13 +17,17 @@ This project is a Django-based Yahoo! Auction market analysis tool. It fetches a
 - `Main/domain/`: 外部I/Oに依存しない値変換・判定ロジック
 - `Main/services/`: ユースケースとアプリケーション固有例外
 - `Main/infrastructure/`: HTTP、DBなど外部I/Oの実装
-- `Main/views/`: HTTP入力とレスポンスへの変換
+- `Main/views/`: HTTP入力とレスポンスへの変換。`accounts.py`は認証、`developer.py`はstaff専用監視画面
 
 既存のDjango app label、migration、importパスを維持するため、現時点ではリポジトリ全体を`src/`へ移していません。まず上記境界へロジックを移し、`views/utils.py`を段階的に薄くする方針です。
 
 商品コンディション分類と状態別相場集計は`Main/domain/product_condition.py`に置き、スクレイピングやDjangoへ依存しない純粋ロジックとしてテストします。相場検索APIは既存の商品項目を維持し、分類項目と`conditionSummary`を追加する形で拡張します。
 
-買い時判定は`Main/domain/buying_opportunity.py`に置き、相場中央値との価格比率、商品状態、残り時間から説明可能な判定結果を生成します。Systema内のウォッチ商品は`WatchItem`へURL単位で保存し、保存・更新・シリアライズは`Main/services/watchlist.py`へ分離します。ターゲット分析で登録済み商品を再取得した場合は、追加時価格を維持したまま現在価格と判定を更新します。
+買い時判定は`Main/domain/buying_opportunity.py`に置き、相場中央値との価格比率、商品状態、残り時間から説明可能な判定結果を生成します。Systema内のウォッチ商品は`WatchItem`へユーザーとURLの組み合わせで保存し、保存・更新・シリアライズは`Main/services/watchlist.py`へ分離します。ターゲット分析で登録済み商品を再取得した場合は、追加時価格を維持したまま現在価格と判定を更新します。
+
+Django標準のユーザー、セッション、パスワード検証を認証基盤に使用します。一般登録と一度限りの初回管理者作成を画面から行い、開発者ダッシュボードは`is_staff`ユーザーだけに制限します。
+
+検索1回を`SearchRun`として記録し、`scraping`の商品行をその配下へ保存します。`SearchRun`、検索ワード履歴、ウォッチ商品は、ログイン時はユーザー、未ログイン時はDjangoセッションキーを所有者とします。履歴APIは現在の所有者で必ず絞り込み、所有者未割当の旧データは通常画面へ表示しません。ログイン・登録時には匿名セッションの検索履歴とウォッチ商品をユーザーへ移管します。
 
 価格統計は`Main/services/market_statistics.py`でpandasを使って集計します。DataFrameやSeriesはサービス内部に閉じ、APIではJSONへ変換した中央値、四分位範囲、標準偏差、変動係数、外れ値候補数、ヒストグラムだけを返します。検索結果の比較UIは`Main/static/JS/MarketComparison.js`を相場検索と現在価格検索で共有します。
 

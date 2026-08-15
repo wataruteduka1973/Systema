@@ -182,13 +182,32 @@
                     </div>
                 </div>
             </div>
+            <div class="row mb-3">
+                <div class="col-12">
+                    <label class="fw-bold">商品状態:</label>
+                    <div class="d-flex flex-wrap gap-3 mt-2">
+                        <div class="form-check"><input class="form-check-input condition-filter" type="checkbox" value="new" id="historyConditionNew"><label class="form-check-label" for="historyConditionNew">新品・未使用</label></div>
+                        <div class="form-check"><input class="form-check-input condition-filter" type="checkbox" value="used" id="historyConditionUsed"><label class="form-check-label" for="historyConditionUsed">中古・動作品</label></div>
+                        <div class="form-check"><input class="form-check-input condition-filter" type="checkbox" value="junk" id="historyConditionJunk"><label class="form-check-label" for="historyConditionJunk">ジャンク・故障品</label></div>
+                        <div class="form-check"><input class="form-check-input condition-filter" type="checkbox" value="unknown" id="historyConditionUnknown"><label class="form-check-label" for="historyConditionUnknown">未分類</label></div>
+                        <div class="form-check"><input class="form-check-input" type="checkbox" id="historyExcludeJunk"><label class="form-check-label" for="historyExcludeJunk">ジャンクを除外</label></div>
+                    </div>
+                </div>
+            </div>
             <div class="Main-Element">
                 <div id="medianPrice" class="alert alert-info"></div>
+                <div class="alert alert-secondary">
+                    表の「比較」にチェックを入れると、画面下部に比較ボタンが表示されます。2～4商品を選ぶと、価格差・商品状態・入札数を横並びで確認できます。
+                </div>
+                <div id="conditionSummary" class="row g-2 mb-3" aria-live="polite"></div>
+                <div id="marketStatisticsSummary" class="row g-2 mb-3" aria-live="polite"></div>
                 <div id="dataTableContainer">
                     <table id="dataTable" class="table table-striped table-hover table-container">
                         <thead>
                             <tr>
+                                <th style="width:60px;">比較</th>
                                 <th style="width:200px;">商品名</th>
+                                <th style="width:170px;">商品状態</th>
                                 <th style="width:150px;">終了価格
                                     <button class="btn btn-sm btn-outline-secondary sort-btn" data-sort="price"
                                         data-order="asc">
@@ -233,8 +252,9 @@
     {% include 'footer.html' %}
     <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.9.2/dist/umd/popper.min.js"></script>
-    <script src="{% static 'JS/Yahuoku_history.js' %}"></script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="{% static 'JS/MarketComparison.js' %}?v=20260815-history"></script>
+    <script src="{% static 'JS/Yahuoku_history.js' %}?v=20260815-history"></script>
 </body>
 
 </html>

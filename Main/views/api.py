@@ -10,6 +10,7 @@ from Main.services.market_statistics import (
     analyze_market_prices,
     enrich_items_with_market_comparison,
 )
+from Main.services.ownership import get_request_owner, owner_query
 from Main.services.watchlist import (
     list_watch_items,
     save_watch_item,
@@ -23,6 +24,7 @@ from .utils import (
     get_popular_words_logic,
     get_search_words_logic,
     prediction_market_logic,
+    record_search_run,
     save_to_database,
     scrape_current_listings,
     scrape_data,
@@ -33,7 +35,11 @@ logger = logging.getLogger("search_logger")
 
 
 def handle_search_response(
-    request, data_fetch_func, save_func=None, include_condition_analysis=False
+    request,
+    data_fetch_func,
+    save_func=None,
+    include_condition_analysis=False,
+    search_type="closed",
 ):
     """
     共通の検索処理を行うヘルパー関数。
@@ -53,8 +59,11 @@ def handle_search_response(
     try:
         scraped_data_list = data_fetch_func(searchname)
         logger.info(f"Scraped {len(scraped_data_list)} items for keyword: {searchname}")
+        search_run = record_search_run(
+            request, searchname, search_type, len(scraped_data_list)
+        )
         if save_func:
-            save_func(searchname, scraped_data_list)
+            save_func(searchname, scraped_data_list, search_run)
             logger.info(f"Data saved to database for keyword: {searchname}")
         response_data = {"data": scraped_data_list}
         if include_condition_analysis:
@@ -87,7 +96,13 @@ def RealtimeSearch(request):
     """
     現在出品されている商品のデータを取得して処理する。
     """
-    return handle_search_response(request, scrape_current_listings, include_condition_analysis=True)
+    return handle_search_response(
+        request,
+        scrape_current_listings,
+        save_to_database,
+        include_condition_analysis=True,
+        search_type="current",
+    )
 
 
 def get_search_words(request):
@@ -144,15 +159,16 @@ def get_popular_words(request):
 @csrf_exempt
 def watchlist(request):
     """Systema内のウォッチリストを取得、または商品を登録する。"""
+    owner = get_request_owner(request)
     if request.method == "GET":
-        return JsonResponse({"items": list_watch_items()})
+        return JsonResponse({"items": list_watch_items(owner)})
     if request.method != "POST":
         return JsonResponse({"error": "Invalid request method"}, status=400)
     try:
         payload = json.loads(request.body or b"{}")
         if not isinstance(payload, dict):
             raise ValueError("リクエスト形式が正しくありません")
-        item, created = save_watch_item(payload)
+        item, created = save_watch_item(payload, owner)
         return JsonResponse(
             {"item": serialize_watch_item(item), "created": created},
             status=201 if created else 200,
@@ -164,9 +180,10 @@ def watchlist(request):
 @csrf_exempt
 def watchlist_item(request, item_id):
     """ウォッチ商品を解除する。"""
+    owner = get_request_owner(request)
     if request.method != "DELETE":
         return JsonResponse({"error": "Invalid request method"}, status=400)
-    deleted, _ = WatchItem.objects.filter(pk=item_id).delete()
+    deleted, _ = WatchItem.objects.filter(owner_query(owner), pk=item_id).delete()
     if not deleted:
         return JsonResponse({"error": "Watch item not found"}, status=404)
     return JsonResponse({"message": "ウォッチを解除しました"})

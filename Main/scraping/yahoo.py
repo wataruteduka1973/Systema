@@ -6,6 +6,10 @@ from bs4 import BeautifulSoup
 
 class YahooAuctionParser:
     @staticmethod
+    def _is_valid_auction_id(value):
+        return re.fullmatch(r"[a-z]?\d{8,}", str(value or ""), re.I) is not None
+
+    @staticmethod
     def _safe_int(value):
         if value is None:
             return 0
@@ -161,6 +165,12 @@ class YahooAuctionParser:
                     auction_id = auction_id.group(0)
                 auction_id = str(auction_id) if auction_id else None
 
+                href_id = re.search(r"/(?:auction|item)/([a-z]?\d{8,})(?:[/?#]|$)", href, re.I)
+                if not cls._is_valid_auction_id(auction_id) and href_id:
+                    auction_id = href_id.group(1)
+                if not cls._is_valid_auction_id(auction_id):
+                    continue
+
                 if re.search(
                     r"^(yahoo!\s*japan|help|ヘルプ|ログイン|マイページ|検索|トップ|カテゴリ|お問い合わせ|規約|プライバシー)$",
                     title_text,
@@ -172,6 +182,12 @@ class YahooAuctionParser:
                     '.Product__priceValue:not(.Product__priceValue--start), .Product__priceValue, .price, [class*="Product__priceValue"]'
                 )
                 price_text = price_tag.get_text(" ", strip=True) if price_tag else ""
+                if not price_text:
+                    price_node = card.find(string=re.compile(r"(?:[￥¥]\s*)?[\d,]+\s*円"))
+                    price_text = str(price_node).strip() if price_node else ""
+                price = cls._safe_int(price_text)
+                if price <= 0:
+                    continue
 
                 bid_tag = card.select_one(
                     '.Product__bid, dd[class*="Product__bid"], [class*="Product__bid"]'
@@ -192,7 +208,7 @@ class YahooAuctionParser:
 
                 data = {
                     "title": title_text,
-                    "price": cls._safe_int(price_text),
+                    "price": price,
                     "bidding": cls._safe_int(bid_text),
                     "time": cls._normalize_time_value(time_text),
                     "auctionId": auction_id,
@@ -245,8 +261,17 @@ class YahooAuctionParser:
             ):
                 continue
 
-            auction_match = re.search(r"z\d+", href or str(auction_id or ""))
-            if not auction_id and not auction_match:
+            auction_match = re.search(
+                r"(?:/(?:auction|item)/)?([a-z]?\d{8,})(?:[/?#]|$)",
+                href or str(auction_id or ""),
+                re.I,
+            )
+            normalized_id = (
+                auction_id
+                if cls._is_valid_auction_id(auction_id)
+                else (auction_match.group(1) if auction_match else None)
+            )
+            if not cls._is_valid_auction_id(normalized_id):
                 continue
 
             price_text = None
@@ -255,20 +280,20 @@ class YahooAuctionParser:
                 if re.search(r"\d", text) and len(text) <= 40:
                     price_text = text
                     break
-            if not price_text and not auction_id:
+            price = cls._safe_int(price_text) if price_text else 0
+            if price <= 0:
                 continue
 
-            key = str(auction_id or (auction_match.group(0) if auction_match else title_text))
+            key = str(normalized_id)
             if key in seen_ids:
                 continue
             seen_ids.add(key)
 
             data = {
                 "title": title_text,
-                "price": cls._safe_int(price_text) if price_text else 0,
+                "price": price,
+                "auctionId": normalized_id,
             }
-            if auction_id:
-                data["auctionId"] = auction_id
             if href:
                 data["url"] = href
             extracted.append(data)

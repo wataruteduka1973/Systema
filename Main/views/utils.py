@@ -1,4 +1,5 @@
 import logging
+import math
 import re
 from collections import Counter
 from datetime import datetime
@@ -12,11 +13,18 @@ from Main.domain.buying_opportunity import evaluate_buying_opportunity
 from Main.domain.product_condition import enrich_market_items
 from Main.infrastructure.http import get_with_retry
 from Main.models.scraping import scraping
+from Main.models.searchrun import SearchRun
 from Main.models.searchwordlog import searchwordlog
 from Main.scraping.yahoo import YahooAuctionParser
 from Main.services.exceptions import ExternalServiceError
+from Main.services.market_statistics import enrich_items_with_market_comparison
+from Main.services.ownership import get_request_owner, owner_query
 from Main.services.watchlist import refresh_watched_item
-from Main.services.time_series_analysis import analyze_stored_market, predict_market_prices
+from Main.services.time_series_analysis import (
+    analyze_snapshot_history,
+    analyze_stored_market,
+    predict_market_prices,
+)
 
 logger = logging.getLogger("search_logger")
 
@@ -58,6 +66,29 @@ def _normalize_yahoo_item(item):
     return YahooAuctionParser.normalize_item(item)
 
 
+def _is_valid_listing(normalized):
+    """商品ID・価格・商品名を持つ実際の出品だけを許可する。"""
+    if not normalized:
+        return False
+    title = str(normalized.get("name") or "").strip()
+    price = normalized.get("price")
+    auction_id = str(normalized.get("auctionId") or "").strip()
+    if not auction_id:
+        url_match = re.search(
+            r"/(?:auction|item)/([a-z]?\d{8,})(?:[/?#]|$)",
+            str(normalized.get("url") or ""),
+            re.I,
+        )
+        auction_id = url_match.group(1) if url_match else ""
+    return (
+        YahooAuctionParser._is_valid_title_text(title)
+        and isinstance(price, (int, float))
+        and not isinstance(price, bool)
+        and price > 0
+        and re.fullmatch(r"[a-z]?\d{8,}", auction_id, re.I) is not None
+    )
+
+
 def _format_remaining_time(end_time):
     """後方互換のため公開名を維持し、ドメイン層へ委譲する。"""
     return format_remaining_time(end_time)
@@ -80,9 +111,6 @@ def scrape_data(searchname):
 
     scraped_data_list = []
     headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"}
-    if searchname:
-        searchwordlog.objects.create(word=searchname)
-
     for url in urls:
         try:
             response = _request_with_retry(url, headers=headers)
@@ -94,7 +122,7 @@ def scrape_data(searchname):
 
             for item in items:
                 normalized = _normalize_yahoo_item(item)
-                if normalized:
+                if _is_valid_listing(normalized):
                     scraped_data_list.append(
                         {
                             "name": normalized["name"],
@@ -125,8 +153,6 @@ def scrape_current_listings(searchname):
         f"{base_url}?auccat=&tab_ex=commerce&aq=-&p={searchname}&f=0:1&b=1&n=100",
         f"{base_url}?auccat=&tab_ex=commerce&aq=-&p={searchname}&f=0:1&b=101&n=100",
     ]
-    if searchname:
-        searchwordlog.objects.create(word=searchname)
     scraped_data_list = []
     headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"}
 
@@ -136,7 +162,7 @@ def scrape_current_listings(searchname):
             items = _extract_listing_items(response.text)
             for item in items:
                 normalized = _normalize_yahoo_item(item)
-                if not normalized:
+                if not _is_valid_listing(normalized):
                     continue
                 scraped_data_list.append(
                     {
@@ -158,29 +184,56 @@ def scrape_current_listings(searchname):
     return scraped_data_list[:200]
 
 
-def save_to_database(searchname, scraped_data_list):
+def record_search_run(
+    request, searchname, search_type, item_count, succeeded=True, record_word=True
+):
+    owner = get_request_owner(request)
+    run = SearchRun.objects.create(
+        **owner.model_values,
+        keyword=searchname,
+        search_type=search_type,
+        item_count=item_count,
+        succeeded=succeeded,
+    )
+    if record_word:
+        searchwordlog.objects.create(**owner.model_values, word=searchname)
+    return run
+
+
+def save_to_database(searchname, scraped_data_list, search_run=None):
     """
     スクレイピングされたデータをデータベースに保存する。
     """
     now_time = datetime.now()
     SearchDay = now_time.strftime("%Y-%m-%d %H:%M:%S")
 
-    # 同名のSearchWordが存在する場合、削除
-    scraping.objects.filter(SearchWord=searchname).delete()
-
     for scraped_data in scraped_data_list:
         try:
             scraping.objects.create(
+                search_run=search_run,
                 SearchWord=searchname,
                 SearchDay=SearchDay,
                 Name=scraped_data["name"],
-                EndPrice=scraped_data["price"],
-                StartPrice=scraped_data["startPrice"],
-                Bidding=scraped_data["bidding"],
-                URL=scraped_data["url"],
+                EndPrice=scraped_data.get("price", scraped_data.get("currentPrice", 0)),
+                StartPrice=scraped_data.get(
+                    "startPrice", scraped_data.get("currentPrice", 0)
+                ),
+                Bidding=scraped_data.get("bidding", 0),
+                URL=scraped_data.get("url", "#"),
             )
         except Exception:
             logger.exception("相場データの保存に失敗しました keyword=%s", searchname)
+
+    if search_run is not None:
+        owner = {"user": search_run.user, "session_key": search_run.session_key}
+        retained_ids = list(
+            SearchRun.objects.filter(
+                **owner, keyword=searchname, search_type=search_run.search_type
+            ).values_list("id", flat=True)[:50]
+        )
+        SearchRun.objects.filter(
+            **owner, keyword=searchname, search_type=search_run.search_type
+        ).exclude(pk__in=retained_ids).delete()
 
 
 def get_search_words_logic(request):
@@ -190,8 +243,14 @@ def get_search_words_logic(request):
     if request.method != "GET":
         return JsonResponse({"error": "Invalid request method"}, status=400)
     try:
-        search_words = scraping.objects.values_list("SearchWord", flat=True).distinct()
-        return JsonResponse({"searchWords": list(search_words)})
+        owner = get_request_owner(request)
+        search_words = (
+            SearchRun.objects.filter(owner_query(owner), search_type=SearchRun.CLOSED)
+            .order_by("-created_at")
+            .values_list("keyword", flat=True)
+        )
+        unique_words = list(dict.fromkeys(str(word).strip() for word in search_words if word))
+        return JsonResponse({"searchWords": unique_words})
     except Exception as e:
         return JsonResponse({"error": str(e)}, status=500)
 
@@ -204,14 +263,36 @@ def get_market_data_logic(request):
     if not searchname:
         return JsonResponse({"error": "Keyword is required"}, status=400)
     try:
-        data = list(scraping.objects.filter(SearchWord=searchname).values())
-        search_day = (
-            scraping.objects.filter(SearchWord=searchname)
-            .values_list("SearchDay", flat=True)
-            .first()
+        owner = get_request_owner(request)
+        runs = SearchRun.objects.filter(
+            owner_query(owner), keyword=searchname, search_type=SearchRun.CLOSED
         )
+        latest_run = runs.first()
+        records = scraping.objects.filter(search_run__in=runs).order_by("SearchDay")
+        search_day = latest_run.created_at.isoformat() if latest_run else None
+        data = list(scraping.objects.filter(search_run=latest_run).values()) if latest_run else []
+        history = list(records.values("SearchDay", "EndPrice"))
         analysis = analyze_stored_market(data, datetime.now())
-        return JsonResponse({"data": data, "searchDay": search_day, "analysis": analysis})
+        analysis["timeSeries"] = analyze_snapshot_history(history)
+        normalized = [
+            {
+                "name": item["Name"],
+                "price": item["EndPrice"],
+                "startPrice": item["StartPrice"],
+                "bidding": item["Bidding"],
+                "url": item["URL"],
+                "searchDay": item["SearchDay"],
+            }
+            for item in data
+        ]
+        enriched = enrich_market_items(normalized)
+        enriched = enrich_items_with_market_comparison(
+            enriched, analysis["summary"]["median"]
+        )
+        response_data = [original | extra for original, extra in zip(data, enriched)]
+        return JsonResponse(
+            {"data": response_data, "searchDay": search_day, "analysis": analysis}
+        )
     except Exception as e:
         return JsonResponse({"error": str(e)}, status=500)
 
@@ -228,7 +309,10 @@ def update_market_data_logic(request):
         return JsonResponse({"error": "Keyword is required"}, status=400)
     try:
         scraped_data_list = scrape_data(searchname)
-        save_to_database(searchname, scraped_data_list)
+        run = record_search_run(
+            request, searchname, SearchRun.CLOSED, len(scraped_data_list)
+        )
+        save_to_database(searchname, scraped_data_list, run)
         return JsonResponse({"message": "相場データを更新しました"})
     except Exception as e:
         return JsonResponse({"error": str(e)}, status=500)
@@ -245,7 +329,10 @@ def delete_market_data_logic(request):
     if not searchname:
         return JsonResponse({"error": "Keyword is required"}, status=400)
     try:
-        scraping.objects.filter(SearchWord=searchname).delete()
+        owner = get_request_owner(request)
+        SearchRun.objects.filter(
+            owner_query(owner), keyword=searchname, search_type=SearchRun.CLOSED
+        ).delete()
         return JsonResponse({"message": "相場データを削除しました"})
     except Exception as e:
         return JsonResponse({"error": str(e)}, status=500)
@@ -266,7 +353,10 @@ def complex_market_data_logic(request):
     try:
         # 落札履歴データ取得＆DB更新
         closed_data = scrape_data(searchname)
-        save_to_database(searchname, closed_data)
+        closed_run = record_search_run(
+            request, searchname, SearchRun.CLOSED, len(closed_data)
+        )
+        save_to_database(searchname, closed_data, closed_run)
         closed_prices = [
             item["price"]
             for item in closed_data
@@ -276,6 +366,14 @@ def complex_market_data_logic(request):
 
         # 現在出品中データ
         now_data = scrape_current_listings(searchname)
+        current_run = record_search_run(
+            request,
+            searchname,
+            SearchRun.CURRENT,
+            len(now_data),
+            record_word=False,
+        )
+        save_to_database(searchname, now_data, current_run)
 
         now_items = []
         for item in now_data:
@@ -312,7 +410,7 @@ def complex_market_data_logic(request):
                 item["condition"],
                 item["remainingSeconds"],
             )
-            refresh_watched_item(item)
+            refresh_watched_item(item, get_request_owner(request))
 
         now_items_sorted = sorted(
             enriched_now_items,
@@ -328,7 +426,9 @@ def complex_market_data_logic(request):
                 "name": item["name"],
                 "url": item["url"],
                 "remainingTime": item["remainingTime"],
-                "remainingSeconds": item["remainingSeconds"],
+                "remainingSeconds": item["remainingSeconds"]
+                if math.isfinite(item["remainingSeconds"])
+                else None,
                 "bidding": item["bidding"],
                 "marketMedian": median_price,
                 "condition": item["condition"],
@@ -366,6 +466,9 @@ def prediction_market_logic(request):
     try:
         # 過去180日間の落札データを取得
         closed_data = scrape_data(searchname)
+        record_search_run(
+            request, searchname, SearchRun.PREDICTION, len(closed_data), bool(closed_data)
+        )
         if not closed_data:
             return JsonResponse({"error": "No data available"}, status=404)
 

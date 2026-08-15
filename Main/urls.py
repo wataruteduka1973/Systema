@@ -23,6 +23,7 @@ from Main.views.urls import (
     index,
     introduction,
 )
+from Main.views.developer import developer_dashboard
 
 urlpatterns = [
     path("", index, name="index"),
@@ -33,6 +34,7 @@ urlpatterns = [
     path("Deep_Analysis_now", Deep_Analysis_now, name="Deep_Analysis_now"),
     path("Yahuoku_prediction", Yahuoku_prediction, name="Yahuoku_prediction"),
     path("introduction", introduction, name="introduction"),
+    path("developer/", developer_dashboard, name="developer_dashboard"),
     path("perform_search", perform_search, name="perform_search"),
     path("RealtimeSearch", RealtimeSearch, name="RealtimeSearch"),
     path("get_search_words", get_search_words, name="get_search_words"),

@@ -3,6 +3,7 @@ from django.utils.html import format_html
 
 from .models.errorlog import ErrorLog
 from .models.scraping import scraping
+from .models.searchrun import SearchRun
 from .models.watchitem import WatchItem
 
 # スクレイピングモデル
@@ -11,6 +12,7 @@ from .models.watchitem import WatchItem
 @admin.register(scraping)
 class ScrapingAdmin(admin.ModelAdmin):
     list_display = (
+        "search_run",
         "Name",
         "SearchWord",
         "SearchDay",
@@ -31,6 +33,22 @@ class ScrapingAdmin(admin.ModelAdmin):
     url_link.short_description = "リンク"
 
 
+@admin.register(SearchRun)
+class SearchRunAdmin(admin.ModelAdmin):
+    list_display = (
+        "keyword",
+        "search_type",
+        "user",
+        "session_key",
+        "item_count",
+        "succeeded",
+        "created_at",
+    )
+    search_fields = ("keyword", "user__username", "session_key")
+    list_filter = ("search_type", "succeeded", "created_at")
+    ordering = ("-created_at",)
+
+
 # エラーログモデル
 
 
@@ -46,6 +64,8 @@ class ErrorLogAdmin(admin.ModelAdmin):
 @admin.register(WatchItem)
 class WatchItemAdmin(admin.ModelAdmin):
     list_display = (
+        "user",
+        "session_key",
         "name",
         "current_price",
         "added_price",
@@ -53,6 +73,6 @@ class WatchItemAdmin(admin.ModelAdmin):
         "buy_score",
         "last_checked_at",
     )
-    search_fields = ("name", "search_keyword", "url")
+    search_fields = ("user__username", "name", "search_keyword", "url")
     list_filter = ("buy_status", "condition", "last_checked_at")
     ordering = ("-buy_score", "-updated_at")

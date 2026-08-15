@@ -28,12 +28,13 @@ def test_yahoo_parser_extracts_normal_listing_from_fixture():
 
     items = YahooAuctionParser.extract_listing_items(html)
 
-    assert len(items) >= 2
+    assert len(items) == 1
     first = items[0]
     assert first["title"] == "テスト商品"
     assert first["price"] == 1234
     assert first["auctionId"] == "1234567890"
     assert first["url"].endswith("/jp/auction/1234567890")
+    assert all(item["price"] > 0 for item in items)
 
 
 def test_yahoo_parser_normalizes_missing_optional_fields():
@@ -87,6 +88,23 @@ def test_yahoo_parser_does_not_extract_nested_product_badges_as_items():
     assert len(items) == 1
     assert items[0]["title"] == "HG ザクII"
     assert items[0]["price"] == 1234
+
+
+def test_yahoo_parser_rejects_search_controls_disguised_as_items():
+    html = """
+    <div data-item-id="acls"><h3>Item acls</h3><span>800円</span></div>
+    <div data-item-id="searchListControls">
+      <h3>Item searchListControls</h3><span>1,002,050,100円</span>
+    </div>
+    <div class="Product" data-auction-id="x123456789">
+      <a class="Product__titleLink" href="/jp/auction/x123456789">実際の商品</a>
+      <span class="Product__priceValue">3,000円</span>
+    </div>
+    """
+
+    items = YahooAuctionParser.extract_listing_items(html)
+
+    assert [item["title"] for item in items] == ["実際の商品"]
 
 
 def test_yahoo_parser_preserves_relative_time_units():

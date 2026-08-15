@@ -6,6 +6,16 @@ document.addEventListener('DOMContentLoaded', () => {
     const deleteMarketDataButton = document.getElementById('deleteMarketData');
     const spinner = document.getElementById('updateSpinner');
 
+    const summary = document.getElementById('marketSummaryCards');
+    const dropdownGroup = dropdown.closest('.form-group');
+    const searchHeading = dropdownGroup?.previousElementSibling;
+    const actionGroup = analyzeMarketPriceButton.closest('.form-group');
+    if (summary && dropdownGroup && actionGroup) {
+        if (searchHeading) summary.parentNode.insertBefore(searchHeading, summary);
+        summary.parentNode.insertBefore(dropdownGroup, summary);
+        summary.parentNode.insertBefore(actionGroup, summary);
+    }
+
     analyzeMarketPriceButton.addEventListener('click', () => {
         const searchWord = dropdown.value;
         if (!searchWord) {
@@ -49,7 +59,7 @@ document.addEventListener('DOMContentLoaded', () => {
             .catch(error => alert('更新に失敗しました: ' + error))
             .finally(() => {
                 spinner.style.display = 'none';
-                analyzeMarketPriceButton.disabled = false;
+                updateMarketDataButton.disabled = false;
             });
     });
 
@@ -295,21 +305,51 @@ function renderPriceTrend(series) {
         target.innerHTML = '<p class="text-muted">日付を解析できるデータがありません。</p>';
         return;
     }
-    const data = series.map(item => ({ ...item, parsedDate: new Date(`${item.date}T00:00:00`) }));
+    const data = series.slice(-20).map((item, index) => ({
+        ...item,
+        index,
+        parsedDate: new Date(item.date),
+    }));
     const margin = { top: 20, right: 30, bottom: 50, left: 75 };
     const width = 1000 - margin.left - margin.right;
     const height = 340 - margin.top - margin.bottom;
     const svg = d3.select(target).append('svg').attr('viewBox', '0 0 1000 340')
         .append('g').attr('transform', `translate(${margin.left},${margin.top})`);
-    const x = d3.scaleTime().domain(d3.extent(data, d => d.parsedDate)).range([0, width]);
+    const x = d3.scalePoint()
+        .domain(data.map(item => item.index))
+        .range([0, width])
+        .padding(data.length === 1 ? 0.5 : 0.35);
     const y = d3.scaleLinear().domain([0, d3.max(data, d => d.q3) * 1.08]).nice().range([height, 0]);
-    svg.append('path').datum(data).attr('fill', 'rgba(59,130,246,.2)')
-        .attr('d', d3.area().x(d => x(d.parsedDate)).y0(d => y(d.q1)).y1(d => y(d.q3)));
+    svg.selectAll('.iqr-range').data(data).enter().append('rect')
+        .attr('class', 'iqr-range')
+        .attr('x', d => x(d.index) - Math.min(22, width / Math.max(data.length * 3, 1)))
+        .attr('y', d => y(d.q3))
+        .attr('width', Math.min(44, width / Math.max(data.length * 1.5, 1)))
+        .attr('height', d => Math.max(3, y(d.q1) - y(d.q3)))
+        .attr('rx', 4)
+        .attr('fill', 'rgba(59,130,246,.28)');
     svg.append('path').datum(data).attr('fill', 'none').attr('stroke', '#dc2626').attr('stroke-width', 2.5)
-        .attr('d', d3.line().x(d => x(d.parsedDate)).y(d => y(d.median)));
+        .attr('d', d3.line().x(d => x(d.index)).y(d => y(d.median)));
     svg.selectAll('.median-point').data(data).enter().append('circle').attr('class', 'median-point')
-        .attr('cx', d => x(d.parsedDate)).attr('cy', d => y(d.median)).attr('r', 3).attr('fill', '#dc2626')
-        .append('title').text(d => `${d.date}: ${d.median.toLocaleString()}円 (${d.count}件)`);
-    svg.append('g').attr('transform', `translate(0,${height})`).call(d3.axisBottom(x).ticks(7).tickFormat(d3.timeFormat('%m/%d')));
+        .attr('cx', d => x(d.index)).attr('cy', d => y(d.median)).attr('r', 5).attr('fill', '#dc2626')
+        .append('title').text(d => `${d.parsedDate.toLocaleString('ja-JP')}: ${d.median.toLocaleString()}円 (${d.count}件)`);
+    svg.append('g').attr('transform', `translate(0,${height})`)
+        .call(d3.axisBottom(x).tickFormat(index => {
+            const item = data[index];
+            return item ? `更新${index + 1} ${item.parsedDate.toLocaleDateString('ja-JP', { month: 'numeric', day: 'numeric' })}` : '';
+        }))
+        .selectAll('text').attr('transform', 'rotate(-25)').style('text-anchor', 'end');
     svg.append('g').call(d3.axisLeft(y).ticks(6).tickFormat(value => `${Number(value).toLocaleString()}円`));
+
+    const recent = data.slice(-20).reverse();
+    target.insertAdjacentHTML('beforeend', `
+        <div class="table-responsive mt-3">
+            <table class="table table-sm table-striped align-middle">
+                <thead><tr><th>取得日時</th><th>件数</th><th>中央値</th><th>中央50%の価格帯</th></tr></thead>
+                <tbody>${recent.map(item => `
+                    <tr><td>${item.parsedDate.toLocaleString('ja-JP')}</td><td>${item.count}件</td>
+                    <td>${formatYen(item.median)}</td><td>${formatYen(item.q1)} ～ ${formatYen(item.q3)}</td></tr>
+                `).join('')}</tbody>
+            </table>
+        </div>`);
 }

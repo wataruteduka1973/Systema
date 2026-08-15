@@ -8,15 +8,16 @@ from urllib.parse import urlparse
 
 from Main.domain.buying_opportunity import evaluate_buying_opportunity
 from Main.models.watchitem import WatchItem
+from Main.services.ownership import RequestOwner, owner_query
 
 ALLOWED_WATCH_HOSTS = {"auctions.yahoo.co.jp", "paypayfleamarket.yahoo.co.jp"}
 
 
-def list_watch_items() -> list[dict[str, Any]]:
-    return [serialize_watch_item(item) for item in WatchItem.objects.all()]
+def list_watch_items(owner: RequestOwner) -> list[dict[str, Any]]:
+    return [serialize_watch_item(item) for item in WatchItem.objects.filter(owner_query(owner))]
 
 
-def save_watch_item(payload: Mapping[str, Any]) -> tuple[WatchItem, bool]:
+def save_watch_item(payload: Mapping[str, Any], owner: RequestOwner) -> tuple[WatchItem, bool]:
     name = str(payload.get("name") or "").strip()
     url = str(payload.get("url") or "").strip()
     if not name:
@@ -46,6 +47,7 @@ def save_watch_item(payload: Mapping[str, Any]) -> tuple[WatchItem, bool]:
         "buy_reason": decision["reason"],
     }
     item, created = WatchItem.objects.get_or_create(
+        **owner.model_values,
         url=url,
         defaults={**defaults, "added_price": price},
     )
@@ -82,11 +84,11 @@ def serialize_watch_item(item: WatchItem) -> dict[str, Any]:
     }
 
 
-def refresh_watched_item(payload: Mapping[str, Any]) -> bool:
+def refresh_watched_item(payload: Mapping[str, Any], owner: RequestOwner) -> bool:
     """検索結果に含まれる登録済み商品の価格と判定を更新する。"""
     url = str(payload.get("url") or "").strip()
     try:
-        item = WatchItem.objects.get(url=url)
+        item = WatchItem.objects.get(owner_query(owner), url=url)
     except WatchItem.DoesNotExist:
         return False
 
