@@ -8,6 +8,8 @@ python manage.py migrate
 python manage.py runserver
 ```
 
+データベースは既定でSQLiteです。PostgreSQLへ切り替える場合は、`docs/postgresql-bootstrap.md`に記載した環境変数と構築順を使用してください。
+
 ## Common commands
 
 ```bash

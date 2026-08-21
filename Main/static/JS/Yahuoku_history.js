@@ -82,7 +82,10 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         spinner.style.display = 'inline-block';
         updateMarketDataButton.disabled = true;
-        fetch(`/taskle/update_market_data?keyword=${encodeURIComponent(searchWord)}`, { method: 'POST' })
+        fetch(`/taskle/update_market_data?keyword=${encodeURIComponent(searchWord)}`, {
+            method: 'POST',
+            headers: window.systemaCsrfHeaders(),
+        })
             .then(response => response.json())
             .then(data => {
                 alert(data.message || '相場データを更新しました');
@@ -103,7 +106,10 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
         if (!confirm('本当に削除しますか？')) return;
-        fetch(`/taskle/delete_market_data?keyword=${encodeURIComponent(searchWord)}`, { method: 'DELETE' })
+        fetch(`/taskle/delete_market_data?keyword=${encodeURIComponent(searchWord)}`, {
+            method: 'DELETE',
+            headers: window.systemaCsrfHeaders(),
+        })
             .then(response => response.json())
             .then(data => {
                 alert(data.message || '相場データを削除しました');

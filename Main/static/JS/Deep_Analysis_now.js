@@ -200,7 +200,7 @@ async function addWatchItem(item) {
     try {
         const response = await fetch('/taskle/watchlist', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: window.systemaCsrfHeaders({ 'Content-Type': 'application/json' }),
             body: JSON.stringify(payload),
         });
         const result = await response.json();
@@ -214,7 +214,10 @@ async function addWatchItem(item) {
 
 async function removeWatchItem(itemId) {
     try {
-        const response = await fetch(`/taskle/watchlist/${itemId}`, { method: 'DELETE' });
+        const response = await fetch(`/taskle/watchlist/${itemId}`, {
+            method: 'DELETE',
+            headers: window.systemaCsrfHeaders(),
+        });
         const result = await response.json();
         if (!response.ok) throw new Error(result.error || `HTTP ${response.status}`);
         await loadWatchlist();

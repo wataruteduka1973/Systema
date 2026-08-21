@@ -36,6 +36,9 @@
 
 ## 📚 ドキュメント
 
+本番公開時は、事前に [本番環境のセキュリティ設定](docs/deployment-security.md) を確認してください。
+PostgreSQLの初期スキーマを手動構築する場合は、[PostgreSQLスキーマ構築手順](docs/postgresql-bootstrap.md) を参照してください。
+
 ローカルでは次のコマンドで生成できます。
 
 ```powershell

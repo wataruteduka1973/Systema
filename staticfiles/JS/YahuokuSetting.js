@@ -4,6 +4,40 @@ let currentPage = 1;
 let filteredData = [...currentData];
 let sortKey = null;
 let sortOrder = null;
+let conditionSummary = null;
+let marketStatistics = null;
+
+function sleep(ms) {
+    return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+async function fetchJsonWithRetry(url, options = {}, retryConfig = {}) {
+    const { maxRetries = 3, delayMs = 1200, alertOnFailure = true } = retryConfig;
+    let lastError = null;
+
+    for (let attempt = 1; attempt <= maxRetries; attempt += 1) {
+        try {
+            const response = await fetch(url, options);
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}`);
+            }
+            return await response.json();
+        } catch (error) {
+            lastError = error;
+            if (attempt < maxRetries) {
+                console.warn(`[fetchJsonWithRetry] attempt ${attempt} failed, retrying:`, error);
+                await sleep(delayMs);
+                continue;
+            }
+            if (alertOnFailure) {
+                alert('データ取得に失敗しました。再試行しましたが取得できませんでした。\n時間をおいて再度お試しください。');
+            }
+            throw error;
+        }
+    }
+
+    throw lastError;
+}
 
 // 初期データの取得とテーブルの初期化
 document.addEventListener('DOMContentLoaded', function () {
@@ -12,6 +46,8 @@ document.addEventListener('DOMContentLoaded', function () {
         button.addEventListener('click', function () {
             const key = this.dataset.sort;
             const order = this.dataset.order;
+
+            if (!key || !order) return;
 
             sortData(key, order);
 
@@ -22,19 +58,19 @@ document.addEventListener('DOMContentLoaded', function () {
 
     const searchInput = document.getElementById('search');
 
-    // Enterキーで検索
-    searchInput.addEventListener('keydown', function (e) {
-        if (e.key === 'Enter') {
-            e.preventDefault();
-            performSearch();
-        }
-    });
+    if (searchInput) {
+        searchInput.addEventListener('keydown', function (e) {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                performSearch();
+            }
+        });
+    }
 
-    // 人気ワード取得・ボタン生成
-    fetch('/taskle/get_popular_words?top=10')
-        .then(res => res.json())
+    fetchJsonWithRetry('/taskle/get_popular_words?top=10', {}, { maxRetries: 2, delayMs: 1000, alertOnFailure: false })
         .then(data => {
             const area = document.getElementById('popularWordsBtnGroup');
+            if (!area) return;
             area.innerHTML = '';
             (data.words || []).forEach(word => {
                 const btn = document.createElement('button');
@@ -52,11 +88,13 @@ document.addEventListener('DOMContentLoaded', function () {
                 };
                 area.appendChild(btn);
             });
-
+        })
+        .catch(error => {
+            console.warn('人気ワードの取得に失敗しました:', error);
         });
 });
 // 検索ボタンのクリックイベントを設定
-function performSearch() {
+async function performSearch() {
     const searchKeyword = document.getElementById("search").value.trim();
     if (!searchKeyword) {
         alert('検索キーワードを入力してください');
@@ -68,58 +106,50 @@ function performSearch() {
 
     const spinner = document.getElementById('searchSpinner');
     const button = document.getElementById('button-search');
-    spinner.style.display = 'inline-block';
-    button.disabled = true;
-    fetch(`/taskle/perform_search?${params.toString()}`)
-        .then(response => {
-            if (!response.ok) {
-                if (response.status === 400 || response.status === 500) {
-                    return response.text().then(text => {
-                        document.open();
-                        document.write(text);
-                        document.close();
-                        throw new Error(`Error page rendered: ${response.status}`);
-                    });
-                }
-                throw new Error(`HTTP error! status: ${response.status}`);
-            }
-            return response.json();
-        })
+    if (spinner) spinner.style.display = 'inline-block';
+    if (button) button.disabled = true;
 
-        .then(result => {
-            currentData = result.data || [];
-            filteredData = [...currentData];
-            if (Array.isArray(currentData) && currentData.length > 0) {
-                currentPage = 1
-                updateTable(paginateData(currentData));
-                document.querySelector('.Main-Element').style.display = 'block';
-                const prices = currentData.map(item => item.price).filter(price => !isNaN(price));
-                const median = calculateMedian(prices);
-                updatePagination();
-                document.getElementById("medianPrice").textContent = `終了価格の中央値: ${median.toLocaleString()} 円`;
-                document.getElementById("medianPrice").style.display = "block";
-                document.getElementById('minPrice').value = '0';
-                document.getElementById('maxPrice').value = '';
-                document.getElementById('bid0_10').checked = false;
-                document.getElementById('bid10_20').checked = false;
-                document.getElementById('bid20_30').checked = false;
-                document.getElementById('bid30_40').checked = false;
-                document.getElementById('bid40_50').checked = false;
-                document.getElementById('bid50_plus').checked = false;
-            } else {
-                console.error('Error: Data is not a non-empty array');
-                document.getElementById("medianPrice").style.display = "none";
-                document.querySelector('.table-container').style.display = 'none';
-            }
-        })
-        .catch(error => {
-            console.error('検索エラー:', error);
-            alert('検索に失敗しました');
-        })
-        .finally(() => {
-            spinner.style.display = 'none';
-            button.disabled = false;
-        });
+    try {
+        const result = await fetchJsonWithRetry(`/taskle/perform_search?${params.toString()}`, {}, { maxRetries: 3, delayMs: 1500, alertOnFailure: true });
+        currentData = result.data || [];
+        conditionSummary = result.conditionSummary || null;
+        marketStatistics = result.marketStatistics || null;
+        filteredData = [...currentData];
+        if (window.MarketComparison) {
+            window.MarketComparison.configure({ statistics: marketStatistics });
+        }
+        if (Array.isArray(currentData) && currentData.length > 0) {
+            currentPage = 1;
+            updateTable(paginateData(filteredData));
+            document.querySelector('.Main-Element').style.display = 'block';
+            const prices = currentData.map(item => Number(item.price) || 0).filter(price => !isNaN(price));
+            const median = calculateMedian(prices);
+            updatePagination();
+            document.getElementById("medianPrice").textContent = `終了価格の中央値: ${median.toLocaleString()} 円`;
+            document.getElementById("medianPrice").style.display = "block";
+            renderConditionSummary(conditionSummary);
+            document.getElementById('minPrice').value = '0';
+            document.getElementById('maxPrice').value = '';
+            document.getElementById('bid0_10').checked = false;
+            document.getElementById('bid10_20').checked = false;
+            document.getElementById('bid20_30').checked = false;
+            document.getElementById('bid30_40').checked = false;
+            document.getElementById('bid40_50').checked = false;
+            document.getElementById('bid50_plus').checked = false;
+            document.querySelectorAll('.condition-filter').forEach(input => { input.checked = false; });
+            document.getElementById('excludeJunk').checked = false;
+        } else {
+            console.error('Error: Data is not a non-empty array');
+            document.getElementById("medianPrice").style.display = "none";
+            document.querySelector('.table-container').style.display = 'none';
+        }
+    } catch (error) {
+        console.error('検索エラー:', error);
+        alert('検索に失敗しました。再試行を実行しましたが、データを取得できませんでした。');
+    } finally {
+        if (spinner) spinner.style.display = 'none';
+        if (button) button.disabled = false;
+    }
 }
 
 // ページネーションのためのデータを取得
@@ -130,7 +160,7 @@ function paginateData(data) {
 }
 // ページネーションの更新
 function updatePagination() {
-    const totalPages = Math.ceil(currentData.length / ITEMS_PER_PAGE);
+    const totalPages = Math.ceil(filteredData.length / ITEMS_PER_PAGE);
     const pagination = document.createElement('nav');
     pagination.innerHTML = `
         <ul class="pagination justify-content-center mt-3">
@@ -173,6 +203,149 @@ function calculateMedian(numbers) {
     return sorted[middle];
 }
 // テーブルの更新
+function normalizeItemUrl(url) {
+    if (!url || url === '#') return '#';
+    const value = String(url).trim();
+    if (/^https?:\/\//i.test(value)) return value;
+    if (value.startsWith('//')) return `https:${value}`;
+    if (value.startsWith('/')) return `https://auctions.yahoo.co.jp${value}`;
+    if (value.startsWith('jp/auction/') || value.startsWith('auction/')) return `https://auctions.yahoo.co.jp/${value}`;
+    return value;
+}
+
+function parseAuctionTime(value, now = new Date()) {
+    if (!value) return null;
+    const text = String(value).trim();
+    if (!text || text === 'N/A') return null;
+
+    const absolute = text.match(/(?:(\d{4})[年/-])?(\d{1,2})[月/-](\d{1,2})日?(?:\([^)]{1,3}\))?\s+(\d{1,2}):(\d{2})/);
+    if (absolute) {
+        const hasYear = Boolean(absolute[1]);
+        const year = Number(absolute[1] || now.getFullYear());
+        const result = new Date(year, Number(absolute[2]) - 1, Number(absolute[3]), Number(absolute[4]), Number(absolute[5]));
+        // 年が省略された終了日時が未来になる場合は、前年の結果として扱う。
+        if (!hasYear && result.getTime() > now.getTime()) result.setFullYear(year - 1);
+        return result.getTime();
+    }
+
+    const parsed = new Date(text);
+    if (!isNaN(parsed.getTime())) return parsed.getTime();
+
+    const days = Number(text.match(/(\d+)日/)?.[1] || 0);
+    const hours = Number(text.match(/(\d+)時間/)?.[1] || 0);
+    const minutes = Number(text.match(/(\d+)分/)?.[1] || 0);
+    if (days || hours || minutes) {
+        const difference = (days * 24 * 60 + hours * 60 + minutes) * 60 * 1000;
+        return now.getTime() + (text.includes('前') ? -difference : difference);
+    }
+    return null;
+}
+
+function renderConditionSummary(summary) {
+    const container = document.getElementById('conditionSummary');
+    if (!container) return;
+    container.innerHTML = '';
+    if (!summary || !Array.isArray(summary.conditions)) return;
+
+    summary.conditions.forEach(item => {
+        const column = document.createElement('div');
+        column.className = 'col-6 col-md-3';
+        const card = document.createElement('div');
+        card.className = 'border rounded bg-light p-2 h-100';
+        const label = document.createElement('div');
+        label.className = 'fw-bold small';
+        label.textContent = item.label;
+        const value = document.createElement('div');
+        value.textContent = item.medianPrice == null
+            ? `${item.count}件 / 中央値なし`
+            : `${item.count}件 / 中央値 ${Number(item.medianPrice).toLocaleString()}円`;
+        card.append(label, value);
+        column.appendChild(card);
+        container.appendChild(column);
+    });
+
+    if (summary.medianPriceExcludingJunk != null) {
+        const note = document.createElement('div');
+        note.className = 'col-12 text-muted small';
+        note.textContent = `ジャンクを除く中央値: ${Number(summary.medianPriceExcludingJunk).toLocaleString()}円（分類済み ${summary.classifiedCount}/${summary.totalCount}件）`;
+        container.appendChild(note);
+    }
+}
+
+function summarizeVisibleItems(items) {
+    const definitions = [
+        ['new', '新品・未使用'],
+        ['used', '中古・動作品'],
+        ['junk', 'ジャンク・故障品'],
+        ['unknown', '未分類'],
+    ];
+    const conditions = definitions.map(([condition, label]) => {
+        const matching = items.filter(item => (item.condition || 'unknown') === condition);
+        const prices = matching.map(item => Number(item.price)).filter(price => price > 0);
+        return {
+            condition,
+            label,
+            count: matching.length,
+            medianPrice: prices.length ? calculateMedian(prices) : null,
+        };
+    });
+    const regularPrices = items
+        .filter(item => item.condition !== 'junk')
+        .map(item => Number(item.price))
+        .filter(price => price > 0);
+    return {
+        conditions,
+        medianPriceExcludingJunk: regularPrices.length ? calculateMedian(regularPrices) : null,
+        classifiedCount: items.filter(item => ['new', 'used', 'junk'].includes(item.condition)).length,
+        totalCount: items.length,
+    };
+}
+
+function updateVisibleMarketSummary() {
+    const prices = filteredData.map(item => Number(item.price)).filter(price => price > 0);
+    const medianArea = document.getElementById('medianPrice');
+    if (medianArea) {
+        medianArea.textContent = prices.length
+            ? `絞り込み結果の終了価格中央値: ${calculateMedian(prices).toLocaleString()} 円（${filteredData.length}件）`
+            : '条件に一致する価格データがありません';
+    }
+    renderConditionSummary(summarizeVisibleItems(filteredData));
+}
+
+function formatAuctionTime(value, now = new Date()) {
+    const text = String(value || '').trim();
+    if (text && /\d+\s*(?:日|時間|分)/.test(text) && !/[年月/]\d{1,2}/.test(text)) {
+        return text.replace(/\s+/g, '');
+    }
+    const timestamp = parseAuctionTime(value, now);
+    if (timestamp === null) return value || 'N/A';
+
+    const isPast = timestamp <= now.getTime();
+    let totalMinutes = Math.max(Math.floor(Math.abs(timestamp - now.getTime()) / 60000), 0);
+    const days = Math.floor(totalMinutes / (24 * 60));
+    totalMinutes %= 24 * 60;
+    const hours = Math.floor(totalMinutes / 60);
+    const minutes = totalMinutes % 60;
+    const parts = [];
+    if (days) parts.push(`${days}日`);
+    if (hours) parts.push(`${hours}時間`);
+    if (minutes || parts.length === 0) parts.push(`${minutes}分`);
+    return `${parts.join('')}${isPast ? '前' : ''}`;
+}
+
+function toSortableValue(value, key) {
+    if (key === 'time') {
+        return parseAuctionTime(value) ?? 0;
+    }
+
+    if (typeof value === 'string') {
+        const stripped = value.replace(/[^\d.-]/g, '');
+        return Number(stripped || 0);
+    }
+    if (typeof value === 'number') return value;
+    return 0;
+}
+
 function updateTable(data) {
     const tableBody = document.getElementById("dataTable").getElementsByTagName("tbody")[0];
     tableBody.innerHTML = "";
@@ -180,26 +353,44 @@ function updateTable(data) {
     data.forEach(item => {
         const row = tableBody.insertRow();
 
-        const productNameCell = row.insertCell(0);
-        productNameCell.textContent = item.name;
+        const compareCell = row.insertCell(0);
+        if (window.MarketComparison) compareCell.appendChild(window.MarketComparison.createSelector(item));
 
-        const endPriceCell = row.insertCell(1);
-        endPriceCell.textContent = item.price.toLocaleString();
+        const productNameCell = row.insertCell(1);
+        productNameCell.textContent = item.name || 'N/A';
 
-        const startPriceCell = row.insertCell(2);
-        startPriceCell.textContent = item.startPrice.toLocaleString();
+        const conditionCell = row.insertCell(2);
+        const conditionBadge = document.createElement('span');
+        conditionBadge.className = `badge ${item.condition === 'junk' ? 'bg-danger' : item.condition === 'new' ? 'bg-success' : item.condition === 'used' ? 'bg-primary' : 'bg-secondary'}`;
+        conditionBadge.textContent = item.conditionLabel || '未分類';
+        conditionCell.appendChild(conditionBadge);
+        if (Array.isArray(item.attributeLabels) && item.attributeLabels.length) {
+            const attributes = document.createElement('div');
+            attributes.className = 'small text-muted mt-1';
+            attributes.textContent = item.attributeLabels.join('・');
+            conditionCell.appendChild(attributes);
+        }
 
-        const biddingCell = row.insertCell(3);
-        biddingCell.textContent = item.time;
+        const endPriceCell = row.insertCell(3);
+        endPriceCell.textContent = Number(item.price || 0).toLocaleString();
 
-        const timeCell = row.insertCell(4);
-        timeCell.textContent = item.bidding;
+        const startPriceCell = row.insertCell(4);
+        startPriceCell.textContent = Number(item.startPrice || 0).toLocaleString();
 
-        const productURLCell = row.insertCell(5);
+        const timeCell = row.insertCell(5);
+        timeCell.textContent = formatAuctionTime(item.time);
+
+        const biddingCell = row.insertCell(6);
+        biddingCell.textContent = Number(item.bidding || 0).toLocaleString();
+
+        const productURLCell = row.insertCell(7);
         const link = document.createElement("a");
-        link.href = item.url;
-        link.textContent = "商品リンクURL";
-        link.target = "_blank"
+        const href = normalizeItemUrl(item.url);
+        link.href = href;
+        link.textContent = href === '#' ? 'URLなし' : '商品リンクURL';
+        link.target = '_blank';
+        link.rel = 'noopener noreferrer';
+        link.style.color = href === '#' ? '#666' : '#0d6efd';
         productURLCell.appendChild(link);
     });
 }
@@ -209,10 +400,8 @@ function sortData(key, order) {
     sortKey = key;
     sortOrder = order;
     filteredData.sort((a, b) => {
-        let valueA = a[key];
-        let valueB = b[key];
-        if (typeof valueA === 'string') valueA = parseFloat(valueA.replace(/[^\d.-]/g, '')) || 0;
-        if (typeof valueB === 'string') valueB = parseFloat(valueB.replace(/[^\d.-]/g, '')) || 0;
+        const valueA = toSortableValue(a[key], key);
+        const valueB = toSortableValue(b[key], key);
         return order === 'asc' ? valueA - valueB : valueB - valueA;
     });
     currentPage = 1;
@@ -244,6 +433,10 @@ function filterData() {
     const bid30_40 = document.getElementById('bid30_40').checked;
     const bid40_50 = document.getElementById('bid40_50').checked;
     const bid50_plus = document.getElementById('bid50_plus').checked;
+    const selectedConditions = new Set(
+        Array.from(document.querySelectorAll('.condition-filter:checked')).map(input => input.value)
+    );
+    const excludeJunk = document.getElementById('excludeJunk').checked;
     const minPrice = minPriceInput ? parseFloat(minPriceInput) : 0;
     const maxPrice = maxPriceInput ? parseFloat(maxPriceInput) : Infinity;
 
@@ -262,6 +455,8 @@ function filterData() {
         const bidding = parseInt(item.bidding) || 0;
 
         if (price < minPrice || price > maxPrice) return false;
+        if (excludeJunk && item.condition === 'junk') return false;
+        if (selectedConditions.size > 0 && !selectedConditions.has(item.condition || 'unknown')) return false;
         const noBidFilter = !bid0_10 && !bid10_20 && !bid20_30 && !bid30_40 && !bid40_50 && !bid50_plus;
         if (noBidFilter) return true;
         if (bid0_10 && bidding >= 0 && bidding < 10) return true;
@@ -274,6 +469,7 @@ function filterData() {
     });
 
     currentPage = 1;
+    updateVisibleMarketSummary();
     updateTable(paginateData(filteredData));
     updatePagination();
 }
@@ -281,6 +477,8 @@ function filterData() {
 function clearFilters() {
     document.getElementById('minPrice').value = '0';
     document.getElementById('maxPrice').value = '';
+    document.querySelectorAll('.condition-filter').forEach(input => { input.checked = false; });
+    document.getElementById('excludeJunk').checked = false;
     filterData();
     currentPage = 1;
     updateTable(paginateData(filteredData));

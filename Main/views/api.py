@@ -2,10 +2,15 @@ import json
 import logging
 
 from django.http import JsonResponse
-from django.views.decorators.csrf import csrf_exempt
 
 from Main.domain.product_condition import enrich_market_items, summarize_condition_market
 from Main.models.watchitem import WatchItem
+from Main.services.exceptions import (
+    ExternalServiceError,
+    SearchInputError,
+    SearchRateLimitError,
+)
+from Main.services.external_search import enforce_search_rate_limit, normalize_search_keyword
 from Main.services.market_statistics import (
     analyze_market_prices,
     enrich_items_with_market_comparison,
@@ -33,6 +38,23 @@ from .utils import (
 
 logger = logging.getLogger("search_logger")
 
+EXTERNAL_SERVICE_MESSAGE = "外部サービスからデータを取得できませんでした"
+
+
+def _external_search_guard(request):
+    try:
+        keyword = normalize_search_keyword(request.GET.get("keyword", ""))
+        enforce_search_rate_limit(request)
+        return keyword, None
+    except SearchInputError as error:
+        return None, JsonResponse({"error": str(error), "code": "invalid_keyword"}, status=400)
+    except SearchRateLimitError as error:
+        response = JsonResponse(
+            {"error": str(error), "code": "rate_limit_exceeded"}, status=429
+        )
+        response["Retry-After"] = str(error.retry_after)
+        return None, response
+
 
 def handle_search_response(
     request,
@@ -49,12 +71,10 @@ def handle_search_response(
         logger.warning("Invalid request method received")
         return JsonResponse({"error": "Invalid request method"}, status=400)
 
-    searchname = request.GET.get("keyword", "")
-    logger.info(f"Search started for keyword: {searchname}")
-    if not searchname:
-        return JsonResponse({"error": "Keyword is required"}, status=400)
-    if request.method not in ["GET", "POST", "DELETE"]:
-        return JsonResponse({"error": "Method not allowed"}, status=405)
+    searchname, guard_response = _external_search_guard(request)
+    if guard_response is not None:
+        return guard_response
+    logger.info("External search started keyword_length=%s", len(searchname))
 
     try:
         scraped_data_list = data_fetch_func(searchname)
@@ -78,9 +98,19 @@ def handle_search_response(
                 "marketStatistics": market_statistics,
             }
         return JsonResponse(response_data)
-    except Exception as e:
-        logger.error(f"Error during search for keyword {searchname}: {str(e)}")
-        return JsonResponse({"error": str(e)}, status=500)
+    except ExternalServiceError:
+        logger.exception("External search failed")
+        record_search_run(request, searchname, search_type, 0, succeeded=False)
+        return JsonResponse(
+            {"error": EXTERNAL_SERVICE_MESSAGE, "code": "external_service_unavailable"},
+            status=503,
+        )
+    except Exception:
+        logger.exception("Unexpected external search error")
+        return JsonResponse(
+            {"error": "検索処理中にエラーが発生しました", "code": "search_failed"},
+            status=500,
+        )
 
 
 def perform_search(request):
@@ -119,15 +149,17 @@ def get_market_data(request):
     return get_market_data_logic(request)
 
 
-@csrf_exempt
 def update_market_data(request):
     """
     フロントエンドから取得した対象を更新する
     """
+    if request.method == "POST":
+        _, guard_response = _external_search_guard(request)
+        if guard_response is not None:
+            return guard_response
     return update_market_data_logic(request)
 
 
-@csrf_exempt
 def delete_market_data(request):
     """
     フロントエンドから取得した対象を削除する
@@ -139,6 +171,10 @@ def complex_market_data(request):
     """
     指定キーワードの落札履歴と現在出品中データを取得し、分析結果を返す
     """
+    if request.method == "GET":
+        _, guard_response = _external_search_guard(request)
+        if guard_response is not None:
+            return guard_response
     return complex_market_data_logic(request)
 
 
@@ -146,6 +182,10 @@ def prediction_market(request):
     """
     過去90日間の価格推移を分析し、異常値を排除した90日移動平均と1ヶ月予測を返す。
     """
+    if request.method == "GET":
+        _, guard_response = _external_search_guard(request)
+        if guard_response is not None:
+            return guard_response
     return prediction_market_logic(request)
 
 
@@ -156,7 +196,6 @@ def get_popular_words(request):
     return get_popular_words_logic(request)
 
 
-@csrf_exempt
 def watchlist(request):
     """Systema内のウォッチリストを取得、または商品を登録する。"""
     owner = get_request_owner(request)
@@ -177,7 +216,6 @@ def watchlist(request):
         return JsonResponse({"error": str(error)}, status=400)
 
 
-@csrf_exempt
 def watchlist_item(request, item_id):
     """ウォッチ商品を解除する。"""
     owner = get_request_owner(request)

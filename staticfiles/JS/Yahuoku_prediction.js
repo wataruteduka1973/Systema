@@ -2,14 +2,6 @@ let currentData = {};
 let predictionChart = null;
 // 初期データの取得
 document.addEventListener('DOMContentLoaded', () => {
-    const script = document.createElement('script');
-    script.src = 'https://cdn.jsdelivr.net/npm/chart.js';
-    script.onload = () => {
-        console.log('Chart.js loaded');
-    };
-    script.onerror = () => console.error('Failed to load Chart.js');
-    document.head.appendChild(script);
-
     const searchInput = document.getElementById('search');
 
     // Enterキーで検索
@@ -81,29 +73,16 @@ function Prediction_Search() {
             }
 
             // データが少ない場合の警告
-            if (!currentData.price_trends || currentData.price_trends.length < 10) {
-                showPredictionWarning("データが少なく情報の偏りがある可能性があります。");
-            } else {
-                showPredictionWarning(""); // 警告を消す
-            }
-
-            // 中央値から40%以上乖離しているデータを除外
-            const prices = currentData.price_trends.map(item => item.price).filter(v => typeof v === "number" && !isNaN(v));
-            const median = calculateMedian(prices);
-            currentData.price_trends = currentData.price_trends.filter(item => {
-                if (typeof item.price !== "number" || isNaN(item.price)) return false;
-                return Math.abs(item.price - median) / median <= 0.4;
-            });
+            showPredictionWarning(currentData.quality?.warning || '');
 
             // 日付順にソート
             currentData.price_trends.sort((a, b) => {
-                const dateA = new Date(`${new Date().getFullYear()}-${a.date.split('/')[0]}-${a.date.split('/')[1].split(' ')[0]} ${a.date.split(' ')[1]}`);
-                const dateB = new Date(`${new Date().getFullYear()}-${b.date.split('/')[0]}-${b.date.split('/')[1].split(' ')[0]} ${b.date.split(' ')[1]}`);
-                return dateA - dateB;
+                return parsePredictionDate(a.date) - parsePredictionDate(b.date);
             });
 
             updatePredictionChart();
             updatePredictionTable();
+            updatePredictionSummary();
         })
         .catch(error => {
             console.error('検索エラー:', error);
@@ -143,112 +122,69 @@ function calculateMedian(arr) {
         : (sorted[mid - 1] + sorted[mid]) / 2;
 }
 // グラフの更新
-function updatePredictionChart() {
-    if (!window.Chart) return;
-
-    const labels = currentData.price_trends.map(item => item.date.split(' ')[0]);
-    const prices = currentData.price_trends.map(item => item.price);
-    const movingAverages = currentData.price_trends.map(item => item.moving_avg);
-    const predictedPrice = currentData.predicted_price || 0;
-
-    const barLabels = [...labels, '1ヶ月後'];
-    const barData = [...prices, predictedPrice];
-
-    const hasMovingAvg = movingAverages.some(v => v !== null && v !== undefined);
-
-    if (predictionChart) {
-        predictionChart.destroy();
+function parsePredictionDate(value) {
+    const text = String(value || '').trim();
+    if (/^\d{4}-\d{2}-\d{2}[T\s]/.test(text)) {
+        return new Date(text);
     }
 
+    const match = text.match(/^(\d{1,2})\/(\d{1,2})\s+(\d{1,2}:\d{2})$/);
+    if (!match) return new Date(0);
+    return new Date(`${new Date().getFullYear()}-${match[1].padStart(2, '0')}-${match[2].padStart(2, '0')}T${match[3]}:00`);
+}
+
+function updatePredictionChart() {
+    if (!window.Chart) return;
+    const daily = currentData.daily_trends || [];
+    const labels = daily.map(item => item.date);
+    const forecastLabel = labels.length
+        ? new Date(new Date(`${labels[labels.length - 1]}T00:00:00`).getTime() + 30 * 86400000).toISOString().slice(0, 10)
+        : '1ヶ月後';
+    const allLabels = [...labels, forecastLabel];
+    const interval = currentData.prediction_interval || currentData.confidence_interval || [0, 0];
+    if (predictionChart) predictionChart.destroy();
     const ctx = document.getElementById('predictionChart').getContext('2d');
     const datasets = [
         {
-            type: 'bar',
-            label: '価格推移',
-            data: barData.map((v, i) => i === barData.length - 1 ? null : v),
-            backgroundColor: barData.map((v, i) => i === barData.length - 1 ? 'rgba(0,0,0,0)' : '#1E90FF'),
-            borderWidth: 1
+            type: 'line', label: '日次中央値',
+            data: daily.map(item => item.median).concat([null]),
+            borderColor: '#2563eb', backgroundColor: '#2563eb', pointRadius: 4, tension: 0.2
         },
         {
-            type: 'bar',
-            label: '1ヶ月後予測',
-            data: barData.map((v, i) => i === barData.length - 1 ? v : null),
-            backgroundColor: barData.map((v, i) => i === barData.length - 1 ? '#ff4d4d' : '#ff4d4d'),
-            borderWidth: 1
+            type: 'line', label: '14日移動中央値',
+            data: daily.map(item => item.rollingMedian).concat([null]),
+            borderColor: '#16a34a', pointRadius: 0, borderWidth: 2, tension: 0.25
+        },
+        {
+            type: 'line', label: '予測範囲（上限）',
+            data: daily.map(() => null).concat([interval[1]]),
+            borderColor: 'rgba(220,38,38,.25)', backgroundColor: 'rgba(220,38,38,.15)', pointRadius: 0
+        },
+        {
+            type: 'line', label: '予測範囲（下限）',
+            data: daily.map(() => null).concat([interval[0]]),
+            borderColor: 'rgba(220,38,38,.25)', backgroundColor: 'rgba(220,38,38,.15)', fill: '-1', pointRadius: 0
+        },
+        {
+            type: 'line', label: '30日後予測',
+            data: daily.map(() => null).concat([currentData.predicted_price]),
+            borderColor: '#dc2626', backgroundColor: '#dc2626', pointRadius: 7, borderDash: [6, 4]
         }
     ];
-
-    if (hasMovingAvg) {
-        datasets.push({
-            type: 'line',
-            label: '90日移動平均',
-            data: movingAverages.concat([null]),
-            borderColor: '#32CD32',
-            backgroundColor: 'rgba(50,205,50,0.1)',
-            fill: false,
-            tension: 0.1,
-            yAxisID: 'y'
-        });
-    }
-
     predictionChart = new Chart(ctx, {
-        data: {
-            labels: barLabels,
-            datasets: datasets
-        },
+        data: { labels: allLabels, datasets },
         options: {
-            responsive: true,
-            maintainAspectRatio: false,
+            responsive: true, maintainAspectRatio: false,
             scales: {
-                y: {
-                    beginAtZero: true,
-                    title: { display: true, text: '価格 (円)' }
-                }
+                y: { beginAtZero: true, title: { display: true, text: '価格 (円)' } },
+                x: { title: { display: true, text: '日付' } }
             },
             plugins: {
-                legend: { position: 'top' }, // グラフ上部のラベルを赤色に
-                tooltip: {
-                    mode: 'index',
-                    intersect: false,
-                    callbacks: {
-                        label: function (context) {
-                            // 価格推移バー
-                            if (context.dataset.label === '価格推移' && context.parsed.y !== null) {
-                                return `価格推移: ${context.parsed.y.toLocaleString()} 円`;
-                            }
-                            // 1ヶ月後予測バー
-                            if (context.dataset.label === '1ヶ月後予測' && context.parsed.y !== null) {
-                                return `1ヶ月後予測: ${context.parsed.y.toLocaleString()} 円`;
-                            }
-                            // 90日移動平均
-                            if (context.dataset.label === '90日移動平均' && context.parsed.y !== null) {
-                                return `90日移動平均: ${context.parsed.y.toLocaleString()} 円`;
-                            }
-                            return '';
-                        },
-                        // 他の系列のツールチップを非表示
-                        filter: function (context) {
-                            return context.parsed.y !== null;
-                        }
-                    }
-                }
+                legend: { position: 'top', labels: { filter: item => !item.text.includes('予測範囲') || item.text.includes('上限') } },
+                tooltip: { mode: 'index', intersect: false, callbacks: { label: context => context.parsed.y == null ? '' : `${context.dataset.label}: ${context.parsed.y.toLocaleString()}円` } }
             }
         }
     });
-
-
-    const chartContainer = document.querySelector('.chart-container');
-    let annotation = chartContainer.querySelector('.chart-annotation');
-    if (!annotation) {
-        annotation = document.createElement('div');
-        annotation.className = 'chart-annotation';
-        chartContainer.insertBefore(annotation, chartContainer.firstChild);
-    }
-    annotation.innerHTML = `
-        <p style="color: #ffffff; background-color: rgba(0, 0, 0, 0.7); padding: 5px; border-radius: 3px;">
-            1ヶ月後の価格予想は赤色のバーで表示されます。${hasMovingAvg ? '緑線は90日移動平均です。' : ''}
-        </p>
-    `;
 }
 // 予測テーブルの更新
 function updatePredictionTable() {
@@ -257,16 +193,34 @@ function updatePredictionTable() {
 
     tableBody.innerHTML = '';
     const data = [
-        { label: '移動平均 (90日)', value: currentData.moving_average || 'N/A' },
+        { label: '直近14日移動中央値', value: currentData.moving_average || 'N/A' },
         { label: '1ヶ月予測', value: currentData.predicted_price || 'N/A' },
-        { label: '信頼区間下限', value: currentData.confidence_interval?.[0] || 'N/A' },
-        { label: '信頼区間上限', value: currentData.confidence_interval?.[1] || 'N/A' }
+        { label: '予測範囲下限', value: currentData.prediction_interval?.[0] || currentData.confidence_interval?.[0] || 'N/A' },
+        { label: '予測範囲上限', value: currentData.prediction_interval?.[1] || currentData.confidence_interval?.[1] || 'N/A' }
     ];
 
     data.forEach(item => {
-        if (item.label === '移動平均 (90日)' && (!currentData.moving_average || isNaN(currentData.moving_average))) return;
+        if (item.label === '直近14日移動中央値' && (!currentData.moving_average || isNaN(currentData.moving_average))) return;
         const row = tableBody.insertRow();
         row.insertCell(0).textContent = item.label;
-        row.insertCell(1).textContent = item.value;
+        row.insertCell(1).textContent = typeof item.value === 'number' ? `${item.value.toLocaleString()}円` : item.value;
     });
+}
+
+function updatePredictionSummary() {
+    const quality = currentData.quality || {};
+    const interval = currentData.prediction_interval || currentData.confidence_interval || [];
+    const cards = [
+        ['30日後予測', currentData.predicted_price ? `${currentData.predicted_price.toLocaleString()}円` : '—'],
+        ['予測範囲', interval.length ? `${interval[0].toLocaleString()}～${interval[1].toLocaleString()}円` : '—'],
+        ['30日トレンド', quality.trendPercent30Days == null ? '—' : `${quality.trendPercent30Days >= 0 ? '+' : ''}${quality.trendPercent30Days}%`],
+        ['分析データ', `${quality.usedCount || 0}/${quality.sampleCount || 0}件`]
+    ];
+    document.getElementById('predictionSummary').innerHTML = cards.map(([label, value]) => `
+        <div class="col-6 col-lg-3"><div class="prediction-card">
+            <div class="text-muted small">${label}</div><div class="value">${value}</div>
+        </div></div>`).join('');
+    const qualityBox = document.getElementById('predictionQuality');
+    qualityBox.style.display = 'block';
+    qualityBox.textContent = `分析方法: ${quality.method || '—'} / 対象期間: ${quality.lookbackDays || 90}日 / 外れ値候補: ${quality.outlierCount || 0}件`;
 }

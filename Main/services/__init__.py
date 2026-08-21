@@ -1,5 +1,17 @@
 """Systemaのアプリケーションサービス。"""
 
-from .exceptions import ApplicationError, ConfigurationError, ExternalServiceError
+from .exceptions import (
+    ApplicationError,
+    ConfigurationError,
+    ExternalServiceError,
+    SearchInputError,
+    SearchRateLimitError,
+)
 
-__all__ = ["ApplicationError", "ConfigurationError", "ExternalServiceError"]
+__all__ = [
+    "ApplicationError",
+    "ConfigurationError",
+    "ExternalServiceError",
+    "SearchInputError",
+    "SearchRateLimitError",
+]

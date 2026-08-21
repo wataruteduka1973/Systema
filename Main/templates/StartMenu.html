@@ -147,7 +147,7 @@
               <div class="card-body">
                 <h5 class="card-title">相場検索</h5>
                 <p class="card-text">検索名から直近で落札された商品の金額やよく用いられるワード、落札金額の中央値などを可視化します。</p>
-                <a href="{% url 'yahuoku' %}" class="btn btn-secondary mt-auto">詳細を見る</a>
+                <a href="{% url 'market_search' %}?mode=closed" class="btn btn-secondary mt-auto">統合画面で見る</a>
               </div>
             </div>
           </div>
@@ -157,7 +157,7 @@
               <div class="card-body">
                 <h5 class="card-title">現在価格検索</h5>
                 <p class="card-text">リアルタイムで現在ヤフオクで出品されている商品を調べます</p>
-                <a href="{% url 'yahuoku_now' %}" class="btn btn-secondary mt-auto">詳細を見る</a>
+                <a href="{% url 'market_search' %}?mode=current" class="btn btn-secondary mt-auto">統合画面で見る</a>
               </div>
             </div>
           </div>
@@ -167,7 +167,7 @@
               <div class="card-body">
                 <h5 class="card-title">過去データ参照</h5>
                 <p class="card-text">過去に調べた相場の情報を改めて見ることができます</p>
-                <a href="{% url 'yahuoku_history' %}" class="btn btn-secondary mt-auto" disabled>詳細を見る</a>
+                <a href="{% url 'market_search' %}?mode=history" class="btn btn-secondary mt-auto">統合画面で見る</a>
               </div>
             </div>
           </div>

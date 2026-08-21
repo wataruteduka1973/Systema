@@ -1,4 +1,7 @@
+import os
 from pathlib import Path
+
+from System_Config.database import build_database_config
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -10,14 +13,55 @@ LOG_DIR.mkdir(exist_ok=True, parents=True)
 # See https://docs.djangoproject.com/en/5.0/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = "django-insecure-b966em2nj=vv_1u6*id(90$=x3ccd+$vhadoua8v99$mt6du%n"
+ENVIRONMENT = os.getenv("SYSTEMA_ENV", "development").strip().lower()
+IS_PRODUCTION = ENVIRONMENT == "production"
+
+# Production must provide its own secret. The fallback is intentionally local-only.
+SECRET_KEY = os.getenv("DJANGO_SECRET_KEY", "django-insecure-systema-local-development-only")
+if IS_PRODUCTION and (SECRET_KEY.startswith("django-insecure-") or len(SECRET_KEY) < 50):
+    raise RuntimeError("DJANGO_SECRET_KEY must be set to a strong value in production")
 
 # python manage.py collectstatic 本番環境に更新内容を反映させるために必要
 # python manage.py collectstatic --clear 設定リセット
-DEBUG = False
-# DEBUG = True
+DEBUG = os.getenv("DJANGO_DEBUG", "false").strip().lower() in {"1", "true", "yes", "on"}
+if IS_PRODUCTION and DEBUG:
+    raise RuntimeError("DJANGO_DEBUG must be false in production")
 
-ALLOWED_HOSTS = ["127.0.0.1", "localhost"]
+ALLOWED_HOSTS = [
+    host.strip()
+    for host in os.getenv("DJANGO_ALLOWED_HOSTS", "127.0.0.1,localhost").split(",")
+    if host.strip()
+]
+CSRF_TRUSTED_ORIGINS = [
+    origin.strip()
+    for origin in os.getenv("DJANGO_CSRF_TRUSTED_ORIGINS", "").split(",")
+    if origin.strip()
+]
+
+SECURE_SSL_REDIRECT = IS_PRODUCTION
+SESSION_COOKIE_SECURE = IS_PRODUCTION
+CSRF_COOKIE_SECURE = IS_PRODUCTION
+SECURE_HSTS_SECONDS = 31536000 if IS_PRODUCTION else 0
+SECURE_HSTS_INCLUDE_SUBDOMAINS = IS_PRODUCTION
+SECURE_HSTS_PRELOAD = IS_PRODUCTION
+SECURE_CONTENT_TYPE_NOSNIFF = True
+SECURE_REFERRER_POLICY = "same-origin"
+X_FRAME_OPTIONS = "DENY"
+
+EXTERNAL_SEARCH_KEYWORD_MAX_LENGTH = int(os.getenv("EXTERNAL_SEARCH_KEYWORD_MAX_LENGTH", "100"))
+EXTERNAL_SEARCH_RATE_LIMIT = int(os.getenv("EXTERNAL_SEARCH_RATE_LIMIT", "30"))
+EXTERNAL_SEARCH_RATE_WINDOW_SECONDS = int(os.getenv("EXTERNAL_SEARCH_RATE_WINDOW_SECONDS", "60"))
+EXTERNAL_SEARCH_TRUST_X_FORWARDED_FOR = os.getenv(
+    "EXTERNAL_SEARCH_TRUST_X_FORWARDED_FOR", "false"
+).strip().lower() in {"1", "true", "yes", "on"}
+
+if os.getenv("DJANGO_BEHIND_HTTPS_PROXY", "false").strip().lower() in {
+    "1",
+    "true",
+    "yes",
+    "on",
+}:
+    SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
 
 TEST_RUNNER = "django.test.runner.DiscoverRunner"
 
@@ -68,12 +112,7 @@ WSGI_APPLICATION = "System_Config.wsgi.application"
 # Database
 # https://docs.djangoproject.com/en/5.0/ref/settings/#databases
 
-DATABASES = {
-    "default": {
-        "ENGINE": "django.db.backends.sqlite3",
-        "NAME": BASE_DIR / "db.sqlite3",
-    }
-}
+DATABASES = build_database_config(BASE_DIR, os.environ)
 
 # Password validation
 # https://docs.djangoproject.com/en/5.0/ref/settings/#auth-password-validators

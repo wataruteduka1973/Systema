@@ -3,10 +3,10 @@ import math
 import re
 from collections import Counter
 from datetime import datetime
+from urllib.parse import urlencode
 
 import numpy as np
 from django.http import JsonResponse
-from django.views.decorators.csrf import csrf_exempt
 
 from Main.domain.auction_time import format_remaining_time, parse_duration_seconds
 from Main.domain.buying_opportunity import evaluate_buying_opportunity
@@ -17,6 +17,7 @@ from Main.models.searchrun import SearchRun
 from Main.models.searchwordlog import searchwordlog
 from Main.scraping.yahoo import YahooAuctionParser
 from Main.services.exceptions import ExternalServiceError
+from Main.services.external_search import normalize_search_keyword
 from Main.services.market_statistics import enrich_items_with_market_comparison
 from Main.services.ownership import get_request_owner, owner_query
 from Main.services.watchlist import refresh_watched_item
@@ -27,6 +28,11 @@ from Main.services.time_series_analysis import (
 )
 
 logger = logging.getLogger("search_logger")
+EXTERNAL_SERVICE_MESSAGE = "外部サービスからデータを取得できませんでした"
+
+
+def _build_search_url(base_url, parameters):
+    return f"{base_url}?{urlencode(parameters)}"
 
 
 def _normalize_url(raw_url):
@@ -104,16 +110,22 @@ def scrape_data(searchname):
     指定されたキーワードでヤフオクの落札履歴をスクレイピングする。
     """
     base_url = "https://auctions.yahoo.co.jp/closedsearch/closedsearch"
+    searchname = normalize_search_keyword(searchname)
     urls = [
-        f"{base_url}?p={searchname}&va={searchname}&b=1&n=100&select=6",
-        f"{base_url}?p={searchname}&va={searchname}&b=101&n=100&select=6",
+        _build_search_url(
+            base_url,
+            {"p": searchname, "va": searchname, "b": offset, "n": 100, "select": 6},
+        )
+        for offset in (1, 101)
     ]
 
     scraped_data_list = []
+    successful_pages = 0
     headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"}
     for url in urls:
         try:
             response = _request_with_retry(url, headers=headers)
+            successful_pages += 1
             html = response.text
             items = _extract_listing_items(html)
             if not items:
@@ -135,12 +147,14 @@ def scrape_data(searchname):
                     )
 
         except ExternalServiceError:
-            logger.exception("Yahoo終了商品ページの取得に失敗しました url=%s", url)
+            logger.exception("Yahoo終了商品ページの取得に失敗しました")
             continue
-        except Exception as e:
-            logger.error(f"Error processing URL {url}: {str(e)}")
+        except Exception:
+            logger.exception("Yahoo終了商品ページの解析に失敗しました")
             continue
 
+    if successful_pages == 0:
+        raise ExternalServiceError(EXTERNAL_SERVICE_MESSAGE)
     return scraped_data_list[:200]
 
 
@@ -149,16 +163,30 @@ def scrape_current_listings(searchname):
     指定されたキーワードでヤフオクの現在出品されている商品をスクレイピングする。
     """
     base_url = "https://auctions.yahoo.co.jp/search/search"
+    searchname = normalize_search_keyword(searchname)
     urls = [
-        f"{base_url}?auccat=&tab_ex=commerce&aq=-&p={searchname}&f=0:1&b=1&n=100",
-        f"{base_url}?auccat=&tab_ex=commerce&aq=-&p={searchname}&f=0:1&b=101&n=100",
+        _build_search_url(
+            base_url,
+            {
+                "auccat": "",
+                "tab_ex": "commerce",
+                "aq": "-",
+                "p": searchname,
+                "f": "0:1",
+                "b": offset,
+                "n": 100,
+            },
+        )
+        for offset in (1, 101)
     ]
     scraped_data_list = []
+    successful_pages = 0
     headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"}
 
     for url in urls:
         try:
             response = _request_with_retry(url, headers=headers)
+            successful_pages += 1
             items = _extract_listing_items(response.text)
             for item in items:
                 normalized = _normalize_yahoo_item(item)
@@ -175,12 +203,14 @@ def scrape_current_listings(searchname):
                 )
 
         except ExternalServiceError:
-            logger.exception("Yahoo出品中ページの取得に失敗しました url=%s", url)
+            logger.exception("Yahoo出品中ページの取得に失敗しました")
             continue
-        except Exception as e:
-            logger.error(f"Error processing URL {url}: {str(e)}")
+        except Exception:
+            logger.exception("Yahoo出品中ページの解析に失敗しました")
             continue
 
+    if successful_pages == 0:
+        raise ExternalServiceError(EXTERNAL_SERVICE_MESSAGE)
     return scraped_data_list[:200]
 
 
@@ -259,9 +289,10 @@ def get_market_data_logic(request):
     """
     指定キーワードの取引データをデータベースから取得し、JSONで返す。
     """
-    searchname = request.GET.get("keyword", "")
-    if not searchname:
-        return JsonResponse({"error": "Keyword is required"}, status=400)
+    try:
+        searchname = normalize_search_keyword(request.GET.get("keyword", ""))
+    except Exception as error:
+        return JsonResponse({"error": str(error), "code": "invalid_keyword"}, status=400)
     try:
         owner = get_request_owner(request)
         runs = SearchRun.objects.filter(
@@ -297,16 +328,16 @@ def get_market_data_logic(request):
         return JsonResponse({"error": str(e)}, status=500)
 
 
-@csrf_exempt
 def update_market_data_logic(request):
     """
     指定キーワードで新たにデータを取得し、データベースを更新する。
     """
     if request.method != "POST":
         return JsonResponse({"error": "Invalid request method"}, status=400)
-    searchname = request.GET.get("keyword", "")
-    if not searchname:
-        return JsonResponse({"error": "Keyword is required"}, status=400)
+    try:
+        searchname = normalize_search_keyword(request.GET.get("keyword", ""))
+    except Exception as error:
+        return JsonResponse({"error": str(error), "code": "invalid_keyword"}, status=400)
     try:
         scraped_data_list = scrape_data(searchname)
         run = record_search_run(
@@ -314,20 +345,28 @@ def update_market_data_logic(request):
         )
         save_to_database(searchname, scraped_data_list, run)
         return JsonResponse({"message": "相場データを更新しました"})
-    except Exception as e:
-        return JsonResponse({"error": str(e)}, status=500)
+    except ExternalServiceError:
+        logger.exception("Market data update failed")
+        record_search_run(request, searchname, SearchRun.CLOSED, 0, succeeded=False)
+        return JsonResponse(
+            {"error": EXTERNAL_SERVICE_MESSAGE, "code": "external_service_unavailable"},
+            status=503,
+        )
+    except Exception:
+        logger.exception("Unexpected market data update error")
+        return JsonResponse({"error": "相場データを更新できませんでした"}, status=500)
 
 
-@csrf_exempt
 def delete_market_data_logic(request):
     """
     指定キーワードの取引データをデータベースから削除する。
     """
     if request.method != "DELETE":
         return JsonResponse({"error": "Invalid request method"}, status=400)
-    searchname = request.GET.get("keyword", "")
-    if not searchname:
-        return JsonResponse({"error": "Keyword is required"}, status=400)
+    try:
+        searchname = normalize_search_keyword(request.GET.get("keyword", ""))
+    except Exception as error:
+        return JsonResponse({"error": str(error), "code": "invalid_keyword"}, status=400)
     try:
         owner = get_request_owner(request)
         SearchRun.objects.filter(
@@ -346,9 +385,10 @@ def complex_market_data_logic(request):
     if request.method != "GET":
         return JsonResponse({"error": "Invalid request method"}, status=400)
 
-    searchname = request.GET.get("keyword", "")
-    if not searchname:
-        return JsonResponse({"error": "Keyword is required"}, status=400)
+    try:
+        searchname = normalize_search_keyword(request.GET.get("keyword", ""))
+    except Exception as error:
+        return JsonResponse({"error": str(error), "code": "invalid_keyword"}, status=400)
 
     try:
         # 落札履歴データ取得＆DB更新
@@ -448,8 +488,15 @@ def complex_market_data_logic(request):
                 "recommend_items": response_items,
             }
         )
-    except Exception as e:
-        return JsonResponse({"error": str(e)}, status=500)
+    except ExternalServiceError:
+        logger.exception("Complex market search failed")
+        return JsonResponse(
+            {"error": EXTERNAL_SERVICE_MESSAGE, "code": "external_service_unavailable"},
+            status=503,
+        )
+    except Exception:
+        logger.exception("Unexpected complex market search error")
+        return JsonResponse({"error": "市場分析を実行できませんでした"}, status=500)
 
 
 def prediction_market_logic(request):
@@ -459,9 +506,10 @@ def prediction_market_logic(request):
     if request.method != "GET":
         return JsonResponse({"error": "Invalid request method"}, status=400)
 
-    searchname = request.GET.get("keyword", "")
-    if not searchname:
-        return JsonResponse({"error": "Keyword is required"}, status=400)
+    try:
+        searchname = normalize_search_keyword(request.GET.get("keyword", ""))
+    except Exception as error:
+        return JsonResponse({"error": str(error), "code": "invalid_keyword"}, status=400)
 
     try:
         # 過去180日間の落札データを取得
@@ -477,9 +525,16 @@ def prediction_market_logic(request):
             return JsonResponse({"error": "No price data in the last 90 days"}, status=404)
         return JsonResponse({"keyword": searchname, **prediction})
 
-    except Exception as e:
-        logger.error(f"Error in prediction_market: {str(e)}")
-        return JsonResponse({"error": str(e)}, status=500)
+    except ExternalServiceError:
+        logger.exception("Prediction market search failed")
+        record_search_run(request, searchname, SearchRun.PREDICTION, 0, succeeded=False)
+        return JsonResponse(
+            {"error": EXTERNAL_SERVICE_MESSAGE, "code": "external_service_unavailable"},
+            status=503,
+        )
+    except Exception:
+        logger.exception("Unexpected prediction market error")
+        return JsonResponse({"error": "相場予想を実行できませんでした"}, status=500)
 
 
 def get_popular_words_logic(request):

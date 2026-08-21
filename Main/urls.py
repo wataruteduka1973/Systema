@@ -13,6 +13,7 @@ from Main.views.api import (
     watchlist,
     watchlist_item,
 )
+from Main.views.developer import developer_dashboard
 from Main.views.urls import (
     Deep_Analysis,
     Deep_Analysis_now,
@@ -22,14 +23,15 @@ from Main.views.urls import (
     Yahuoku_prediction,
     index,
     introduction,
+    market_search,
 )
-from Main.views.developer import developer_dashboard
 
 urlpatterns = [
     path("", index, name="index"),
     path("yahuoku", Yahuoku, name="yahuoku"),
     path("yahuoku_now", Yahuoku_now, name="yahuoku_now"),
     path("yahuoku_history", Yahuoku_history, name="yahuoku_history"),
+    path("market-search", market_search, name="market_search"),
     path("Deep_Analysis", Deep_Analysis, name="Deep_Analysis"),
     path("Deep_Analysis_now", Deep_Analysis_now, name="Deep_Analysis_now"),
     path("Yahuoku_prediction", Yahuoku_prediction, name="Yahuoku_prediction"),

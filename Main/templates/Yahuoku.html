@@ -180,7 +180,7 @@
 </head>
 
 <body>
-    {% include 'header.html' %}
+    {% if not embedded %}{% include 'header.html' %}{% endif %}
     <main role="main">
         <section class="hero-section">
             <div class="container">
@@ -368,7 +368,7 @@
             </div>
         </div>
     </main>
-    {% include 'footer.html' %}
+    {% if not embedded %}{% include 'footer.html' %}{% endif %}
     <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.9.2/dist/umd/popper.min.js"></script>
     <script src="{% static 'JS/MarketComparison.js' %}?v=20260814-phase3a"></script>

@@ -100,7 +100,7 @@
 </head>
 
 <body>
-    {% include 'header.html' %}
+    {% if not embedded %}{% include 'header.html' %}{% endif %}
     <main role="main">
         <section class="hero-section">
             <div class="container">
@@ -249,12 +249,13 @@
             </div>
         </div>
     </main>
-    {% include 'footer.html' %}
+    {% if not embedded %}{% include 'footer.html' %}{% endif %}
     <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.9.2/dist/umd/popper.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
     <script src="{% static 'JS/MarketComparison.js' %}?v=20260815-history"></script>
-    <script src="{% static 'JS/Yahuoku_history.js' %}?v=20260815-history"></script>
+    <script src="{% static 'JS/csrf.js' %}?v=20260821-security"></script>
+    <script src="{% static 'JS/Yahuoku_history.js' %}?v=20260821-security"></script>
 </body>
 
 </html>

@@ -4,6 +4,49 @@ let currentPage = 1;
 let filteredData = [...currentData];
 let sortKey = null;
 let sortOrder = null;
+let conditionSummary = null;
+let marketStatistics = null;
+
+function fetchJsonWithRetry(url, options = {}, maxRetries = 3) {
+    return fetch(url, options).then(async (response) => {
+        if (!response.ok) {
+            if (response.status >= 500 || response.status === 429) {
+                throw new Error(`HTTP ${response.status}`);
+            }
+            throw new Error(`Request failed with status ${response.status}`);
+        }
+        const text = await response.text();
+        if (!text) {
+            return {};
+        }
+        try {
+            return JSON.parse(text);
+        } catch (error) {
+            return {};
+        }
+    }).catch(async (error) => {
+        if (maxRetries <= 0) {
+            throw error;
+        }
+        await new Promise(resolve => setTimeout(resolve, 500));
+        return fetchJsonWithRetry(url, options, maxRetries - 1);
+    });
+}
+
+function normalizeItemUrl(url) {
+    if (!url) return '#';
+    const value = String(url).trim();
+    if (!value || value === '#') return '#';
+    if (value.startsWith('http://') || value.startsWith('https://')) return value;
+    if (value.startsWith('//')) return `https:${value}`;
+    if (value.startsWith('/item/')) return `https://paypayfleamarket.yahoo.co.jp${value}`;
+    if (value.startsWith('/jp/auction/')) return `https://auctions.yahoo.co.jp${value}`;
+    if (value.startsWith('/')) return `https://auctions.yahoo.co.jp${value}`;
+    if (value.startsWith('auction/')) return `https://auctions.yahoo.co.jp/${value}`;
+    if (value.startsWith('jp/auction/')) return `https://auctions.yahoo.co.jp/${value}`;
+    if (value.includes('paypayfleamarket.yahoo.co.jp')) return value;
+    return value;
+}
 
 // 初期データの取得とテーブルの初期化
 document.addEventListener('DOMContentLoaded', function () {
@@ -29,8 +72,7 @@ document.addEventListener('DOMContentLoaded', function () {
     });
 
     // 人気ワードの取得と表示
-    fetch('/taskle/get_popular_words?top=10')
-        .then(res => res.json())
+    fetchJsonWithRetry('/taskle/get_popular_words?top=10')
         .then(data => {
             const area = document.getElementById('popularWordsBtnGroup');
             if (!area) return;
@@ -51,6 +93,9 @@ document.addEventListener('DOMContentLoaded', function () {
                 };
                 area.appendChild(btn);
             });
+        })
+        .catch(error => {
+            console.error('人気ワード取得エラー:', error);
         });
 });
 
@@ -65,34 +110,32 @@ function RealtimeSearch() {
         keyword: searchKeyword,
     });
 
-
     const spinner = document.getElementById('searchSpinner');
     const button = document.getElementById('button-search');
     spinner.style.display = 'inline-block';
     button.disabled = true;
-    fetch(`/taskle/RealtimeSearch?${params.toString()}`)
-        .then(response => {
-            if (!response.ok) {
-                if (response.status === 400 || response.status === 500) {
-                    return response.text().then(text => {
-                        document.open();
-                        document.write(text);
-                        document.close();
-                        throw new Error(`Error page rendered: ${response.status}`);
-                    });
-                }
-                throw new Error(`HTTP error! status: ${response.status}`);
-            }
-            return response.json();
-        })
 
+    fetchJsonWithRetry(`/taskle/RealtimeSearch?${params.toString()}`)
         .then(result => {
-            currentData = (result.data || []).map(item => ({
-                ...item,
-                currentPrice: parseFloat(item.currentPrice) || 0,
-                bidding: parseInt(item.bidding) || 0
-            }));
+            conditionSummary = result.conditionSummary || null;
+            marketStatistics = result.marketStatistics || null;
+            currentData = (result.data || []).map(item => {
+                const currentPrice = Number(item.currentPrice ?? item.price ?? 0) || 0;
+                const bidding = Number(item.bidding ?? item.bidCount ?? 0) || 0;
+                const remainingTime = item.remainingTime || item.time || 'N/A';
+                const url = normalizeItemUrl(item.url || item.link || '#');
+                return {
+                    ...item,
+                    currentPrice,
+                    bidding,
+                    remainingTime,
+                    url
+                };
+            });
             filteredData = [...currentData];
+            if (window.MarketComparison) {
+                window.MarketComparison.configure({ statistics: marketStatistics });
+            }
             if (Array.isArray(currentData) && currentData.length > 0) {
                 currentPage = 1;
                 updateTable(paginateData(currentData));
@@ -106,23 +149,25 @@ function RealtimeSearch() {
                 document.getElementById('bid30_40').checked = false;
                 document.getElementById('bid40_50').checked = false;
                 document.getElementById('bid50_plus').checked = false;
-                // 中央値計算
+                document.querySelectorAll('.condition-filter').forEach(input => { input.checked = false; });
+                document.getElementById('excludeJunk').checked = false;
+                renderConditionSummary(conditionSummary);
                 const prices = currentData.map(item => item.currentPrice).filter(currentPrice => !isNaN(currentPrice));
-                const median = calculateMedian(prices);
-                // ±15%の範囲を計算
-                const lowerBound = Math.floor(median * 0.85);
-                const upperBound = Math.ceil(median * 1.15);
-                // テキスト更新
-                document.getElementById("medianPrice").textContent = `特に多い価格帯 ${lowerBound.toLocaleString()} 円から ${upperBound.toLocaleString()} 円`;
-                document.getElementById("medianPrice").style.display = "block";
+                const band = findMostFrequentPriceBand(prices);
+                if (band) {
+                    document.getElementById("medianPrice").textContent =
+                        `特に多い価格帯 ${band.lower.toLocaleString()} 円から ${band.upper.toLocaleString()} 円`;
+                    document.getElementById("medianPrice").style.display = "block";
+                }
             } else {
                 console.error('Error: Data is not a non-empty array');
                 document.querySelector('.table-container').style.display = 'none';
+                renderConditionSummary(null);
             }
         })
         .catch(error => {
             console.error('検索エラー:', error);
-            alert('検索に失敗しました');
+            alert('検索に失敗しました。再試行しても取得できない場合は、しばらくしてから再度お試しください。');
         })
         .finally(() => {
             spinner.style.display = 'none';
@@ -140,6 +185,26 @@ function calculateMedian(numbers) {
 
     return sorted[middle];
 }
+
+function findMostFrequentPriceBand(prices, binCount = 10) {
+    if (!prices.length) return null;
+    const min = Math.min(...prices);
+    const max = Math.max(...prices);
+    if (min === max) {
+        return { lower: min, upper: max };
+    }
+    const binWidth = (max - min) / binCount;
+    const counts = new Array(binCount).fill(0);
+    prices.forEach(p => {
+        const idx = Math.min(Math.floor((p - min) / binWidth), binCount - 1);
+        counts[idx]++;
+    });
+    const modeIdx = counts.indexOf(Math.max(...counts));
+    return {
+        lower: Math.floor(min + modeIdx * binWidth),
+        upper: Math.ceil(min + (modeIdx + 1) * binWidth)
+    };
+}
 // ページネーションのデータを取得
 function paginateData(data) {
     const start = (currentPage - 1) * ITEMS_PER_PAGE;
@@ -148,7 +213,7 @@ function paginateData(data) {
 }
 // ページネーションの更新
 function updatePagination() {
-    const totalPages = Math.ceil(currentData.length / ITEMS_PER_PAGE);
+    const totalPages = Math.ceil(filteredData.length / ITEMS_PER_PAGE);
     const pagination = document.createElement('nav');
     pagination.innerHTML = `
         <ul class="pagination justify-content-center mt-3">
@@ -187,19 +252,33 @@ function updateTable(data) {
 
     data.forEach(item => {
         const row = tableBody.insertRow();
-        const productNameCell = row.insertCell(0);
+        const compareCell = row.insertCell(0);
+        if (window.MarketComparison) compareCell.appendChild(window.MarketComparison.createSelector(item));
+        const productNameCell = row.insertCell(1);
         productNameCell.textContent = item.name || 'N/A';
-        const currentPriceCell = row.insertCell(1);
-        currentPriceCell.textContent = item.currentPrice.toLocaleString();
-        const biddingCell = row.insertCell(2);
-        biddingCell.textContent = item.bidding;
-        const remainingTimeCell = row.insertCell(3);
+        const conditionCell = row.insertCell(2);
+        const conditionBadge = document.createElement('span');
+        conditionBadge.className = `badge ${item.condition === 'junk' ? 'bg-danger' : item.condition === 'new' ? 'bg-success' : item.condition === 'used' ? 'bg-primary' : 'bg-secondary'}`;
+        conditionBadge.textContent = item.conditionLabel || '未分類';
+        conditionCell.appendChild(conditionBadge);
+        if (Array.isArray(item.attributeLabels) && item.attributeLabels.length) {
+            const attributes = document.createElement('div');
+            attributes.className = 'small text-muted mt-1';
+            attributes.textContent = item.attributeLabels.join('・');
+            conditionCell.appendChild(attributes);
+        }
+        const currentPriceCell = row.insertCell(3);
+        currentPriceCell.textContent = Number(item.currentPrice || 0).toLocaleString();
+        const biddingCell = row.insertCell(4);
+        biddingCell.textContent = item.bidding ?? 0;
+        const remainingTimeCell = row.insertCell(5);
         remainingTimeCell.textContent = item.remainingTime || 'N/A';
-        const productURLCell = row.insertCell(4);
+        const productURLCell = row.insertCell(6);
         const link = document.createElement("a");
-        link.href = item.url || '#';
+        link.href = normalizeItemUrl(item.url || '#');
         link.textContent = "商品リンクURL";
         link.target = "_blank";
+        link.rel = "noopener noreferrer";
         productURLCell.appendChild(link);
     });
 }
@@ -249,6 +328,10 @@ function filterData() {
     const bid30_40 = document.getElementById('bid30_40').checked;
     const bid40_50 = document.getElementById('bid40_50').checked;
     const bid50_plus = document.getElementById('bid50_plus').checked;
+    const selectedConditions = new Set(
+        Array.from(document.querySelectorAll('.condition-filter:checked')).map(input => input.value)
+    );
+    const excludeJunk = document.getElementById('excludeJunk').checked;
     const minPrice = minPriceInput ? parseFloat(minPriceInput) : 0;
     const maxPrice = maxPriceInput ? parseFloat(maxPriceInput) : Infinity;
 
@@ -266,6 +349,8 @@ function filterData() {
         const bidding = Number(item.bidding) || 0;
 
         if (price < minPrice || price > maxPrice) return false;
+        if (excludeJunk && item.condition === 'junk') return false;
+        if (selectedConditions.size > 0 && !selectedConditions.has(item.condition || 'unknown')) return false;
         const noBidFilter = !bid0_10 && !bid10_20 && !bid20_30 && !bid30_40 && !bid40_50 && !bid50_plus;
         if (noBidFilter) return true;
         if (bid0_10 && bidding >= 0 && bidding < 10) return true;
@@ -278,6 +363,7 @@ function filterData() {
     });
 
     currentPage = 1;
+    updateVisibleMarketSummary();
     updateTable(paginateData(filteredData));
     updatePagination();
 }
@@ -285,6 +371,8 @@ function filterData() {
 function clearFilters() {
     document.getElementById('minPrice').value = '0';
     document.getElementById('maxPrice').value = '';
+    document.querySelectorAll('.condition-filter').forEach(input => { input.checked = false; });
+    document.getElementById('excludeJunk').checked = false;
     filterData();
     currentPage = 1;
     updateTable(paginateData(filteredData));
@@ -293,13 +381,14 @@ function clearFilters() {
 // 残り時間のパース
 function parseRemainingTime(str) {
     if (!str) return 0;
+    const value = String(str).replace(/\s+/g, '');
     let days = 0, hours = 0, minutes = 0;
-    const dayMatch = str.match(/(\d+)日/);
-    const hourMatch = str.match(/(\d+)時間/);
-    const minMatch = str.match(/(\d+)分/);
-    if (dayMatch) days = parseInt(dayMatch[1]);
-    if (hourMatch) hours = parseInt(hourMatch[1]);
-    if (minMatch) minutes = parseInt(minMatch[1]);
+    const dayMatch = value.match(/(\d+)日/);
+    const hourMatch = value.match(/(\d+)時間/);
+    const minMatch = value.match(/(\d+)分/);
+    if (dayMatch) days = parseInt(dayMatch[1], 10);
+    if (hourMatch) hours = parseInt(hourMatch[1], 10);
+    if (minMatch) minutes = parseInt(minMatch[1], 10);
     return days * 24 * 60 + hours * 60 + minutes;
 }
 //ソート処置
@@ -316,4 +405,77 @@ function validateAndFilterData() {
         return;
     }
     filterData();
+}
+
+function renderConditionSummary(summary) {
+    const container = document.getElementById('conditionSummary');
+    if (!container) return;
+    container.innerHTML = '';
+    if (!summary || !Array.isArray(summary.conditions)) return;
+
+    summary.conditions.forEach(item => {
+        const column = document.createElement('div');
+        column.className = 'col-6 col-md-3';
+        const card = document.createElement('div');
+        card.className = 'border rounded bg-light p-2 h-100';
+        const label = document.createElement('div');
+        label.className = 'fw-bold small';
+        label.textContent = item.label;
+        const value = document.createElement('div');
+        value.textContent = item.medianPrice == null
+            ? `${item.count}件 / 中央値なし`
+            : `${item.count}件 / 中央値 ${Number(item.medianPrice).toLocaleString()}円`;
+        card.append(label, value);
+        column.appendChild(card);
+        container.appendChild(column);
+    });
+
+    if (summary.medianPriceExcludingJunk != null) {
+        const note = document.createElement('div');
+        note.className = 'col-12 text-muted small';
+        note.textContent = `ジャンクを除く中央値: ${Number(summary.medianPriceExcludingJunk).toLocaleString()}円（分類済み ${summary.classifiedCount}/${summary.totalCount}件）`;
+        container.appendChild(note);
+    }
+}
+
+function summarizeVisibleItems(items) {
+    const definitions = [
+        ['new', '新品・未使用'],
+        ['used', '中古・動作品'],
+        ['junk', 'ジャンク・故障品'],
+        ['unknown', '未分類'],
+    ];
+    const conditions = definitions.map(([condition, label]) => {
+        const matching = items.filter(item => (item.condition || 'unknown') === condition);
+        const prices = matching.map(item => Number(item.currentPrice)).filter(price => price > 0);
+        return {
+            condition,
+            label,
+            count: matching.length,
+            medianPrice: prices.length ? calculateMedian(prices) : null,
+        };
+    });
+    const regularPrices = items
+        .filter(item => item.condition !== 'junk')
+        .map(item => Number(item.currentPrice))
+        .filter(price => price > 0);
+    return {
+        conditions,
+        medianPriceExcludingJunk: regularPrices.length ? calculateMedian(regularPrices) : null,
+        classifiedCount: items.filter(item => ['new', 'used', 'junk'].includes(item.condition)).length,
+        totalCount: items.length,
+    };
+}
+
+function updateVisibleMarketSummary() {
+    const prices = filteredData.map(item => Number(item.currentPrice)).filter(price => price > 0);
+    const priceArea = document.getElementById('medianPrice');
+    if (priceArea) {
+        const band = findMostFrequentPriceBand(prices);
+        priceArea.textContent = band
+            ? `絞り込み結果で特に多い価格帯 ${band.lower.toLocaleString()} 円から ${band.upper.toLocaleString()} 円（${filteredData.length}件）`
+            : '条件に一致する価格データがありません';
+        priceArea.style.display = 'block';
+    }
+    renderConditionSummary(summarizeVisibleItems(filteredData));
 }
