@@ -18,7 +18,7 @@ from Main.models.searchwordlog import searchwordlog
 from Main.scraping.yahoo import YahooAuctionParser
 from Main.services.exceptions import ExternalServiceError
 from Main.services.external_search import normalize_search_keyword
-from Main.services.market_statistics import enrich_items_with_market_comparison
+from Main.services.market_statistics import analyze_market_prices, enrich_items_with_market_comparison
 from Main.services.ownership import get_request_owner, owner_query
 from Main.services.watchlist import refresh_watched_item
 from Main.services.time_series_analysis import (
@@ -442,6 +442,9 @@ def complex_market_data_logic(request):
             median_price = 0
 
         enriched_now_items = enrich_market_items(now_items)
+        enriched_now_items = enrich_items_with_market_comparison(
+            enriched_now_items, median_price
+        )
         for item in enriched_now_items:
             item["marketMedian"] = median_price
             item["buyDecision"] = evaluate_buying_opportunity(
@@ -476,6 +479,7 @@ def complex_market_data_logic(request):
                 "attributes": item["attributes"],
                 "attributeLabels": item["attributeLabels"],
                 "buyDecision": item["buyDecision"],
+                "marketComparison": item["marketComparison"],
             }
             for item in now_items_sorted
         ]
@@ -485,6 +489,9 @@ def complex_market_data_logic(request):
                 "closed_prices": closed_prices,
                 "closed_names": closed_names,
                 "medianPrice": median_price,
+                "marketStatistics": analyze_market_prices(
+                    [{"price": price} for price in closed_prices]
+                ),
                 "recommend_items": response_items,
             }
         )

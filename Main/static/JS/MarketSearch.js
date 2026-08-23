@@ -56,6 +56,11 @@
         const max = el.max.value.trim() ? numeric(el.max.value) : Infinity;
         if (max < min) return message('最低価格は最高価格以下にしてください。', 'warning');
         state.filtered = state.items.filter(item => item.price >= min && item.price <= max && (!el.condition.value || item.condition === el.condition.value));
+        const [key, direction] = el.sort.value.split('-');
+        if (key !== 'default') {
+            const multiplier = direction === 'desc' ? -1 : 1;
+            state.filtered.sort((a, b) => (a[key] - b[key]) * multiplier);
+        }
         state.page = Math.min(state.page, Math.max(1, Math.ceil(state.filtered.length / SIZE)));
         render();
     }
@@ -175,11 +180,11 @@
     }
 
     document.addEventListener('DOMContentLoaded', () => {
-        Object.assign(el, { keyword:id('marketKeyword'),search:id('marketSearchButton'),spinner:id('marketSearchSpinner'),keywordGroup:id('keywordSearchGroup'),historyGroup:id('historySearchGroup'),actions:id('historyActions'),history:id('historyKeyword'),message:id('marketMessage'),popular:id('popularWords'),min:id('minimumPrice'),max:id('maximumPrice'),condition:id('conditionFilter'),body:id('resultTable').querySelector('tbody'),pages:id('resultPagination'),summary:id('resultSummary'),detail:id('resultDetail') });
+        Object.assign(el, { keyword:id('marketKeyword'),search:id('marketSearchButton'),spinner:id('marketSearchSpinner'),keywordGroup:id('keywordSearchGroup'),historyGroup:id('historySearchGroup'),actions:id('historyActions'),history:id('historyKeyword'),message:id('marketMessage'),popular:id('popularWords'),min:id('minimumPrice'),max:id('maximumPrice'),condition:id('conditionFilter'),sort:id('sortOrder'),body:id('resultTable').querySelector('tbody'),pages:id('resultPagination'),summary:id('resultSummary'),detail:id('resultDetail') });
         el.search.addEventListener('click', externalSearch); el.keyword.addEventListener('keydown', event => { if (event.key === 'Enter') externalSearch(); });
         id('historyLoadButton').addEventListener('click', loadHistory); id('historyUpdateButton').addEventListener('click', updateHistory); id('historyDeleteButton').addEventListener('click', deleteHistory);
-        el.min.addEventListener('input', filter); el.max.addEventListener('input', filter); el.condition.addEventListener('change', filter);
-        id('resetFilters').addEventListener('click', () => { el.min.value='0';el.max.value='';el.condition.value='';filter(); });
+        el.min.addEventListener('input', filter); el.max.addEventListener('input', filter); el.condition.addEventListener('change', filter); el.sort.addEventListener('change', () => { state.page = 1; filter(); });
+        id('resetFilters').addEventListener('click', () => { el.min.value='0';el.max.value='';el.condition.value='';el.sort.value='default';filter(); });
         document.querySelectorAll('.mode-button').forEach(button => button.addEventListener('click', () => activate(button.dataset.mode)));
         popularWords(); activate(state.mode);
     });

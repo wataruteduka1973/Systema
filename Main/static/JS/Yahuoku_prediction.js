@@ -83,6 +83,7 @@ function Prediction_Search() {
             updatePredictionChart();
             updatePredictionTable();
             updatePredictionSummary();
+            updateBacktest();
         })
         .catch(error => {
             console.error('検索エラー:', error);
@@ -223,4 +224,30 @@ function updatePredictionSummary() {
     const qualityBox = document.getElementById('predictionQuality');
     qualityBox.style.display = 'block';
     qualityBox.textContent = `分析方法: ${quality.method || '—'} / 対象期間: ${quality.lookbackDays || 90}日 / 外れ値候補: ${quality.outlierCount || 0}件`;
+}
+
+function updateBacktest() {
+    const backtest = currentData.backtest || {};
+    const status = document.getElementById('backtestStatus');
+    const summary = document.getElementById('backtestSummary');
+    const warning = document.getElementById('backtestWarning');
+    const tableBody = document.querySelector('#backtestTable tbody');
+    if (!status || !summary || !warning || !tableBody) return;
+    warning.textContent = backtest.warning || '';
+    warning.style.display = backtest.warning ? 'block' : 'none';
+    tableBody.innerHTML = '';
+    if (!backtest.available) {
+        status.className = 'badge bg-secondary'; status.textContent = 'データ不足'; summary.innerHTML = ''; return;
+    }
+    status.className = 'badge bg-success'; status.textContent = `${backtest.windowCount}期間を検証`;
+    const cards = [['平均絶対誤差', `${Number(backtest.mae).toLocaleString()}円`], ['平均誤差率', `${backtest.mape}%`],
+        ['方向的中率', `${backtest.directionAccuracy}%`], ['予測範囲内', `${backtest.intervalCoverage}%`]];
+    summary.innerHTML = cards.map(([label, value]) => `<div class="col-6 col-lg-3"><div class="prediction-card">
+        <div class="text-muted small">${label}</div><div class="value">${value}</div></div></div>`).join('');
+    (backtest.points || []).forEach(point => {
+        const row = tableBody.insertRow();
+        [point.cutoffDate, point.targetDate, `${Number(point.predictedPrice).toLocaleString()}円`,
+            `${Number(point.actualPrice).toLocaleString()}円`, `${Number(point.absoluteError).toLocaleString()}円 (${point.percentageError}%)`,
+            point.directionCorrect ? '的中' : '不一致'].forEach(value => row.insertCell().textContent = value);
+    });
 }

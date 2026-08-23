@@ -25,13 +25,9 @@ document.addEventListener('DOMContentLoaded', () => {
         fetch(`/taskle/get_market_data?keyword=${encodeURIComponent(searchWord)}`)
             .then(response => response.json())
             .then(data => {
-                const prices = data.data.map(item => item.EndPrice).filter(price => !isNaN(price));
-                const names = data.data.map(item => item.Name);
                 const searchDay = data.searchDay;
 
                 if (data.error) throw new Error(data.error);
-                generateBarChart(prices, data.analysis?.summary?.histogram);
-                generateWordCloud(names);
                 renderMarketSummary(data.analysis?.summary || {});
                 renderPriceTrend(data.analysis?.timeSeries || []);
                 renderConditionStats(data.analysis?.conditionMarket || {});
@@ -81,8 +77,6 @@ document.addEventListener('DOMContentLoaded', () => {
             .then(data => {
                 alert(data.message || '相場データを削除しました');
                 refreshSearchWordDropdown();
-                document.getElementById('priceChart').innerHTML = '';
-                document.getElementById('wordcloud').innerHTML = '';
                 document.getElementById('marketSummaryCards').innerHTML = '';
                 document.getElementById('priceTrendChart').innerHTML = '';
                 document.getElementById('conditionStats').innerHTML = '';
@@ -111,6 +105,7 @@ function refreshSearchWordDropdown(selectedValue = "") {
 
 function generateWordCloud(data) {
     const container = document.querySelector('.wordcloud-container');
+    if (!container || !document.getElementById('wordcloud')) return;
     const width = container.offsetWidth || 800;
     const height = container.offsetHeight || 400;
 
@@ -180,6 +175,7 @@ function calculateStandardDeviation(numbers, mean) {
 
 function generateBarChart(prices, serverBins = null) {
     const chartContainer = document.getElementById('priceChart');
+    if (!chartContainer) return;
     chartContainer.innerHTML = '';
 
     if (!prices.length) return;

@@ -1,50 +1,116 @@
-# Project Overview
+# Systema Agent Guide
 
-This project is a Django application for Yahoo! Auction market analysis. It fetches auction data, stores search results in SQLite, and exposes analysis APIs for product trend, current listings, and market prediction.
+## Purpose
 
-# Architecture
+Systema is a Django application for Yahoo! Auctions market analysis. Agents should autonomously inspect, implement, verify, and document scoped changes. A change is not complete merely because it runs; correctness, regression safety, and reproducible verification are required.
 
-- `Main/views/api.py`: API endpoints and request validation
-- `Main/views/utils.py`: search, scraping, database, and analysis logic
-- `Main/models/`: Django models for persisted auction/search data
-- `Main/static/` and `Main/templates/`: frontend assets and HTML views
-- `tests/`: API and regression tests
+## Token-Efficient Context Routing (Mandatory)
+
+Token optimization is a project requirement, not an optional preference.
+
+1. Read this file and `docs/PROJECT.md` first.
+2. Read only the matching document under `docs/features/`; use `docs/architecture.md` only for cross-cutting or scraper work.
+3. Open the feature document's `Related Files` first. Expand with targeted `rg` only when an import, route, API contract, or test proves it necessary.
+4. Do not scan the whole repository, load unrelated feature documents, or reread known files by default.
+5. Keep one task focused on one theme. Do not mix unrelated cleanup or refactoring.
+6. Prefer focused diffs, narrow line ranges, concise failure output, and summaries of successful checks. Do not return full files or full successful logs unless requested.
+7. Run the narrowest relevant tests first. Run the full suite only for cross-cutting changes or final regression verification.
+8. For a clear request, inspect, implement, self-review, and verify in one pass. Do not add proposal rounds unless a material decision is unresolved.
+9. Record durable behavior or architecture decisions in the matching feature document or ADR so future agents do not need chat history.
+10. Keep this guide concise. Put detailed feature knowledge in routed documents rather than expanding global instructions.
+
+## Source of Truth
+
+Use the following priority when sources conflict:
+
+1. Current user requirements
+2. Requirements and accepted product decisions
+3. ADRs and architecture documents
+4. Feature, DB, API, and module design documents
+5. Approved implementation plans
+6. This guide
+7. Existing code
+
+Do not silently choose a side when design and implementation materially conflict. Identify the conflict, recommended resolution, reason, and affected scope.
+
+## Project Boundaries
+
+- `Main/views/api.py`: endpoints and request validation
+- `Main/views/utils.py`: legacy orchestration; prefer services for new domain logic
+- `Main/services/`: application and analysis services
+- `Main/domain/`: domain rules and value logic
+- `Main/models/`: persisted data and ownership
+- `Main/scraping/`: Yahoo retrieval and parsing boundary
+- `Main/templates/`, `Main/static/`: Django UI
+- `tests/`: unit, integration, and regression coverage
 - `System_Config/`: Django settings and routing
 
-# Important Rules
+Preserve owner scoping for saved searches, scraped results, and watchlists. Keep scraper, parser, normalization, persistence, and analysis responsibilities separate.
 
-- Keep changes minimal and behavior-preserving.
-- Prefer targeted edits over large refactors.
-- Do not modify DB migrations or schema without explicit reason.
-- Do not commit secrets, API keys, or credentials.
-- Do not run large external scraping jobs during tests.
-- Preserve the existing Django project structure unless a narrow fix requires it.
+## Before and During Implementation
 
-# Commands
+- Inspect the relevant implementation, nearest similar pattern, dependencies, conventions, and test entrypoint before editing.
+- Reuse an existing mechanism when it satisfies the requirement; avoid duplicate abstractions and speculative infrastructure.
+- For larger changes, maintain a short plan covering purpose, targets, data flow, order, tests, and risks. Keep implementation units small.
+- Preserve public API behavior unless the requested change explicitly requires a contract change.
+- Avoid unrelated changes, broad refactors, circular dependencies, layer violations, oversized modules, and premature generalization.
+- Maintain type safety. Do not hide errors with unsafe casts, swallowed exceptions, disabled lint rules, or deleted tests.
+- Never add secrets, credentials, or environment-specific values to source control.
+- Do not change migrations or schema without an explicit need and impact assessment.
+
+## Testing and Verification
+
+- Treat implementation and tests as one change. Add or update unit, integration, regression, and UI tests in proportion to risk.
+- For bug fixes, prefer: reproduce with a test, identify root cause, fix it, run related tests, then search narrowly for the same pattern.
+- Yahoo HTML regressions must use fixtures. Never use bulk live scraping in tests.
+- Discover commands from project configuration and CI; do not invent commands or report unexecuted checks as successful.
+- Use the available formatter, linter, type checker, tests, build, Django checks, and migration checks appropriate to the change.
+- For UI changes, inspect the rendered page when available: layout, interactions, validation, loading/error/empty states, responsiveness, accessibility basics, and console errors.
+- Report unavailable checks and the reason. Static validation is not runtime proof.
+
+Common commands:
 
 - Setup: `pip install -r requirements.txt`
-- Run app: `python manage.py runserver`
-- Run tests: `pytest -q`
+- Run: `python manage.py runserver`
+- Tests: `pytest -q`
 - Django checks: `python manage.py check`
-- Collect static: `python manage.py collectstatic`
+- Static collection: `python manage.py collectstatic`
 
-# Change Guidelines
+## Self Review
 
-- For Yahoo HTML changes, inspect the scraper/parser boundary first.
-- Keep scraper, parser, normalization, and database logic separated as much as possible.
-- Update the nearest test file when changing request/response behavior.
-- Use fixtures for HTML parsing regressions instead of live network calls.
+Before completion, review the focused diff as a maintainer:
 
-# Testing
+- Architecture: responsibilities and dependencies remain clear.
+- Correctness: requirements, edge cases, and error handling are covered.
+- Regression: existing behavior and public interfaces remain safe.
+- Security: authentication, authorization, ownership, validation, injection, secrets, and disclosure risks are addressed.
+- Maintainability: the solution is the simplest adequate approach, with clear names and no unnecessary duplication.
+- Scope: no unrelated user changes were overwritten or included.
 
-- Run the relevant pytest target after code changes.
-- Prefer small unit or parser-focused tests for the changed behavior.
-- For Yahoo HTML changes, validate fixture-based parsing before broader app checks.
+## Documentation
 
-# Do Not
+Update the matching feature document or ADR when behavior, ownership, contracts, constraints, or non-obvious decisions change. Document reusable knowledge such as environment pitfalls and important regression causes; do not record routine work history.
 
-- Do not perform broad refactors without a clear reason.
-- Do not change public API response formats silently.
-- Do not delete tests to hide regressions.
-- Do not add large live scraping loops to the test suite.
-- Do not add secrets or environment-specific config into source control.
+## Stop Conditions
+
+Stop and request direction instead of guessing when the task requires:
+
+- resolving a materially ambiguous requirement or conflicting accepted design;
+- a destructive operation or migration with possible data loss;
+- a security architecture change;
+- an unrequested breaking public API change;
+- a new paid service or infrastructure commitment;
+- a material design expansion beyond the requested scope.
+
+Report the problem, evidence, options, recommendation, and impact.
+
+## Definition of Done and Report
+
+Complete only when the requested behavior is implemented, relevant tests and checks pass, the focused diff is self-reviewed, and required documentation is updated. If `docs/quality/definition-of-done.md` exists, also satisfy it.
+
+Keep the final report concise:
+
+- Changes
+- Verification and tests
+- Documentation
+- Remaining issues or unexecuted checks (`None` when empty)

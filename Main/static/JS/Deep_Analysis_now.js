@@ -85,6 +85,9 @@ function TargetSearch() {
                 document.getElementById('medianPriceBox').style.display = "none";
             }
             currentData = recommendations;
+            if (window.MarketComparison) {
+                window.MarketComparison.configure({ statistics: result.marketStatistics || null });
+            }
             updateTable(currentData);
         })
         .catch(error => {
@@ -107,13 +110,15 @@ function updateTable(data) {
 
     data.forEach(item => {
         const row = tableBody.insertRow();
-        const productNameCell = row.insertCell(0);
+        const compareCell = row.insertCell(0);
+        if (window.MarketComparison) compareCell.appendChild(window.MarketComparison.createSelector(item));
+        const productNameCell = row.insertCell(1);
         productNameCell.textContent = item.name || 'N/A';
-        const conditionCell = row.insertCell(1);
+        const conditionCell = row.insertCell(2);
         conditionCell.appendChild(createConditionBadge(item));
-        const currentPriceCell = row.insertCell(2);
+        const currentPriceCell = row.insertCell(3);
         currentPriceCell.textContent = item.price !== undefined && item.price !== null ? item.price.toLocaleString() : 'N/A';
-        const decisionCell = row.insertCell(3);
+        const decisionCell = row.insertCell(4);
         decisionCell.appendChild(createDecisionBadge(item.buyDecision));
         if (item.buyDecision && item.buyDecision.reason) {
             const reason = document.createElement('div');
@@ -121,18 +126,18 @@ function updateTable(data) {
             reason.textContent = item.buyDecision.reason;
             decisionCell.appendChild(reason);
         }
-        const biddingCell = row.insertCell(4);
+        const biddingCell = row.insertCell(5);
         biddingCell.textContent = item.bidding !== undefined ? item.bidding : 'N/A';
-        const remainingTimeCell = row.insertCell(5);
+        const remainingTimeCell = row.insertCell(6);
         remainingTimeCell.textContent = item.remainingTime || 'N/A';
-        const productURLCell = row.insertCell(6);
+        const productURLCell = row.insertCell(7);
         const link = document.createElement("a");
         link.href = item.url || '#';
         link.textContent = "商品リンクURL";
         link.target = "_blank";
         link.rel = "noopener noreferrer";
         productURLCell.appendChild(link);
-        const watchCell = row.insertCell(7);
+        const watchCell = row.insertCell(8);
         watchCell.appendChild(createWatchButton(item));
     });
 }

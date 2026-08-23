@@ -171,7 +171,85 @@ def predict_market_prices(
             "trendPercent30Days": round(trend_percent, 1),
             "warning": warning,
         },
+        "backtest": backtest_market_prediction(items, reference),
     }
+
+
+def backtest_market_prediction(
+    items: list[dict[str, Any]], reference: datetime, lookback_days: int = 90,
+    horizon_days: int = 30, max_windows: int = 8,
+) -> dict[str, Any]:
+    """過去時点だけで学習し、将来の日次中央値に対する予測誤差を検証する。"""
+    rows = []
+    for item in items:
+        date = parse_auction_date(item.get("time"), reference)
+        price = _positive_number(item.get("price"))
+        if date is not None and price is not None and date <= reference:
+            rows.append({"date": date, "price": price})
+    if not rows:
+        return _empty_backtest(horizon_days)
+    frame = pd.DataFrame(rows)
+    frame["day"] = frame["date"].dt.normalize()
+    daily = frame.groupby("day")["price"].median().sort_index()
+    if len(daily) < 6:
+        return _empty_backtest(horizon_days)
+    eligible = daily.index[
+        (daily.index >= daily.index.min() + timedelta(days=min(14, lookback_days)))
+        & (daily.index <= daily.index.max() - timedelta(days=horizon_days))
+    ]
+    if len(eligible) == 0:
+        return _empty_backtest(horizon_days)
+    selected = eligible[np.linspace(0, len(eligible) - 1, min(max_windows, len(eligible)), dtype=int)]
+    points = []
+    for cutoff in selected.unique():
+        train = daily[(daily.index >= cutoff - timedelta(days=lookback_days)) & (daily.index <= cutoff)]
+        target = cutoff + timedelta(days=horizon_days)
+        actual_window = daily[(daily.index >= target - timedelta(days=3)) & (daily.index <= target + timedelta(days=3))]
+        if len(train) < 3 or actual_window.empty:
+            continue
+        q1, q3 = float(train.quantile(0.25)), float(train.quantile(0.75))
+        iqr = q3 - q1
+        filtered = train[(train >= max(0.0, q1 - 1.5 * iqr)) & (train <= q3 + 1.5 * iqr)]
+        if len(filtered) >= 3:
+            train = filtered
+        x = (train.index - train.index.min()).days.to_numpy(dtype=float)
+        y = train.to_numpy(dtype=float)
+        if np.ptp(x) > 0:
+            slope, intercept = np.polyfit(x, y, 1)
+            fitted = intercept + slope * x
+            predicted = max(0.0, float(intercept + slope * (float(x[-1]) + horizon_days)))
+            residual_scale = float(np.sqrt(np.mean((y - fitted) ** 2)))
+        else:
+            predicted, residual_scale = float(np.median(y)), float(np.std(y))
+        margin = max(residual_scale * 1.96, predicted * 0.05)
+        actual = float(daily.loc[target]) if target in daily.index else float(actual_window.median())
+        latest = float(train.iloc[-1])
+        points.append({
+            "cutoffDate": cutoff.date().isoformat(), "targetDate": target.date().isoformat(),
+            "predictedPrice": int(round(predicted)), "actualPrice": int(round(actual)),
+            "absoluteError": int(round(abs(predicted - actual))),
+            "percentageError": round(abs(predicted - actual) / actual * 100, 1),
+            "withinInterval": max(0.0, predicted - margin) <= actual <= predicted + margin,
+            "directionCorrect": (predicted - latest) * (actual - latest) >= 0,
+        })
+    if not points:
+        return _empty_backtest(horizon_days)
+    errors = np.array([point["predictedPrice"] - point["actualPrice"] for point in points], dtype=float)
+    return {
+        "available": True, "horizonDays": horizon_days, "windowCount": len(points),
+        "mae": int(round(float(np.mean(np.abs(errors))))),
+        "rmse": int(round(float(np.sqrt(np.mean(errors**2))))),
+        "mape": round(float(np.mean([point["percentageError"] for point in points])), 1),
+        "intervalCoverage": round(sum(point["withinInterval"] for point in points) / len(points) * 100, 1),
+        "directionAccuracy": round(sum(point["directionCorrect"] for point in points) / len(points) * 100, 1),
+        "points": points,
+        "warning": "" if len(points) >= 3 else "検証可能な期間が少ないため、精度指標は参考値です。",
+    }
+
+
+def _empty_backtest(horizon_days: int) -> dict[str, Any]:
+    return {"available": False, "horizonDays": horizon_days, "windowCount": 0, "points": [],
+            "warning": "30日先まで実績がある期間が不足しているため、バックテストを実行できません。"}
 
 
 def _daily_series(items: list[dict[str, Any]]) -> list[dict[str, Any]]:

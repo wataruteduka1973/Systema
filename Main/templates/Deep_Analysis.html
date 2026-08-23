@@ -25,7 +25,7 @@
     }
 
     .hero-section {
-        background: linear-gradient(135deg, rgba(255, 77, 77, 0.8), rgba(255, 140, 140, 0.6));
+        background: radial-gradient(circle at 75% 20%, rgba(255,255,255,.18), transparent 28%), linear-gradient(135deg, #7f1d1d, #dc2626);
         color: #ffffff;
         padding: 4rem 1.5rem;
         text-align: center;
@@ -64,84 +64,6 @@
     .analysis-panel { padding: 1.25rem; margin-top: 2rem; overflow-x: auto; }
     #priceTrendChart svg { min-width: 720px; width: 100%; height: 360px; }
 
-    #priceChartContainer svg {
-        width: 100%;
-        max-width: 1300px;
-        height: auto;
-        aspect-ratio: 2.6 / 1;
-        background-color: #f8f9fa;
-        border-radius: 15px;
-        padding: 15px;
-        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-        margin: 20px auto;
-        display: block;
-    }
-
-    #priceChartContainer .bar {
-        fill: steelblue;
-        transition: fill 0.3s;
-    }
-
-    #priceChartContainer .bar:hover {
-        fill: #005f99;
-    }
-
-    #priceChartContainer .label {
-        font-size: 14px;
-        fill: #333;
-    }
-
-    #priceChartContainer .axis text {
-        font-size: 14px;
-        fill: #333;
-    }
-
-    #priceChartContainer .axis path,
-    #priceChartContainer .axis line {
-        stroke: #333;
-    }
-
-    .wordcloud-container {
-        width: 1300px;
-        aspect-ratio: 2 / 1;
-        background-color: #f8f9fa;
-        border-radius: 15px;
-        padding: 15px;
-        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-        margin: 20px auto;
-        display: flex;
-        justify-content: center;
-        align-items: center;
-    }
-
-    #wordcloud {
-        width: 100%;
-        height: 100%;
-    }
-
-    @media (max-width: 1024px) {
-        .wordcloud-container {
-            width: 100%;
-            max-width: 800px;
-            aspect-ratio: 2 / 1;
-        }
-    }
-
-    @media (max-width: 768px) {
-        .wordcloud-container {
-            width: 100%;
-            aspect-ratio: 1.5 / 1;
-            padding: 10px;
-        }
-    }
-
-    @media (max-width: 576px) {
-        .wordcloud-container {
-            width: 100%;
-            aspect-ratio: 1 / 1;
-            padding: 5px;
-        }
-    }
 </style>
 
 <body>
@@ -150,14 +72,14 @@
         <section class="hero-section">
             <div class="container">
                 <h1>ヤフオク情報分析</h1>
-                <p class="lead">取得したデータからより深い分析を行います</p>
+                <p class="lead">保存した落札相場の推移と商品状態別の傾向を確認します</p>
             </div>
         </section>
         <div class="container search-container">
             <div class="form-group mt-4 d-flex gap-2 align-items-center">
-                <h3>関連項目</h3>
-                <a href="{% url 'yahuoku' %}" class="btn btn-danger">相場検索</a>
-                <a href="{% url 'yahuoku_history' %}" class="btn btn-danger">過去データ参照</a>
+                <h3 class="h5 mb-0 me-2">関連項目</h3>
+                <a href="{% url 'market_search' %}?mode=closed" class="btn btn-outline-danger">市場検索</a>
+                <a href="{% url 'market_search' %}?mode=history" class="btn btn-outline-danger">保存済みデータ</a>
 
             </div>
             <h2>過去の検索ワード</h2>
@@ -168,7 +90,7 @@
                 </select>
             </div>
                         <div class="form-group mt-4 d-flex gap-2 align-items-center">
-                <button id="analyzeMarketPrice" class="btn btn-info">相場の分析</button>
+                <button id="analyzeMarketPrice" class="btn btn-danger">分析を表示</button>
                 <button id="updateMarketData" class="btn btn-success">
                     相場データの更新
                     <span id="updateSpinner" class="spinner-border spinner-border-sm" style="display:none;"
@@ -186,16 +108,6 @@
                 <h3>商品状態別の相場</h3>
                 <div id="conditionStats" class="table-responsive"></div>
             </div>
-            <div class="mt-5 text-center">
-                <h2>よく用いられるキーワード</h2>
-            </div>
-            <div class="wordcloud-container">
-                <div id="wordcloud"></div>
-            </div>
-            <div id="priceChartContainer" class="mt-5 text-center">
-                <h3>価格分布</h3>
-                <div id="priceChart"></div>
-            </div>
             <div class="search-day mt-4 container">
                 <p>最終更新日: <span id="searchDay"></span></p>
             </div>
@@ -206,7 +118,6 @@
     <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.9.2/dist/umd/popper.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
     <script src="https://d3js.org/d3.v6.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/d3-cloud@1.2.5/build/d3.layout.cloud.js"></script>
     <script src="{% static 'JS/csrf.js' %}?v=20260821-security"></script>
     <script src="{% static 'JS/Deep_Analysis.js' %}?v=20260821-security"></script>
 </body>

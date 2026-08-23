@@ -344,9 +344,12 @@ class TestAPIUtils:
         )
 
         assert response.status_code == 200
-        item = json.loads(response.content)["recommend_items"][0]
+        payload = json.loads(response.content)
+        item = payload["recommend_items"][0]
         assert item["condition"] == "used"
         assert item["buyDecision"]["status"] == "strong_buy"
+        assert item["marketComparison"]["position"] == "below"
+        assert payload["marketStatistics"]["median"] == 11000
 
     def test_complex_market_data_serializes_unknown_remaining_time_as_null(self, monkeypatch):
         monkeypatch.setattr(
@@ -459,6 +462,7 @@ class TestAPIUtils:
         assert "predicted_price" in data
         assert "daily_trends" in data
         assert "quality" in data
+        assert "backtest" in data
         assert any(item["date"] == "12/31 23:59" for item in data["price_trends"])
 
     def test_utils_prediction_market_logic_accepts_iso_dates(self, monkeypatch):

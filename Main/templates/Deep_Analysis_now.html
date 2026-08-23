@@ -13,8 +13,8 @@
 <style>
     body {
         font-family: 'Poppins', sans-serif;
-        background: #f8f9fa;
-        color: #333;
+        background: #f4f6f8;
+        color: #172033;
         min-height: 100vh;
         display: flex;
         flex-direction: column;
@@ -25,7 +25,7 @@
     }
 
     .hero-section {
-        background: linear-gradient(135deg, rgba(255, 77, 77, 0.8), rgba(255, 140, 140, 0.6));
+        background: radial-gradient(circle at 75% 20%, rgba(255,255,255,.18), transparent 28%), linear-gradient(135deg, #7f1d1d, #dc2626);
         color: #ffffff;
         padding: 4rem 1.5rem;
         text-align: center;
@@ -75,6 +75,8 @@
         background-color: #f3f3f3;
     }
 
+    .target-card { background:#fff; border:1px solid #e7e9ee; border-radius:1rem; box-shadow:0 8px 28px rgba(23,32,51,.07); padding:1.25rem; }
+
     @media (max-width: 768px) {
 
         .input-group {
@@ -94,18 +96,19 @@
         <section class="hero-section">
             <div class="container">
                 <h1>ターゲット分析</h1>
-                <p class="lead">出品中の商品を統計的に分析して狙い目の商品をピックアップして表示します</p>
+                <p class="lead">落札相場と現在価格を比較し、狙い目と注意点をひとつの画面で確認します</p>
             </div>
         </section>
         <div class="container search-container">
-            <div class="form-group mt-4 d-flex gap-2 align-items-center">
-                <h3>関連項目</h3>
-                <a href="{% url 'yahuoku_now' %}" class="btn btn-danger">相場検索</a>
-                <a href="{% url 'yahuoku_now' %}" class="btn btn-danger">現在価格検索</a>
-                <a href="{% url 'Yahuoku_prediction' %}" class="btn btn-danger">相場予想</a>
+            <div class="target-card mt-4">
+            <div class="d-flex flex-wrap gap-2 align-items-center mb-4">
+                <span class="fw-bold me-2">関連機能</span>
+                <a href="{% url 'market_search' %}" class="btn btn-outline-danger btn-sm">市場検索</a>
+                <a href="{% url 'Yahuoku_prediction' %}" class="btn btn-outline-danger btn-sm">相場予想</a>
             </div>
             <div class="row justify-content-center search-button">
-                <h2>キーワードの行間を開けると詳細に検索できます</h2>
+                <h2 class="h4">比較する商品を検索</h2>
+                <p class="text-muted">複数の語句はスペースで区切ってください。落札相場の中央値と現在の出品価格を自動比較します。</p>
                 <div class="col-12">
                     <div class="col-md-8">
                         <div class="input-group mb-3">
@@ -124,8 +127,9 @@
                     </div>
                 </div>
             </div>
+            </div>
         </div>
-        <div id="popularWordsArea" class="mb-3">
+        <div id="popularWordsArea" class="container mb-3 mt-3">
             <label class="fw-bold">よく使われるキーワード:</label>
             <div id="popularWordsBtnGroup" class="d-flex flex-wrap gap-2 mt-2"></div>
         </div>
@@ -137,12 +141,13 @@
                 買い時判定は落札価格の中央値との比較を中心に算出します。価格が安くてもジャンク品は「要注意」として扱います。
             </div>
         </div>
-        <div id="dataTableContainer">
+        <div id="dataTableContainer" class="container-fluid px-3 px-lg-4">
             <div class="Main-Element">
                 <div id="dataTableContainer">
                     <table id="dataTable" class="table table-striped table-hover table-container">
                         <thead>
                             <tr>
+                                <th style="width:70px;">比較</th>
                                 <th style="width:200px;">商品名</th>
                                 <th style="width:140px;">商品状態</th>
                                 <th style="width:150px;">現在価格</th>
@@ -190,6 +195,7 @@
     <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.9.2/dist/umd/popper.min.js"></script>
     <script src="{% static 'JS/csrf.js' %}?v=20260821-security"></script>
+    <script src="{% static 'JS/MarketComparison.js' %}?v=20260821-target"></script>
     <script src="{% static 'JS/Deep_Analysis_now.js' %}?v=20260821-security"></script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
 </body>

@@ -3,6 +3,7 @@ from datetime import datetime, timedelta
 from Main.services.time_series_analysis import (
     analyze_snapshot_history,
     analyze_stored_market,
+    backtest_market_prediction,
     parse_auction_date,
     predict_market_prices,
 )
@@ -82,3 +83,22 @@ def test_prediction_keeps_dates_aligned_and_marks_iqr_outlier():
     assert outlier["price"] == 10000
     assert result["prediction_interval"][0] <= result["predicted_price"]
     assert result["prediction_interval"][1] >= result["predicted_price"]
+
+
+def test_backtest_uses_only_data_available_at_each_cutoff():
+    reference = datetime(2026, 8, 15, 12, 0)
+    items = [{"time": (reference - timedelta(days=120 - day)).isoformat(), "price": 1000 + day * 10} for day in range(121)]
+    result = backtest_market_prediction(items, reference)
+    assert result["available"] is True
+    assert result["windowCount"] >= 3
+    assert result["mae"] <= 1
+    assert result["directionAccuracy"] == 100.0
+    assert all(point["targetDate"] > point["cutoffDate"] for point in result["points"])
+
+
+def test_backtest_reports_when_history_is_too_short():
+    reference = datetime(2026, 8, 15, 12, 0)
+    items = [{"time": (reference - timedelta(days=day)).isoformat(), "price": 1000} for day in range(10)]
+    result = backtest_market_prediction(items, reference)
+    assert result["available"] is False
+    assert result["windowCount"] == 0

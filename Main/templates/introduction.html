@@ -153,7 +153,7 @@
     <section class="hero-section">
         <div class="container">
             <h1>情報分析ツール システマ ガイド</h1>
-            <p class="lead">ヤフオクの「今」と「これから」が分かる！<br>相場・トレンド・予測をワンクリックで。</p>
+            <p class="lead">落札相場・現在価格・買い時を、迷わず比較できる市場分析ツールです。</p>
         </div>
     </section>
 
@@ -165,10 +165,10 @@
                     <div class="feature-card h-100" data-bs-toggle="modal" data-bs-target="#marketSearchModal">
                         <img src="{% static 'jpg/yahuoku_screen.jpg' %}" alt="相場検索スクリーンショット">
                         <div class="card-body">
-                            <h3>相場検索</h3>
+                            <h3>市場検索</h3>
                             <ul>
-                                <li><strong>概要</strong>: 過去180日間の落札データを取得します。</li>
-                                <li><strong>特徴</strong>: 価格・入札数で絞り込み、最安値や高値も一目で分かる。</li>
+                                <li><strong>概要</strong>: 落札相場・現在価格・保存済みデータをひとつの画面で検索します。</li>
+                                <li><strong>特徴</strong>: 価格、商品状態で絞り込み、終了／現在価格・開始価格・入札数で並べ替えできます。</li>
                                 <li><strong>用途</strong>: 「いくらで売れる？」「いくらで買えば損しない？」を知りたい方に。</li>
                             </ul>
                         </div>
@@ -207,8 +207,8 @@
                             <h3>価格分析</h3>
                             <ul>
                                 <li><strong>概要</strong>: 過去に検索した相場のデータを分析します。</li>
-                                <li><strong>機能</strong>: ワードクラウドの作成、棒グラフによる価格帯の視覚化</li>
-                                <li><strong>用途</strong>: 市場トレンドを視覚的に把握できるようにする。</li>
+                                <li><strong>機能</strong>: 更新ごとの中央値・中央50%の価格帯と、商品状態別の相場を表示します。</li>
+                                <li><strong>用途</strong>: 相場の変化とデータのばらつきを把握します。</li>
                             </ul>
                         </div>
                     </div>
@@ -313,7 +313,7 @@
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body">
-                    <p>売れ筋商品をワードクラウドや棒グラフで視覚化し、市場トレンドを視覚化、出品の際に役に立ちます。</p>
+                    <p>保存済みデータの更新履歴から中央値と中央50%の価格帯を表示し、商品状態ごとの相場差も確認できます。</p>
                     <img src="{% static 'jpg/yahuoku_analysis_screen.jpg' %}" alt="相場分析詳細">
                 </div>
                 <div class="modal-footer">
