@@ -60,3 +60,7 @@ For maintainability, treat the flow as:
 - API response layer
 
 This project keeps the existing Django layout, but the scraper/parser boundary should remain as isolated as practical.
+
+## Release expansion boundaries
+
+将来APIとDBの詳細は`docs/design/api.md`と`docs/design/database.md`を正とします。既存`/taskle/` APIは互換層として維持し、新機能はversioned APIへ追加します。購入候補の`WatchItem`とユーザー自身の`SellerListing`は責務を分け、Yahoo認証情報を保存せず公開出品URLの手動登録から開始します。利益計算はdomain serviceへ集約し、在庫、出品観測、販売実績を分離して、仕入れ時予測と確定利益を比較できる構造にします。

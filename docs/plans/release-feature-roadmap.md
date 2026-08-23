@@ -1,8 +1,10 @@
 # Release Feature Roadmap
 
+Related designs: `docs/design/api.md` and `docs/design/database.md`.
+
 ## Goal
 
-リリースに向け、保存検索、ウォッチリスト、履歴比較、通知、価格アラート、管理監視を、既存の所有者分離と検索フローを壊さず段階的に追加する。
+リリースに向け、保存検索、ウォッチリスト、履歴比較、通知、価格アラート、出品・利益管理、管理監視を、既存の所有者分離と検索フローを壊さず段階的に追加する。購入判断から仕入れ、出品、販売結果、利益検証までを一つの循環として扱う。
 
 ## Current Baseline
 
@@ -12,6 +14,7 @@
 - ユーザーページとAPIには所有者分離テストがある。
 - 管理者画面には基本件数、直近エラー、ログ末尾表示がある。
 - 本番用Secret、DEBUG禁止、Hosts、HTTPS、Secure Cookie、CSRF、外部検索レート制限は設定済み。
+- 現在は購入候補の分析が中心で、自分の出品、在庫、費用、確定利益を保存するモデルはない。
 
 ## Conflicts and Decisions
 
@@ -22,6 +25,10 @@
 5. **通知とアラートを分離する。** `AlertRule`は判定条件、`Notification`は発生イベントとし、重複通知防止キーと既読日時を持たせる。
 6. **定期実行はデプロイ工程まで開始しない。** ローカルでは検索・ウォッチ更新時の同期判定と手動管理コマンドまで実装し、サーバー選定後にスケジューラーを接続する。
 7. **履歴比較は本人所有・成功済み・同一検索種別を原則とする。** 初期版は落札検索を対象とし、現在出品比較は終了判定の精度確認後に拡張する。
+8. **購入候補と自分の出品を分離する。** `WatchItem`は購入候補、`SellerListing`はユーザー自身の出品とし、一覧・状態・通知を混在させない。
+9. **出品連携はURL手動登録から始める。** Yahooアカウントの認証情報やCookieは保存しない。自動取込は公式かつ安全な連携方式を確認できた場合だけ別工程で検討する。
+10. **利益は入力値と計算結果を分ける。** 仕入、送料、梱包、手数料率、その他費用を保存し、見込み利益はサービスで計算する。販売完了時の実績は`SaleRecord`へ固定する。
+11. **仕入れ時の予測と販売結果を接続する。** 購入候補を`InventoryItem`へ変換できるようにし、想定販売価格・想定利益と確定利益の差を将来バックテストできる構造にする。
 
 ## Proposed Models
 
@@ -50,6 +57,13 @@
 - `AlertRule`: user、saved_search/watch_item、rule_type、threshold、is_enabled、cooldown、last_triggered_at
 - `Notification`: user、event_type、title、message、target_url、source、dedupe_key、created_at、read_at
 
+### Seller and inventory
+
+- `InventoryItem`: user、source_watch_item、name、condition、acquisition_cost、acquired_at、status
+- `SellerListing`: user、inventory_item、URL、商品識別子、状態、開始・現在・即決価格、終了日時、相場中央値、費用入力
+- `SellerListingSnapshot`: listing、価格、入札数、残り時間、相場、予測価格、見込み利益、観測日時
+- `SaleRecord`: listing、販売価格、実手数料、実送料、その他費用、販売日時、確定利益
+
 ## Implementation Phases
 
 ### Phase 0: Release foundation and contracts
@@ -77,7 +91,18 @@
 - 終了商品を通常一覧とアーカイブに分離する。
 - 検索更新でメモ等のユーザー入力を上書きしない。
 
-### Phase 3: Search run comparison
+### Phase 3: Seller listing and profitability foundation
+
+- 購入候補から在庫へ移す操作と、在庫の手動登録を追加する。
+- 自分の出品URLを手動登録し、現在価格、入札、残り時間、状態を取得する。
+- 仕入、送料、梱包、手数料率、その他費用、目標利益を入力できるようにする。
+- 相場中央値、想定販売価格、損益分岐価格、見込み利益・利益率を表示する。
+- 出品スナップショットを保存し、価格・入札・見込み利益の推移を表示する。
+- 出品終了、落札、見送り、再出品待ちを区別する。
+
+**初期範囲:** Yahoo認証情報は扱わず、URL手動登録とユーザー入力を正とする。
+
+### Phase 4: Search run comparison
 
 - 本人所有・成功済み・同一種別の2実行を選択するAPIを追加する。
 - 中央値、IQR、件数、状態構成、価格変化率を共通統計サービスで算出する。
@@ -85,39 +110,51 @@
 - ユーザーページに比較選択と日次／週次変化を表示する。
 - 初期範囲は落札検索のみとし、算出不能な指標を明示する。
 
-### Phase 4: Notification center
+### Phase 5: Notification center
 
 - 所有者限定の通知一覧、既読、一括既読APIを追加する。
 - ユーザーページに未読件数と通知欄を追加する。
 - ウォッチ値下げ、終了間近、保存検索更新完了、検索失敗を接続する。
 - `dedupe_key`で同一事象の連続通知を防ぐ。
 
-### Phase 5: Alert rules
+### Phase 6: Alert rules
 
 - 価格、中央値差、終了時間、入札数、買い時点数の条件CRUDと評価サービスを追加する。
 - 検索結果・ウォッチ更新時に同期評価し、通知を作成する。
 - 保存検索更新とアラート評価を手動実行できる管理コマンドを作る。
 - デプロイ先決定後、管理コマンドをスケジューラーへ接続する。
 - メール通知はin-app通知安定後にoutbox方式で追加する。
+- 出品向けに、入札停滞、終了間近で入札ゼロ、赤字見込み、目標利益到達、相場下落を追加する。
 
-### Phase 6: Administrator monitoring
+### Phase 7: Seller intelligence and outcome learning
+
+- 開始価格・即決価格・送料条件を変える利益シミュレーターを追加する。
+- 早期売却、標準、利益重視の推奨価格を提示する。
+- 相場差、入札推移、類似出品数から売れ残りリスクと改善理由を表示する。
+- 類似落札タイトルから重要語、状態、型番、付属品を抽出し、タイトル改善候補を提示する。
+- 曜日・時間帯別実績が十分な場合だけ終了日時候補を提示する。
+- 販売完了時に確定費用と利益を保存し、想定値との差、販売日数、カテゴリ別利益を集計する。
+- 仕入れ時の買い時スコア・予測利益と販売実績をバックテストする。
+
+### Phase 8: Administrator monitoring
 
 - 既存管理画面に検索成功率、失敗分類、実行時間、主体別件数、日次エラー、DB量、所有者なしデータ、過剰検索を追加する。
 - Yahoo取得失敗とHTML解析失敗を`failure_code`で分離する。
 - DB上の構造化情報を優先し、安全な期間・レベル・種別フィルターを付ける。
 - メール、セッションキー、Cookie、完全な検索語をログ・画面へ表示しない。
 
-### Phase 7: Deployment release gate
+### Phase 9: Deployment release gate
 
 - `manage.py check --deploy`、環境変数、HTTPS/proxy、静的ファイル、DBバックアップ・復元を確認する。
 - ログイン・検索レート制限を実環境で検証する。
 - 全新規モデル・APIのユーザー間分離を確認する。
 - 定期ジョブの多重実行防止、タイムアウト、再試行、通知重複防止を検証する。
 - E2Eで保存検索→再実行→ウォッチ→価格更新→通知→履歴比較を確認する。
+- E2Eで購入候補→在庫→出品→価格更新→販売結果→確定利益を確認する。
 
 ## Test Strategy
 
-- Unit: 条件正規化、比較統計、商品キー、価格履歴、アラート判定、通知重複防止
+- Unit: 条件正規化、比較統計、商品キー、価格履歴、利益計算、損益分岐、アラート判定、通知重複防止
 - Integration: CRUD認証、CSRF、所有者分離、SearchRunスナップショット、管理者権限
 - Regression: 市場検索、ターゲット分析、ウォッチ登録、プロフィール、匿名データ引継ぎ
 - UI/E2E: 空・エラー状態、モバイル、キーボード操作、二重送信、未読更新
@@ -125,6 +162,6 @@
 
 ## Recommended Order
 
-`Phase 0 → Phase 1 → Phase 2 → Phase 3 → Phase 4 → Phase 5 → Phase 6 → Phase 7`
+`Phase 0 → Phase 1 → Phase 2 → Phase 3 → Phase 4 → Phase 5 → Phase 6 → Phase 7 → Phase 8 → Phase 9`
 
-通知センターは価格アラートより先、ウォッチ価格履歴は値下げ通知より先に実装する。監視用メタデータはPhase 0で記録を開始し、管理画面はPhase 6で完成させる。
+通知センターは価格アラートより先、ウォッチ価格履歴は値下げ通知より先に実装する。出品者向け高度分析は販売実績が蓄積してから実装する。監視用メタデータはPhase 0で記録を開始し、管理画面はPhase 8で完成させる。
