@@ -9,6 +9,8 @@ Search closed auctions, current listings, or saved snapshots through one screen.
 - Inputs: mode, keyword, minimum/maximum price, product condition, sort order
 - Output: product name, end/current price, start price, bids, time/date, condition, URL
 - Sorting: end/current price, start price, and bid count in both directions
+- External search and saved-data refresh send the same normalized criteria to the server.
+- Applied criteria are stored on `SearchRun.criteria_snapshot`; UI-only interpretation is not authoritative.
 
 ## Boundaries
 

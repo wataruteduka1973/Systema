@@ -68,11 +68,24 @@ Related designs: `docs/design/api.md` and `docs/design/database.md`.
 
 ### Phase 0: Release foundation and contracts
 
+Phase 0は後続機能の依存関係に沿って分割し、検索契約を先に安定させる。
+
+#### Phase 0A: Search contract
+
 - 共通`SearchCriteria`の検証・正規化・適用サービスを作る。
-- `SearchRun`へ条件スナップショット、trigger、duration、failure codeを追加する。
-- 現行のキーワード・種別ごと50実行保持を、比較機能の保存期間と整合させる。
-- 本番時に`admin_setup`を404にする。
-- ログイン試行制限とログの個人情報マスキングを追加する。
+- `SearchRun`へ条件スナップショットとtriggerを追加する。
+- 現行検索画面からも正規化対象の条件をサーバーへ送り、画面内処理と結果を一致させる。
+- 保存検索と将来自動実行は同じサービスを使用し、独自の条件解釈を持たせない。
+
+#### Phase 0B: Minimum observability
+
+- `SearchRun`へdurationと個人情報を含まないfailure codeを追加する。
+- 詳細な監視画面や運用イベントはPhase 8で完成させる。
+
+#### Later release prerequisites
+
+- 現行のキーワード・種別ごと50実行保持は直ちに変更せず、Phase 4着手前に比較対象期間を決めて整合させる。
+- 本番時の`admin_setup` 404、ログイン試行制限、ログの個人情報マスキングは初回本番公開前のrelease security gateとする。
 
 **Done:** 手動・保存・将来自動実行で同じ条件解釈になり、所有者分離と本番セキュリティがテストされる。
 

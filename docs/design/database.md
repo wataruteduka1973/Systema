@@ -1,0 +1,331 @@
+# Database Design
+
+## 1. Purpose and Status
+
+本書は現行DBの実態と、リリースロードマップに必要な将来スキーマを定義する。将来テーブル・カラムは設計であり、未実装。SQLite開発環境とPostgreSQL本番環境の両方でDjango migrationを使用する。
+
+## 2. Current Schema Baseline
+
+現行Main migration headは`0009_search_ownership`。
+
+| Model/table | Main fields | Ownership/relations | Current issue |
+|---|---|---|---|
+| `SearchRun` | keyword, search_type, item_count, succeeded, created_at | userまたはsession_key、items | 条件、trigger、所要時間、失敗分類がない |
+| `scraping` | SearchWord, SearchDay, Bidding, EndPrice, StartPrice, Name, URL | nullable SearchRun FK | legacy命名、日時/入札がtext、状態・商品キーがない |
+| `searchwordlog` | word, searched_at | userまたはsession_key | SearchRunと役割が重複 |
+| `WatchItem` | URL、追加/現在価格、入札、状態、相場、買い時判定 | userまたはsession_key | メモ、状態管理、タグ、価格履歴がない |
+| `ErrorLog` | code, message, timestamp, file, line | なし | 生messageへ個人情報が混ざる可能性 |
+| Django User/Session | 認証・セッション | Django標準 | 維持する |
+
+### Current ownership invariant
+
+- 認証済みデータ: `user_id IS NOT NULL`かつ`session_key = ''`
+- 匿名データ: `user_id IS NULL`かつ`session_key != ''`
+- ownerless legacy rowsが存在するため、現時点でDB CHECK制約にはできない。
+- 通常参照は`owner_query()`で必ず絞り、ログイン時に匿名データをclaimする。
+
+## 3. Design Principles
+
+- 既存データを破壊的に置換せず、nullable追加→backfill→読取切替→制約強化の順で移行する。
+- 金額は円単位`PositiveBigIntegerField`。率は`DecimalField`を使いfloatを保存しない。
+- 時刻は`DateTimeField`と`USE_TZ=True`。表示時だけAsia/Tokyoへ変換する。
+- 計算可能な見込み利益は原則serviceで算出し、履歴として必要な時点値だけsnapshotへ保存する。
+- 新しい永続ユーザー機能はlogin必須とし、`user` FKをnullableにしない。
+- 検索・ウォッチの既存匿名利用は互換性のため維持する。
+- 外部URLは正規化し、可能な場合は`external_listing_id`を抽出して一意性に使う。
+- JSONは条件スナップショットや可変メタデータに限定し、検索・集計対象の主要値は列にする。
+- raw HTML、Yahoo認証情報、Cookie、アクセストークンは保存しない。
+
+## 4. Relationship Overview
+
+```text
+User
+ ├─ SavedSearch ──< SearchRun ──< scraping
+ ├─ WatchItem ──< WatchPriceSnapshot
+ │    └─ M:N WatchTag
+ │    └─ optional conversion ──> InventoryItem
+ ├─ InventoryItem ──< SellerListing ──< SellerListingSnapshot
+ │                         └─ 0..1 SaleRecord
+ ├─ AlertRule ──> SavedSearch | WatchItem | SellerListing
+ ├─ Notification
+ └─ OperationalEvent (actor optional, privacy-limited)
+```
+
+## 5. Existing Table Extensions
+
+### 5.1 SearchRun
+
+Add:
+
+| Field | Type | Rule |
+|---|---|---|
+| saved_search | nullable FK SavedSearch, SET_NULL | 削除後も履歴維持 |
+| criteria_snapshot | JSONField default=dict | 正規化済み条件 |
+| trigger | CharField(20), indexed | manual/saved/alert/scheduled/system |
+| duration_ms | PositiveInteger nullable | 外部取得を含む所要時間 |
+| failure_code | CharField(40), blank, indexed | raw exceptionを入れない |
+| completed_at | DateTime nullable | 成功/失敗確定時刻 |
+
+Indexes:
+
+- `(user, -created_at)`
+- `(session_key, -created_at)`
+- `(user, search_type, -created_at)`
+- `(succeeded, failure_code, -created_at)`
+- `(saved_search, -created_at)`
+
+`keyword`は既存UI互換で維持する。保存期間削除はFK cascadeに任せず、比較・通知参照を考慮した明示的retention serviceで行う。
+
+### 5.2 scraping compatibility extension
+
+既存テーブルをリリース前に全面置換しない。以下の正規化列をnullableで追加し、新規保存から埋める。
+
+| Field | Type | Purpose |
+|---|---|---|
+| listing_key | CharField(255), blank, indexed | URLから抽出した商品識別子 |
+| observed_at | DateTime nullable, indexed | `SearchDay`の正規化先 |
+| bidding_count | PositiveInteger nullable | `Bidding`の正規化先 |
+| condition | CharField(20), blank, indexed | new/used/junk/unknown |
+| remaining_seconds | PositiveInteger nullable | 現在出品の残時間 |
+| is_active | Boolean nullable | current listing状態 |
+
+旧列はlegacy API移行完了まで維持する。backfill不能値はNULLのままとし、推測で補完しない。将来のモデル名・列名整理は別migrationで`db_table`互換を維持して行う。
+
+### 5.3 WatchItem
+
+Add:
+
+- note: TextField blank
+- priority: SmallInteger choices 0..3, indexed
+- category: CharField(100), blank, indexed
+- lifecycle_status: active/purchased/skipped/ended/archived, indexed
+- ended_at、archived_at: nullable DateTime
+- last_price_change_at: nullable DateTime
+
+観測更新ではこれらユーザー管理列を変更しない。
+
+## 6. New Search and Watch Models
+
+### 6.1 SavedSearch
+
+| Field | Type/constraint |
+|---|---|
+| id | BigAutoField PK |
+| user | FK User CASCADE, required |
+| name | CharField(100) |
+| keyword | CharField(255), indexed |
+| search_type | CharField(20) |
+| condition | CharField(20), blank |
+| minimum_price | PositiveBigInteger default=0 |
+| maximum_price | PositiveBigInteger nullable |
+| excluded_keywords | JSONField default=list |
+| ending_within_minutes | PositiveInteger nullable |
+| sort_order | CharField(30) |
+| is_active | Boolean default=True, indexed |
+| last_run_at | DateTime nullable |
+| created_at/updated_at | DateTime |
+
+Constraints:
+
+- unique `(user, name)`
+- check `maximum_price IS NULL OR minimum_price <= maximum_price`
+- service validationでsearch_typeとending conditionの組合せを確認
+
+### 6.2 WatchTag
+
+- user FK required、name CharField(50)、color CharField(7)
+- unique `(user, name)`
+- WatchItemとの中間テーブルにもwatch/tag unique constraint
+
+### 6.3 WatchPriceSnapshot
+
+- watch_item FK CASCADE
+- price PositiveBigInteger
+- bidding PositiveInteger default=0
+- remaining_seconds PositiveInteger nullable
+- condition CharField(20)
+- observed_at DateTime indexed
+
+Index `(watch_item, -observed_at)`。登録時、価格変化時、または設定した最小観測間隔経過時だけ作成する。
+
+## 7. Seller and Inventory Models
+
+### 7.1 InventoryItem
+
+| Field | Type/constraint |
+|---|---|
+| user | FK User CASCADE, required |
+| source_watch_item | nullable FK WatchItem SET_NULL |
+| name | TextField |
+| condition | CharField(20), indexed |
+| category | CharField(100), blank, indexed |
+| acquisition_cost | PositiveBigInteger default=0 |
+| acquired_at | DateTime nullable |
+| status | planned/acquired/preparing/listed/sold/disposed, indexed |
+| note | TextField blank |
+| created_at/updated_at | DateTime |
+
+WatchItemから変換するときはtransaction内でInventoryItemを作り、WatchItemを`purchased`にする。再試行で重複作成しない一意参照またはidempotencyを持たせる。
+
+### 7.2 SellerListing
+
+| Field | Type/constraint |
+|---|---|
+| user | FK User CASCADE, required |
+| inventory_item | nullable FK InventoryItem SET_NULL |
+| external_listing_id | CharField(255), blank, indexed |
+| url | CharField(1000) |
+| name | TextField |
+| condition | CharField(20), indexed |
+| status | draft/active/ended/sold/cancelled/relist, indexed |
+| start_price/current_price/buyout_price | PositiveBigInteger; buyout nullable |
+| bidding | PositiveInteger default=0 |
+| starts_at/ends_at | nullable DateTime |
+| market_median | PositiveBigInteger default=0 |
+| acquisition_cost | PositiveBigInteger default=0 |
+| shipping_cost_estimate | PositiveBigInteger default=0 |
+| packaging_cost_estimate | PositiveBigInteger default=0 |
+| other_cost_estimate | PositiveBigInteger default=0 |
+| fee_rate | Decimal(6,5), default configured rate |
+| target_profit | PositiveBigInteger default=0 |
+| last_checked_at | nullable DateTime |
+| created_at/updated_at | DateTime |
+
+Constraints and indexes:
+
+- partial unique `(user, external_listing_id)` when id is not blank
+- fallback partial unique `(user, url)`
+- checks: `0 <= fee_rate <= 1`、全金額非負
+- indexes: `(user, status, -updated_at)`、`(user, ends_at)`
+
+`acquisition_cost`等は出品時のスナップショットとして保持する。InventoryItemの値を後で変更しても当時の利益計算を変えない。
+
+### 7.3 SellerListingSnapshot
+
+- seller_listing FK CASCADE
+- current_price、bidding、remaining_seconds、market_median
+- predicted_sale_price、estimated_fee、estimated_profit
+- sell_through_risk: unknown/low/medium/high
+- observed_at DateTime indexed
+- uniqueまたはdedupe rule `(seller_listing, observed_at bucket, current_price, bidding)`
+
+Index `(seller_listing, -observed_at)`。推奨根拠を再現するため、計算に使った時点値を保存する。
+
+### 7.4 SaleRecord
+
+| Field | Type/constraint |
+|---|---|
+| seller_listing | OneToOne FK CASCADE |
+| sale_price | PositiveBigInteger |
+| actual_fee | PositiveBigInteger default=0 |
+| actual_shipping_cost | PositiveBigInteger default=0 |
+| actual_packaging_cost | PositiveBigInteger default=0 |
+| actual_other_cost | PositiveBigInteger default=0 |
+| sold_at | DateTime |
+| confirmed_profit | BigInteger | 負利益を許可 |
+| created_at/updated_at | DateTime |
+
+`confirmed_profit`は確定時の監査用スナップショット。serviceで再計算した値だけ保存し、入力された計算結果は採用しない。
+
+## 8. Alerts and Notifications
+
+### 8.1 AlertRule
+
+- user FK required
+- nullable FK: saved_search、watch_item、seller_listing
+- rule_type CharField(40), indexed
+- threshold_value Decimal(18,4)
+- is_enabled Boolean indexed
+- cooldown_minutes PositiveInteger
+- last_triggered_at nullable DateTime
+- created_at/updated_at
+
+DB CHECKで対象FKがちょうど1つだけ非NULLになるようにする。対象リソースのuserとrule.user一致はserviceとテストで保証する。
+
+### 8.2 Notification
+
+- user FK required
+- event_type CharField(40), indexed
+- title CharField(200)、message TextField、target_url CharField(1000, blank)
+- source_type CharField(40)、source_id BigInteger nullable
+- dedupe_key CharField(255)
+- payload JSONField default=dict（機密情報禁止）
+- created_at indexed、read_at nullable indexed
+
+Unique `(user, dedupe_key)`。同じ条件が再通知可能な場合、dedupe keyへ評価期間bucketを含める。
+
+メール追加時はNotificationへ送信状態を混ぜず、`NotificationDelivery`またはoutboxを追加する。
+
+## 9. Operational Monitoring
+
+### OperationalEvent
+
+- event_type、severity、failure_code、duration_ms、status_code
+- actor_type: user/anonymous/system（user FKは必要時のみnullable）
+- request_id、occurred_at
+- metadata JSON（allowlistした数値・分類値のみ）
+
+検索語、メール、セッションキー、Cookie、stack trace全文をmetadataへ入れない。詳細例外はアクセス制御されたログへ短期保持し、DB集計は分類値を使う。
+
+`ErrorLog`は既存互換で維持し、新規処理はOperationalEvent中心へ移す。移行後にretentionと廃止可否を判断する。
+
+## 10. Profit Calculation Rules
+
+見込み値:
+
+```text
+estimated_fee = round(sale_price * fee_rate)
+estimated_profit = sale_price
+  - estimated_fee
+  - acquisition_cost
+  - shipping_cost_estimate
+  - packaging_cost_estimate
+  - other_cost_estimate
+profit_margin = estimated_profit / sale_price * 100  (sale_price > 0)
+```
+
+損益分岐価格は手数料を含むため、`ceil(fixed_cost / (1 - fee_rate))`。`fee_rate >= 1`は禁止する。
+
+確定利益はSaleRecordのactual値で再計算する。丸め規則はdomain serviceに一元化し、API・画面・jobで同じ関数を使う。
+
+## 11. Retention and Deletion
+
+- SearchRun/scraping: 比較に必要な期間を設定化し、現行の一律50件削除を置換する。
+- Snapshot: 日次集約後の詳細保持期間を設定可能にする。削除前に集約値が必要か確認する。
+- Notification: 既読を一定期間後に削除可能。未読は自動削除しない。
+- Seller/Sale: ユーザーが明示削除するまで保持。ただし退会時の方針を利用規約と整合させる。
+- OperationalEvent/log: 最短限の保持期間とローテーションを設定する。
+- Django User削除はuser-owned modelsをCASCADEする。販売実績の法的保持要件が発生する場合は実装前に方針を再決定する。
+
+## 12. Migration Plan
+
+実際のmigration名は生成時に確認する。現在の`0009`から概ね以下の単位で分割する。
+
+1. SearchRun metadataとscraping正規化nullable列
+2. SavedSearchとSearchRun FK
+3. WatchItem拡張、WatchTag、WatchPriceSnapshot
+4. InventoryItem、SellerListing、SellerListingSnapshot、SaleRecord
+5. Notification
+6. AlertRule
+7. OperationalEventと監視index
+8. backfill完了後の制約・不要index整理
+
+各migrationで実施すること:
+
+- SQLiteとPostgreSQLの両方で`makemigrations --check`とmigration rehearsal
+- schema migrationと重いdata migrationを分ける
+- batch処理し、全テーブルロック時間を抑える
+- reverse可能性を確認し、不可逆ならバックアップ・復元手順を先に用意する
+- legacy ownerless rowsを新機能へ自動帰属させない
+
+## 13. Required Database Tests
+
+- user/session所有者のunique constraintとclaim処理
+- 他ユーザーFKをAlertRule等へ設定できないservice validation
+- minimum/maximum、fee rate、非負金額の制約
+- WatchItem→InventoryItem変換のtransactionと再試行
+- SellerListing refresh時にユーザー入力費用が上書きされない
+- SaleRecordの利益再計算と負利益
+- Notification dedupeの同時作成
+- SQLite→PostgreSQL移行対象件数と除外件数
+- cascade/SET_NULL動作と退会時削除範囲

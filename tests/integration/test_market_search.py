@@ -1,3 +1,5 @@
+from pathlib import Path
+
 import pytest
 from django.urls import reverse
 
@@ -29,6 +31,21 @@ def test_market_search_falls_back_to_closed_mode(client):
 
     assert response.status_code == 200
     assert response.context["active_mode"] == "closed"
+
+
+def test_popular_word_button_appends_without_overwriting_existing_input():
+    script = Path("Main/static/JS/MarketSearch.js").read_text(encoding="utf-8")
+
+    assert "currentWords.push(word)" in script
+    assert "el.keyword.value = currentWords.join(' ')" in script
+    assert "el.keyword.value = word" not in script
+
+
+def test_saved_data_refresh_uses_the_same_criteria_parameters_as_search():
+    script = Path("Main/static/JS/MarketSearch.js").read_text(encoding="utf-8")
+
+    assert "function criteriaParams(keyword)" in script
+    assert "update_market_data?${criteriaParams(keyword).toString()}" in script
 
 
 @pytest.mark.django_db

@@ -26,6 +26,8 @@ class SearchRun(models.Model):
     search_type = models.CharField(max_length=20, choices=SEARCH_TYPES, default=CLOSED)
     item_count = models.PositiveIntegerField(default=0)
     succeeded = models.BooleanField(default=True)
+    criteria_snapshot = models.JSONField(default=dict)
+    trigger = models.CharField(max_length=20, default="manual", db_index=True)
     created_at = models.DateTimeField(auto_now_add=True, db_index=True)
 
     def __str__(self) -> str:

@@ -10,12 +10,13 @@ from Main.services.exceptions import (
     SearchInputError,
     SearchRateLimitError,
 )
-from Main.services.external_search import enforce_search_rate_limit, normalize_search_keyword
+from Main.services.external_search import enforce_search_rate_limit
 from Main.services.market_statistics import (
     analyze_market_prices,
     enrich_items_with_market_comparison,
 )
 from Main.services.ownership import get_request_owner, owner_query
+from Main.services.search_criteria import SearchCriteria
 from Main.services.watchlist import (
     list_watch_items,
     save_watch_item,
@@ -41,11 +42,11 @@ logger = logging.getLogger("search_logger")
 EXTERNAL_SERVICE_MESSAGE = "外部サービスからデータを取得できませんでした"
 
 
-def _external_search_guard(request):
+def _external_search_guard(request, search_type="closed"):
     try:
-        keyword = normalize_search_keyword(request.GET.get("keyword", ""))
+        criteria = SearchCriteria.from_query(request.GET, search_type)
         enforce_search_rate_limit(request)
-        return keyword, None
+        return criteria, None
     except SearchInputError as error:
         return None, JsonResponse({"error": str(error), "code": "invalid_keyword"}, status=400)
     except SearchRateLimitError as error:
@@ -71,16 +72,21 @@ def handle_search_response(
         logger.warning("Invalid request method received")
         return JsonResponse({"error": "Invalid request method"}, status=400)
 
-    searchname, guard_response = _external_search_guard(request)
+    criteria, guard_response = _external_search_guard(request, search_type)
     if guard_response is not None:
         return guard_response
+    searchname = criteria.keyword
     logger.info("External search started keyword_length=%s", len(searchname))
 
     try:
-        scraped_data_list = data_fetch_func(searchname)
+        scraped_data_list = criteria.apply(data_fetch_func(searchname))
         logger.info(f"Scraped {len(scraped_data_list)} items for keyword: {searchname}")
         search_run = record_search_run(
-            request, searchname, search_type, len(scraped_data_list)
+            request,
+            searchname,
+            search_type,
+            len(scraped_data_list),
+            criteria_snapshot=criteria.snapshot(),
         )
         if save_func:
             save_func(searchname, scraped_data_list, search_run)
@@ -100,7 +106,14 @@ def handle_search_response(
         return JsonResponse(response_data)
     except ExternalServiceError:
         logger.exception("External search failed")
-        record_search_run(request, searchname, search_type, 0, succeeded=False)
+        record_search_run(
+            request,
+            searchname,
+            search_type,
+            0,
+            succeeded=False,
+            criteria_snapshot=criteria.snapshot(),
+        )
         return JsonResponse(
             {"error": EXTERNAL_SERVICE_MESSAGE, "code": "external_service_unavailable"},
             status=503,
@@ -154,9 +167,10 @@ def update_market_data(request):
     フロントエンドから取得した対象を更新する
     """
     if request.method == "POST":
-        _, guard_response = _external_search_guard(request)
+        criteria, guard_response = _external_search_guard(request)
         if guard_response is not None:
             return guard_response
+        return update_market_data_logic(request, criteria)
     return update_market_data_logic(request)
 
 
@@ -172,9 +186,10 @@ def complex_market_data(request):
     指定キーワードの落札履歴と現在出品中データを取得し、分析結果を返す
     """
     if request.method == "GET":
-        _, guard_response = _external_search_guard(request)
+        criteria, guard_response = _external_search_guard(request, "target")
         if guard_response is not None:
             return guard_response
+        return complex_market_data_logic(request, criteria)
     return complex_market_data_logic(request)
 
 
@@ -183,9 +198,10 @@ def prediction_market(request):
     過去90日間の価格推移を分析し、異常値を排除した90日移動平均と1ヶ月予測を返す。
     """
     if request.method == "GET":
-        _, guard_response = _external_search_guard(request)
+        criteria, guard_response = _external_search_guard(request, "prediction")
         if guard_response is not None:
             return guard_response
+        return prediction_market_logic(request, criteria)
     return prediction_market_logic(request)
 
 

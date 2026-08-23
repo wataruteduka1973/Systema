@@ -104,13 +104,24 @@
         }
     }
 
+    function criteriaParams(keyword) {
+        return new URLSearchParams({
+            keyword,
+            minimumPrice: String(Math.max(0, numeric(el.min.value))),
+            maximumPrice: el.max.value.trim(),
+            condition: el.condition.value,
+            sortOrder: el.sort.value,
+        });
+    }
+
     async function externalSearch() {
         const keyword = el.keyword.value.trim();
         if (!keyword) return message('検索キーワードを入力してください。', 'warning');
         clearMessage(); el.search.disabled = true; el.spinner.classList.remove('d-none');
         try {
             const endpoint = state.mode === 'current' ? 'RealtimeSearch' : 'perform_search';
-            const result = await json(`/taskle/${endpoint}?keyword=${encodeURIComponent(keyword)}`);
+            const params = criteriaParams(keyword);
+            const result = await json(`/taskle/${endpoint}?${params.toString()}`);
             setItems(result.data); message(`${keyword} の検索結果を取得しました。`, 'success');
             if (state.mode === 'closed') await loadWords(keyword);
         } catch (error) { message(error.message); }
@@ -132,7 +143,7 @@
     async function updateHistory() {
         const keyword = historyKeyword(); if (!keyword) return;
         try {
-            const result = await json(`/taskle/update_market_data?keyword=${encodeURIComponent(keyword)}`, { method: 'POST', headers: window.systemaCsrfHeaders() });
+            const result = await json(`/taskle/update_market_data?${criteriaParams(keyword).toString()}`, { method: 'POST', headers: window.systemaCsrfHeaders() });
             message(result.message || '保存済みデータを更新しました。', 'success'); await loadHistory();
         } catch (error) { message(error.message); }
     }
@@ -160,7 +171,12 @@
             el.popular.replaceChildren(...(result.words || []).map(word => {
                 const button = document.createElement('button');
                 button.type = 'button'; button.className = 'btn btn-outline-danger btn-sm'; button.textContent = word;
-                button.addEventListener('click', () => { el.keyword.value = word; el.keyword.focus(); });
+                button.addEventListener('click', () => {
+                    const currentWords = el.keyword.value.trim().split(/\s+/).filter(Boolean);
+                    if (!currentWords.includes(word)) currentWords.push(word);
+                    el.keyword.value = currentWords.join(' ');
+                    el.keyword.focus();
+                });
                 return button;
             }));
         } catch (_) { el.popular.replaceChildren(); }

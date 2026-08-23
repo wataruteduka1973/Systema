@@ -6,7 +6,7 @@ from django.test import RequestFactory, override_settings
 
 from Main.models.searchrun import SearchRun
 from Main.services.exceptions import ExternalServiceError
-from Main.views import api
+from Main.views import api, utils
 
 pytestmark = pytest.mark.django_db
 
@@ -65,3 +65,88 @@ def test_search_rate_limit_uses_429_and_retry_after(monkeypatch):
     assert first.status_code == 200
     assert second.status_code == 429
     assert second["Retry-After"] == "30"
+
+
+def test_search_applies_and_records_normalized_criteria(monkeypatch):
+    monkeypatch.setattr(
+        api,
+        "scrape_data",
+        lambda keyword: [
+            {"name": "中古 カメラ", "price": 2000},
+            {"name": "新品 カメラ", "price": 3000},
+        ],
+    )
+    monkeypatch.setattr(api, "save_to_database", lambda keyword, items, run=None: None)
+    request = RequestFactory().get(
+        "/taskle/perform_search",
+        {"keyword": " カメラ ", "condition": "used", "minimumPrice": "1000"},
+    )
+
+    response = api.perform_search(request)
+    payload = json.loads(response.content)
+    run = SearchRun.objects.get()
+
+    assert response.status_code == 200
+    assert [item["name"] for item in payload["data"]] == ["中古 カメラ"]
+    assert run.item_count == 1
+    assert run.trigger == "manual"
+    assert run.criteria_snapshot["keyword"] == "カメラ"
+    assert run.criteria_snapshot["condition"] == "used"
+
+
+def test_saved_data_refresh_reuses_and_records_common_criteria(monkeypatch):
+    monkeypatch.setattr(
+        utils,
+        "scrape_data",
+        lambda keyword: [
+            {"name": "中古 カメラ A", "price": 1000},
+            {"name": "中古 カメラ B", "price": 3000},
+        ],
+    )
+    monkeypatch.setattr(utils, "save_to_database", lambda keyword, items, run=None: None)
+    request = RequestFactory().post(
+        "/taskle/update_market_data?keyword=カメラ&minimumPrice=2000&condition=used"
+    )
+
+    response = api.update_market_data(request)
+    run = SearchRun.objects.get()
+
+    assert response.status_code == 200
+    assert run.item_count == 1
+    assert run.criteria_snapshot["minimumPrice"] == 2000
+    assert run.criteria_snapshot["condition"] == "used"
+
+
+def test_target_analysis_records_original_target_criteria_for_both_runs(monkeypatch):
+    monkeypatch.setattr(
+        utils,
+        "scrape_data",
+        lambda keyword: [{"name": "中古 落札商品", "price": 10000}],
+    )
+    monkeypatch.setattr(
+        utils,
+        "scrape_current_listings",
+        lambda keyword: [
+            {
+                "name": "中古 現在商品",
+                "currentPrice": 7000,
+                "bidding": 0,
+                "remainingTime": "30分",
+                "url": "https://auctions.yahoo.co.jp/jp/auction/x123456789",
+            }
+        ],
+    )
+    monkeypatch.setattr(utils, "save_to_database", lambda keyword, items, run=None: None)
+    request = RequestFactory().get(
+        "/taskle/complex_market_data",
+        {"keyword": "カメラ", "condition": "used", "endingWithinMinutes": "60"},
+    )
+
+    response = api.complex_market_data(request)
+    runs = list(SearchRun.objects.order_by("search_type"))
+
+    assert response.status_code == 200
+    assert len(runs) == 2
+    assert {run.search_type for run in runs} == {SearchRun.CLOSED, SearchRun.CURRENT}
+    assert all(run.criteria_snapshot["searchType"] == "target" for run in runs)
+    assert all(run.criteria_snapshot["endingWithinMinutes"] == 60 for run in runs)

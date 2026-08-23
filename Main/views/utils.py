@@ -20,6 +20,7 @@ from Main.services.exceptions import ExternalServiceError
 from Main.services.external_search import normalize_search_keyword
 from Main.services.market_statistics import analyze_market_prices, enrich_items_with_market_comparison
 from Main.services.ownership import get_request_owner, owner_query
+from Main.services.search_criteria import SearchCriteria
 from Main.services.watchlist import refresh_watched_item
 from Main.services.time_series_analysis import (
     analyze_snapshot_history,
@@ -215,7 +216,14 @@ def scrape_current_listings(searchname):
 
 
 def record_search_run(
-    request, searchname, search_type, item_count, succeeded=True, record_word=True
+    request,
+    searchname,
+    search_type,
+    item_count,
+    succeeded=True,
+    record_word=True,
+    criteria_snapshot=None,
+    trigger="manual",
 ):
     owner = get_request_owner(request)
     run = SearchRun.objects.create(
@@ -224,6 +232,8 @@ def record_search_run(
         search_type=search_type,
         item_count=item_count,
         succeeded=succeeded,
+        criteria_snapshot=criteria_snapshot or {},
+        trigger=trigger,
     )
     if record_word:
         searchwordlog.objects.create(**owner.model_values, word=searchname)
@@ -328,26 +338,39 @@ def get_market_data_logic(request):
         return JsonResponse({"error": str(e)}, status=500)
 
 
-def update_market_data_logic(request):
+def update_market_data_logic(request, criteria=None):
     """
     指定キーワードで新たにデータを取得し、データベースを更新する。
     """
     if request.method != "POST":
         return JsonResponse({"error": "Invalid request method"}, status=400)
+    if criteria is None:
+        try:
+            criteria = SearchCriteria.from_query(request.GET, SearchRun.CLOSED)
+        except Exception as error:
+            return JsonResponse({"error": str(error), "code": "invalid_keyword"}, status=400)
+    searchname = criteria.keyword
     try:
-        searchname = normalize_search_keyword(request.GET.get("keyword", ""))
-    except Exception as error:
-        return JsonResponse({"error": str(error), "code": "invalid_keyword"}, status=400)
-    try:
-        scraped_data_list = scrape_data(searchname)
+        scraped_data_list = criteria.apply(scrape_data(searchname))
         run = record_search_run(
-            request, searchname, SearchRun.CLOSED, len(scraped_data_list)
+            request,
+            searchname,
+            SearchRun.CLOSED,
+            len(scraped_data_list),
+            criteria_snapshot=criteria.snapshot(),
         )
         save_to_database(searchname, scraped_data_list, run)
         return JsonResponse({"message": "相場データを更新しました"})
     except ExternalServiceError:
         logger.exception("Market data update failed")
-        record_search_run(request, searchname, SearchRun.CLOSED, 0, succeeded=False)
+        record_search_run(
+            request,
+            searchname,
+            SearchRun.CLOSED,
+            0,
+            succeeded=False,
+            criteria_snapshot=criteria.snapshot(),
+        )
         return JsonResponse(
             {"error": EXTERNAL_SERVICE_MESSAGE, "code": "external_service_unavailable"},
             status=503,
@@ -377,7 +400,7 @@ def delete_market_data_logic(request):
         return JsonResponse({"error": str(e)}, status=500)
 
 
-def complex_market_data_logic(request):
+def complex_market_data_logic(request, criteria=None):
     """
     指定キーワードの落札履歴と現在出品中データから、価格リスト・商品名リスト・中央値・おすすめ出品リストを返す。
     また、落札履歴データはデータベースにも保存・更新する。
@@ -385,16 +408,22 @@ def complex_market_data_logic(request):
     if request.method != "GET":
         return JsonResponse({"error": "Invalid request method"}, status=400)
 
-    try:
-        searchname = normalize_search_keyword(request.GET.get("keyword", ""))
-    except Exception as error:
-        return JsonResponse({"error": str(error), "code": "invalid_keyword"}, status=400)
+    if criteria is None:
+        try:
+            criteria = SearchCriteria.from_query(request.GET, SearchRun.TARGET)
+        except Exception as error:
+            return JsonResponse({"error": str(error), "code": "invalid_keyword"}, status=400)
+    searchname = criteria.keyword
 
     try:
         # 落札履歴データ取得＆DB更新
-        closed_data = scrape_data(searchname)
+        closed_data = criteria.apply(scrape_data(searchname), search_type=SearchRun.CLOSED)
         closed_run = record_search_run(
-            request, searchname, SearchRun.CLOSED, len(closed_data)
+            request,
+            searchname,
+            SearchRun.CLOSED,
+            len(closed_data),
+            criteria_snapshot=criteria.snapshot(),
         )
         save_to_database(searchname, closed_data, closed_run)
         closed_prices = [
@@ -405,13 +434,16 @@ def complex_market_data_logic(request):
         closed_names = [item["name"] for item in closed_data if "name" in item]
 
         # 現在出品中データ
-        now_data = scrape_current_listings(searchname)
+        now_data = criteria.apply(
+            scrape_current_listings(searchname), search_type=SearchRun.CURRENT
+        )
         current_run = record_search_run(
             request,
             searchname,
             SearchRun.CURRENT,
             len(now_data),
             record_word=False,
+            criteria_snapshot=criteria.snapshot(),
         )
         save_to_database(searchname, now_data, current_run)
 
@@ -506,23 +538,30 @@ def complex_market_data_logic(request):
         return JsonResponse({"error": "市場分析を実行できませんでした"}, status=500)
 
 
-def prediction_market_logic(request):
+def prediction_market_logic(request, criteria=None):
     """
     過去90日間の価格推移取得し、分析、クラスタリングを行う
     """
     if request.method != "GET":
         return JsonResponse({"error": "Invalid request method"}, status=400)
 
-    try:
-        searchname = normalize_search_keyword(request.GET.get("keyword", ""))
-    except Exception as error:
-        return JsonResponse({"error": str(error), "code": "invalid_keyword"}, status=400)
+    if criteria is None:
+        try:
+            criteria = SearchCriteria.from_query(request.GET, SearchRun.PREDICTION)
+        except Exception as error:
+            return JsonResponse({"error": str(error), "code": "invalid_keyword"}, status=400)
+    searchname = criteria.keyword
 
     try:
         # 過去180日間の落札データを取得
-        closed_data = scrape_data(searchname)
+        closed_data = criteria.apply(scrape_data(searchname))
         record_search_run(
-            request, searchname, SearchRun.PREDICTION, len(closed_data), bool(closed_data)
+            request,
+            searchname,
+            SearchRun.PREDICTION,
+            len(closed_data),
+            bool(closed_data),
+            criteria_snapshot=criteria.snapshot(),
         )
         if not closed_data:
             return JsonResponse({"error": "No data available"}, status=404)
@@ -534,7 +573,14 @@ def prediction_market_logic(request):
 
     except ExternalServiceError:
         logger.exception("Prediction market search failed")
-        record_search_run(request, searchname, SearchRun.PREDICTION, 0, succeeded=False)
+        record_search_run(
+            request,
+            searchname,
+            SearchRun.PREDICTION,
+            0,
+            succeeded=False,
+            criteria_snapshot=criteria.snapshot(),
+        )
         return JsonResponse(
             {"error": EXTERNAL_SERVICE_MESSAGE, "code": "external_service_unavailable"},
             status=503,
