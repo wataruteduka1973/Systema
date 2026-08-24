@@ -1,6 +1,7 @@
 import json
 
 import pytest
+from django.conf import settings
 from django.urls import reverse
 
 pytestmark = pytest.mark.django_db
@@ -47,6 +48,17 @@ def test_watchlist_accepts_csrf_header(client):
 
     assert response.status_code == 400
     assert response.json()["error"]
+
+
+def test_security_headers_and_session_hardening_are_enabled(client):
+    response = client.get(reverse("login"))
+
+    assert "default-src 'self'" in response["Content-Security-Policy"]
+    assert "object-src 'none'" in response["Content-Security-Policy"]
+    assert response["X-Frame-Options"] == "DENY"
+    assert settings.SESSION_COOKIE_HTTPONLY is True
+    assert settings.SESSION_EXPIRE_AT_BROWSER_CLOSE is True
+    assert settings.SESSION_COOKIE_AGE == 28800
 
 
 def client_class_with_csrf(client):

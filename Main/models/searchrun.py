@@ -22,11 +22,19 @@ class SearchRun(models.Model):
         related_name="search_runs",
     )
     session_key = models.CharField(max_length=40, blank=True, db_index=True)
+    saved_search = models.ForeignKey(
+        "Main.SavedSearch",
+        blank=True,
+        null=True,
+        on_delete=models.SET_NULL,
+        related_name="runs",
+    )
     keyword = models.CharField(max_length=255, db_index=True)
     search_type = models.CharField(max_length=20, choices=SEARCH_TYPES, default=CLOSED)
     item_count = models.PositiveIntegerField(default=0)
     succeeded = models.BooleanField(default=True)
     criteria_snapshot = models.JSONField(default=dict)
+    result_snapshot = models.JSONField(default=dict)
     trigger = models.CharField(max_length=20, default="manual", db_index=True)
     duration_ms = models.PositiveIntegerField(blank=True, null=True)
     failure_code = models.CharField(blank=True, db_index=True, max_length=40)

@@ -161,6 +161,8 @@ Responseはsummary差分、condition composition、新規・消失・継続商�
 | POST | `/api/v1/saved-searches/{id}/run` | 保存条件を即時実行 |
 
 作成・更新は`name`とSearch Criteriaを受け取る。削除しても過去`SearchRun`は残り、FKはNULLになる。
+保存条件は検索種別を受け取らず、即時実行は常にターゲット分析を行う。表示した結果は`SearchRun.result_snapshot`へ保存する。
+ターゲット分析とユーザーページの「作成して実行」は`replaceExisting: true`を付ける。同一所有者・同一キーワード名の条件があれば更新し、続けて`/{id}/run`を呼び出すことで表示結果も保存する。
 
 ### 6.3 Buyer watchlist
 

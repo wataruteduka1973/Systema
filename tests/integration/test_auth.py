@@ -2,11 +2,12 @@ import json
 
 import pytest
 from django.contrib.auth import get_user_model
+from django.test import override_settings
 from django.urls import reverse
 
-from Main.models.watchitem import WatchItem
-from Main.models.searchrun import SearchRun
 from Main.models.scraping import scraping
+from Main.models.searchrun import SearchRun
+from Main.models.watchitem import WatchItem
 from Main.views import api
 
 
@@ -53,6 +54,42 @@ class TestAuthentication:
         blocked = client.get(reverse("admin_setup"))
         assert blocked.status_code == 302
         assert blocked.url.startswith(reverse("login"))
+
+    @override_settings(ADMIN_SETUP_ENABLED=False)
+    def test_admin_setup_is_not_exposed_when_disabled(self, client):
+        assert client.get(reverse("admin_setup")).status_code == 404
+
+    @override_settings(
+        AUTH_LOGIN_ACCOUNT_MAX_FAILURES=2,
+        AUTH_LOGIN_IP_MAX_FAILURES=20,
+        AUTH_LOGIN_LOCK_BASE_SECONDS=60,
+        AUTH_LOGIN_WINDOW_SECONDS=900,
+    )
+    def test_login_is_rate_limited_after_repeated_failures(self, client):
+        get_user_model().objects.create_user("rate-user", password="correct-password")
+        endpoint = reverse("login")
+
+        assert client.post(endpoint, {"username": "rate-user", "password": "wrong"}).status_code == 200
+        assert client.post(endpoint, {"username": "rate-user", "password": "wrong"}).status_code == 200
+        blocked = client.post(endpoint, {"username": "rate-user", "password": "wrong"})
+
+        assert blocked.status_code == 429
+        assert int(blocked["Retry-After"]) > 0
+        assert "試行回数が多すぎます" in blocked.content.decode("utf-8")
+
+    @override_settings(
+        AUTH_SIGNUP_MAX_ATTEMPTS=1,
+        AUTH_REGISTRATION_WINDOW_SECONDS=3600,
+    )
+    def test_signup_is_rate_limited_by_ip(self, client):
+        endpoint = reverse("signup")
+        invalid = {"username": "", "password1": "", "password2": ""}
+
+        assert client.post(endpoint, invalid).status_code == 200
+        blocked = client.post(endpoint, invalid)
+
+        assert blocked.status_code == 429
+        assert int(blocked["Retry-After"]) > 0
 
     def test_developer_dashboard_requires_staff(self, client):
         normal = get_user_model().objects.create_user("normal-user", password="password")

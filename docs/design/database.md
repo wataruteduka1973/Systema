@@ -61,6 +61,7 @@ Add:
 |---|---|---|
 | saved_search | nullable FK SavedSearch, SET_NULL | 削除後も履歴維持 |
 | criteria_snapshot | JSONField default=dict | 正規化済み条件 |
+| result_snapshot | JSONField default=dict | ターゲット分析で実際に表示した商品・中央値・判定 |
 | trigger | CharField(20), indexed | manual/saved/alert/scheduled/system |
 | duration_ms | PositiveInteger nullable | 外部取得を含む所要時間 |
 | failure_code | CharField(40), blank, indexed | raw exceptionを入れない |
@@ -114,7 +115,6 @@ Add:
 | user | FK User CASCADE, required |
 | name | CharField(100) |
 | keyword | CharField(255), indexed |
-| search_type | CharField(20) |
 | condition | CharField(20), blank |
 | minimum_price | PositiveBigInteger default=0 |
 | maximum_price | PositiveBigInteger nullable |
@@ -129,7 +129,7 @@ Constraints:
 
 - unique `(user, name)`
 - check `maximum_price IS NULL OR minimum_price <= maximum_price`
-- service validationでsearch_typeとending conditionの組合せを確認
+- 保存条件は常にターゲット分析として実行し、終了時間条件は現在出品側だけに適用
 
 ### 6.2 WatchTag
 

@@ -235,10 +235,15 @@ def record_search_run(
     trigger="manual",
     duration_ms=None,
     failure_code="",
+    saved_search=None,
 ):
     owner = get_request_owner(request)
+    saved_search = saved_search or getattr(request, "saved_search", None)
+    if trigger == "manual":
+        trigger = getattr(request, "search_trigger", trigger)
     run = SearchRun.objects.create(
         **owner.model_values,
+        saved_search=saved_search,
         keyword=searchname,
         search_type=search_type,
         item_count=item_count,
@@ -452,7 +457,7 @@ def complex_market_data_logic(request, criteria=None):
     指定キーワードの落札履歴と現在出品中データから、価格リスト・商品名リスト・中央値・おすすめ出品リストを返す。
     また、落札履歴データはデータベースにも保存・更新する。
     """
-    if request.method != "GET":
+    if request.method != "GET" and criteria is None:
         return JsonResponse({"error": "Invalid request method"}, status=400)
 
     if criteria is None:
@@ -572,18 +577,19 @@ def complex_market_data_logic(request, criteria=None):
             for item in now_items_sorted
         ]
 
+        response_data = {
+            "closed_prices": closed_prices,
+            "closed_names": closed_names,
+            "medianPrice": median_price,
+            "marketStatistics": analyze_market_prices(
+                [{"price": price} for price in closed_prices]
+            ),
+            "recommend_items": response_items,
+        }
+        current_run.result_snapshot = response_data
+        current_run.save(update_fields=("result_snapshot",))
         update_search_run_observability(current_run, duration_ms=active_timer.elapsed_ms())
-        return JsonResponse(
-            {
-                "closed_prices": closed_prices,
-                "closed_names": closed_names,
-                "medianPrice": median_price,
-                "marketStatistics": analyze_market_prices(
-                    [{"price": price} for price in closed_prices]
-                ),
-                "recommend_items": response_items,
-            }
-        )
+        return JsonResponse(response_data)
     except ExternalServiceError:
         logger.exception("Complex market search failed")
         if active_run is None:
@@ -637,7 +643,7 @@ def prediction_market_logic(request, criteria=None):
     """
     過去90日間の価格推移取得し、分析、クラスタリングを行う
     """
-    if request.method != "GET":
+    if request.method != "GET" and criteria is None:
         return JsonResponse({"error": "Invalid request method"}, status=400)
 
     if criteria is None:
@@ -651,7 +657,7 @@ def prediction_market_logic(request, criteria=None):
 
     try:
         # 過去180日間の落札データを取得
-        closed_data = criteria.apply(scrape_data(searchname))
+        closed_data = criteria.apply(scrape_data(searchname), search_type=SearchRun.CLOSED)
         run = record_search_run(
             request,
             searchname,
@@ -733,8 +739,8 @@ def get_popular_words_logic(request):
 
     try:
         top_n = int(request.GET.get("top", 10))
-        # 全検索ワード履歴を取得
-        all_words = searchwordlog.objects.values_list("word", flat=True)
+        owner = get_request_owner(request)
+        all_words = searchwordlog.objects.filter(owner_query(owner)).values_list("word", flat=True)
         tokens = []
         for phrase in all_words:
             if phrase:

@@ -9,6 +9,9 @@ from Main.views.api import (
     get_search_words,
     perform_search,
     prediction_market,
+    run_saved_search,
+    saved_search_item,
+    saved_searches,
     update_market_data,
     watchlist,
     watchlist_item,
@@ -48,4 +51,15 @@ urlpatterns = [
     path("get_popular_words", get_popular_words, name="get_popular_words"),
     path("watchlist", watchlist, name="watchlist"),
     path("watchlist/<int:item_id>", watchlist_item, name="watchlist_item"),
+    path("api/v1/saved-searches", saved_searches, name="saved_searches"),
+    path(
+        "api/v1/saved-searches/<int:saved_search_id>",
+        saved_search_item,
+        name="saved_search_item",
+    ),
+    path(
+        "api/v1/saved-searches/<int:saved_search_id>/run",
+        run_saved_search,
+        name="run_saved_search",
+    ),
 ]

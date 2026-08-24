@@ -2,8 +2,10 @@ import json
 import logging
 
 from django.http import JsonResponse
+from django.utils import timezone
 
 from Main.domain.product_condition import enrich_market_items, summarize_condition_market
+from Main.models.savedsearch import SavedSearch
 from Main.models.watchitem import WatchItem
 from Main.services.exceptions import (
     ExternalServiceError,
@@ -16,6 +18,11 @@ from Main.services.market_statistics import (
     enrich_items_with_market_comparison,
 )
 from Main.services.ownership import get_request_owner, owner_query
+from Main.services.saved_searches import (
+    criteria_from_saved_search,
+    save_saved_search,
+    serialize_saved_search,
+)
 from Main.services.search_criteria import SearchCriteria
 from Main.services.search_observability import (
     FAILURE_EXTERNAL_SERVICE,
@@ -67,18 +74,29 @@ def handle_search_response(
     save_func=None,
     include_condition_analysis=False,
     search_type="closed",
+    criteria=None,
 ):
     """
     共通の検索処理を行うヘルパー関数。
     """
     logger.info("Logger initialized")
-    if request.method != "GET":
+    if request.method != "GET" and criteria is None:
         logger.warning("Invalid request method received")
         return JsonResponse({"error": "Invalid request method"}, status=400)
 
-    criteria, guard_response = _external_search_guard(request, search_type)
-    if guard_response is not None:
-        return guard_response
+    if criteria is None:
+        criteria, guard_response = _external_search_guard(request, search_type)
+        if guard_response is not None:
+            return guard_response
+    else:
+        try:
+            enforce_search_rate_limit(request)
+        except SearchRateLimitError as error:
+            response = JsonResponse(
+                {"error": str(error), "code": "rate_limit_exceeded"}, status=429
+            )
+            response["Retry-After"] = str(error.retry_after)
+            return response
     searchname = criteria.keyword
     logger.info("External search started keyword_length=%s", len(searchname))
     timer = SearchTimer.start()
@@ -277,3 +295,99 @@ def watchlist_item(request, item_id):
     if not deleted:
         return JsonResponse({"error": "Watch item not found"}, status=404)
     return JsonResponse({"message": "ウォッチを解除しました"})
+
+
+def _authenticated_json(request):
+    if request.user.is_authenticated:
+        return None
+    return JsonResponse(
+        {"error": "ログインが必要です", "code": "authentication_required"}, status=401
+    )
+
+
+def _json_payload(request):
+    payload = json.loads(request.body or b"{}")
+    if not isinstance(payload, dict):
+        raise ValueError("リクエスト形式が正しくありません")
+    return payload
+
+
+def saved_searches(request):
+    """本人の保存条件を一覧、または作成する。"""
+    denied = _authenticated_json(request)
+    if denied:
+        return denied
+    if request.method == "GET":
+        items = SavedSearch.objects.filter(user=request.user)
+        return JsonResponse({"items": [serialize_saved_search(item) for item in items]})
+    if request.method != "POST":
+        return JsonResponse({"error": "Invalid request method"}, status=400)
+    try:
+        payload = _json_payload(request)
+        existing = None
+        if payload.pop("replaceExisting", False) is True:
+            name = str(payload.get("name", "")).strip()
+            if name:
+                existing = SavedSearch.objects.filter(user=request.user, name=name).first()
+        item = save_saved_search(request.user, payload, instance=existing)
+        return JsonResponse(
+            {"item": serialize_saved_search(item)}, status=200 if existing else 201
+        )
+    except (json.JSONDecodeError, ValueError, SearchInputError) as error:
+        return JsonResponse({"error": str(error), "code": "invalid_saved_search"}, status=400)
+
+
+def saved_search_item(request, saved_search_id):
+    """本人の保存条件だけを参照、更新、削除する。"""
+    denied = _authenticated_json(request)
+    if denied:
+        return denied
+    item = SavedSearch.objects.filter(user=request.user, pk=saved_search_id).first()
+    if item is None:
+        return JsonResponse({"error": "保存条件が見つかりません"}, status=404)
+    if request.method == "GET":
+        return JsonResponse({"item": serialize_saved_search(item)})
+    if request.method == "DELETE":
+        item.delete()
+        return JsonResponse({"message": "保存条件を削除しました"})
+    if request.method != "PATCH":
+        return JsonResponse({"error": "Invalid request method"}, status=400)
+    try:
+        item = save_saved_search(request.user, _json_payload(request), instance=item)
+        return JsonResponse({"item": serialize_saved_search(item)})
+    except (json.JSONDecodeError, ValueError, SearchInputError) as error:
+        return JsonResponse({"error": str(error), "code": "invalid_saved_search"}, status=400)
+
+
+def run_saved_search(request, saved_search_id):
+    """本人の有効な保存条件を共通検索処理で即時実行する。"""
+    denied = _authenticated_json(request)
+    if denied:
+        return denied
+    if request.method != "POST":
+        return JsonResponse({"error": "Invalid request method"}, status=400)
+    saved_search = SavedSearch.objects.filter(user=request.user, pk=saved_search_id).first()
+    if saved_search is None:
+        return JsonResponse({"error": "保存条件が見つかりません"}, status=404)
+    if not saved_search.is_active:
+        return JsonResponse({"error": "無効な保存条件です"}, status=409)
+
+    try:
+        criteria = criteria_from_saved_search(saved_search)
+    except SearchInputError as error:
+        return JsonResponse({"error": str(error), "code": "invalid_saved_search"}, status=400)
+
+    request.saved_search = saved_search
+    request.search_trigger = "saved"
+    try:
+        enforce_search_rate_limit(request)
+    except SearchRateLimitError as error:
+        response = JsonResponse({"error": str(error), "code": "rate_limit_exceeded"}, status=429)
+        response["Retry-After"] = str(error.retry_after)
+        return response
+    response = complex_market_data_logic(request, criteria)
+
+    SavedSearch.objects.filter(pk=saved_search.pk, user=request.user).update(
+        last_run_at=timezone.now()
+    )
+    return response

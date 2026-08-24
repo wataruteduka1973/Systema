@@ -2,6 +2,8 @@ from django.shortcuts import render
 from django.urls import reverse
 from django.views.decorators.csrf import ensure_csrf_cookie
 
+from Main.models.savedsearch import SavedSearch
+
 MARKET_SEARCH_MODES = {
     "closed": ("落札相場", "yahuoku"),
     "current": ("現在価格", "yahuoku_now"),
@@ -57,7 +59,12 @@ def Deep_Analysis(request):
 
 @ensure_csrf_cookie
 def Deep_Analysis_now(request):
-    return render(request, "Deep_Analysis_now.html")
+    saved_searches = (
+        SavedSearch.objects.filter(user=request.user)
+        if request.user.is_authenticated
+        else SavedSearch.objects.none()
+    )
+    return render(request, "Deep_Analysis_now.html", {"saved_searches": saved_searches})
 
 
 def Yahuoku_prediction(request):

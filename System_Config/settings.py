@@ -1,6 +1,8 @@
 import os
 from pathlib import Path
 
+import django
+
 from System_Config.database import build_database_config
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
@@ -41,6 +43,11 @@ CSRF_TRUSTED_ORIGINS = [
 SECURE_SSL_REDIRECT = IS_PRODUCTION
 SESSION_COOKIE_SECURE = IS_PRODUCTION
 CSRF_COOKIE_SECURE = IS_PRODUCTION
+SESSION_COOKIE_HTTPONLY = True
+SESSION_COOKIE_SAMESITE = "Lax"
+CSRF_COOKIE_SAMESITE = "Lax"
+SESSION_COOKIE_AGE = int(os.getenv("DJANGO_SESSION_COOKIE_AGE", "28800"))
+SESSION_EXPIRE_AT_BROWSER_CLOSE = True
 SECURE_HSTS_SECONDS = 31536000 if IS_PRODUCTION else 0
 SECURE_HSTS_INCLUDE_SUBDOMAINS = IS_PRODUCTION
 SECURE_HSTS_PRELOAD = IS_PRODUCTION
@@ -53,6 +60,23 @@ EXTERNAL_SEARCH_RATE_LIMIT = int(os.getenv("EXTERNAL_SEARCH_RATE_LIMIT", "30"))
 EXTERNAL_SEARCH_RATE_WINDOW_SECONDS = int(os.getenv("EXTERNAL_SEARCH_RATE_WINDOW_SECONDS", "60"))
 EXTERNAL_SEARCH_TRUST_X_FORWARDED_FOR = os.getenv(
     "EXTERNAL_SEARCH_TRUST_X_FORWARDED_FOR", "false"
+).strip().lower() in {"1", "true", "yes", "on"}
+
+AUTH_LOGIN_ACCOUNT_MAX_FAILURES = int(os.getenv("AUTH_LOGIN_ACCOUNT_MAX_FAILURES", "5"))
+AUTH_LOGIN_IP_MAX_FAILURES = int(os.getenv("AUTH_LOGIN_IP_MAX_FAILURES", "30"))
+AUTH_LOGIN_WINDOW_SECONDS = int(os.getenv("AUTH_LOGIN_WINDOW_SECONDS", "900"))
+AUTH_LOGIN_LOCK_BASE_SECONDS = int(os.getenv("AUTH_LOGIN_LOCK_BASE_SECONDS", "60"))
+AUTH_MAX_LOCK_SECONDS = int(os.getenv("AUTH_MAX_LOCK_SECONDS", "3600"))
+AUTH_SIGNUP_MAX_ATTEMPTS = int(os.getenv("AUTH_SIGNUP_MAX_ATTEMPTS", "5"))
+AUTH_ADMIN_SETUP_MAX_ATTEMPTS = int(os.getenv("AUTH_ADMIN_SETUP_MAX_ATTEMPTS", "5"))
+AUTH_REGISTRATION_WINDOW_SECONDS = int(
+    os.getenv("AUTH_REGISTRATION_WINDOW_SECONDS", "3600")
+)
+AUTH_RATE_LIMIT_TRUST_X_FORWARDED_FOR = os.getenv(
+    "AUTH_RATE_LIMIT_TRUST_X_FORWARDED_FOR", "false"
+).strip().lower() in {"1", "true", "yes", "on"}
+ADMIN_SETUP_ENABLED = not IS_PRODUCTION and os.getenv(
+    "ADMIN_SETUP_ENABLED", "true"
 ).strip().lower() in {"1", "true", "yes", "on"}
 
 if os.getenv("DJANGO_BEHIND_HTTPS_PROXY", "false").strip().lower() in {
@@ -87,6 +111,39 @@ MIDDLEWARE = [
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
     "Main.middleware.error_logging_middleware.ErrorLoggingMiddleware",
 ]
+
+if django.VERSION >= (6, 0):
+    from django.utils.csp import CSP
+
+    MIDDLEWARE.insert(-1, "django.middleware.csp.ContentSecurityPolicyMiddleware")
+    SECURE_CSP = {
+        "default-src": [CSP.SELF],
+        "script-src": [
+            CSP.SELF,
+            CSP.UNSAFE_INLINE,
+            "https://cdn.jsdelivr.net",
+            "https://code.jquery.com",
+            "https://d3js.org",
+        ],
+        "style-src": [
+            CSP.SELF,
+            CSP.UNSAFE_INLINE,
+            "https://cdn.jsdelivr.net",
+            "https://fonts.googleapis.com",
+        ],
+        "font-src": [
+            CSP.SELF,
+            "data:",
+            "https://cdn.jsdelivr.net",
+            "https://fonts.gstatic.com",
+        ],
+        "img-src": [CSP.SELF, "data:", "https:"],
+        "connect-src": [CSP.SELF],
+        "object-src": [CSP.NONE],
+        "base-uri": [CSP.SELF],
+        "frame-ancestors": [CSP.NONE],
+        "form-action": [CSP.SELF],
+    }
 
 ROOT_URLCONF = "System_Config.urls"
 

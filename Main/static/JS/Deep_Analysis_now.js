@@ -5,6 +5,12 @@ let watchedByUrl = new Map();
 document.addEventListener("DOMContentLoaded", function () {
 
     const searchInput = document.getElementById('search');
+    const searchForm = document.getElementById('targetSearchForm');
+
+    searchForm?.addEventListener('submit', function (event) {
+        event.preventDefault();
+        TargetSearch();
+    });
 
     // Enterキーで検索
     searchInput.addEventListener('keydown', function (e) {
@@ -51,13 +57,34 @@ function TargetSearch() {
     }
     const params = new URLSearchParams({
         keyword: searchKeyword,
+        condition: document.getElementById('targetCondition')?.value || '',
+        minimumPrice: document.getElementById('targetMinimumPrice')?.value || '0',
+        maximumPrice: document.getElementById('targetMaximumPrice')?.value || '',
+        excludedKeywords: document.getElementById('targetExcludedKeywords')?.value || '',
+        endingWithinMinutes: document.getElementById('targetEndingWithinMinutes')?.value || '',
+        sortOrder: document.getElementById('targetSortOrder')?.value || 'default',
     });
 
     const spinner = document.getElementById('searchSpinner');
     const button = document.getElementById('button-search');
+    const buttonLabel = document.getElementById('searchButtonLabel');
+    if (button.disabled) return;
+    const originalButtonLabel = buttonLabel.textContent;
     spinner.style.display = 'inline-block';
+    buttonLabel.textContent = '検索・分析中...';
     button.disabled = true;
-    fetch(`/taskle/complex_market_data?${params.toString()}`)
+    const savedSearchPromise = window.saveTargetSearchConditions
+        ? window.saveTargetSearchConditions(document.getElementById('targetSearchForm'))
+        : Promise.resolve(null);
+    savedSearchPromise
+        .then(savedSearch => fetch(
+            savedSearch
+                ? `/taskle/api/v1/saved-searches/${savedSearch.id}/run`
+                : `/taskle/complex_market_data?${params.toString()}`,
+            savedSearch
+                ? { method: 'POST', headers: window.systemaCsrfHeaders() }
+                : undefined,
+        ))
         .then(response => {
             if (!response.ok) {
                 if (response.status === 400 || response.status === 500) {
@@ -72,24 +99,7 @@ function TargetSearch() {
             }
             return response.json();
         })
-        .then(result => {
-            const recommendations = result.recommend_items || [];
-            if (recommendations.length && recommendations.some(item => !item.buyDecision || !item.condition)) {
-                throw new Error('SERVER_RESTART_REQUIRED');
-            }
-            if (typeof result.medianPrice !== "undefined") {
-                currentMedianPrice = Number(result.medianPrice) || 0;
-                document.getElementById('medianPrice').textContent = Math.round(result.medianPrice).toLocaleString();
-                document.getElementById('medianPriceBox').style.display = "block";
-            } else {
-                document.getElementById('medianPriceBox').style.display = "none";
-            }
-            currentData = recommendations;
-            if (window.MarketComparison) {
-                window.MarketComparison.configure({ statistics: result.marketStatistics || null });
-            }
-            updateTable(currentData);
-        })
+        .then(result => window.renderTargetAnalysisResult(result))
         .catch(error => {
             console.error('検索エラー:', error);
             if (error.message === 'SERVER_RESTART_REQUIRED') {
@@ -100,9 +110,29 @@ function TargetSearch() {
         })
         .finally(() => {
             spinner.style.display = 'none';
+            buttonLabel.textContent = originalButtonLabel;
             button.disabled = false;
         });
 }
+
+window.renderTargetAnalysisResult = function (result) {
+    const recommendations = result.recommend_items || [];
+    if (recommendations.length && recommendations.some(item => !item.buyDecision || !item.condition)) {
+        throw new Error('SERVER_RESTART_REQUIRED');
+    }
+    if (typeof result.medianPrice !== "undefined") {
+        currentMedianPrice = Number(result.medianPrice) || 0;
+        document.getElementById('medianPrice').textContent = Math.round(result.medianPrice).toLocaleString();
+        document.getElementById('medianPriceBox').style.display = "block";
+    } else {
+        document.getElementById('medianPriceBox').style.display = "none";
+    }
+    currentData = recommendations;
+    if (window.MarketComparison) {
+        window.MarketComparison.configure({ statistics: result.marketStatistics || null });
+    }
+    updateTable(currentData);
+};
 
 function updateTable(data) {
     const tableBody = document.getElementById("dataTable").getElementsByTagName("tbody")[0];

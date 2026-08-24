@@ -1,0 +1,12 @@
+---
+description: Keep local verification scoped and reserve full tests for Phase completion
+alwaysApply: true
+---
+
+# Verification Scope
+
+- During implementation, run `python manage.py verify` or one relevant `--feature` suite.
+- Do not run `python manage.py verify --full` until the current roadmap Phase is complete.
+- CI remains responsible for full-suite verification on pushes and pull requests.
+- Report concise pass summaries. Show detailed output only for failed checks.
+- Never weaken, skip, or delete a relevant focused test to make verification faster.

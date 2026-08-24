@@ -34,7 +34,7 @@ Related designs: `docs/design/api.md` and `docs/design/database.md`.
 
 ### SavedSearch
 
-- user（ログイン必須）、name、keyword、search_type
+- user（ログイン必須）、name、keyword
 - condition、minimum_price、maximum_price
 - excluded_keywords（JSON list）、ending_within_minutes、sort_order
 - is_active、created_at、updated_at、last_run_at
@@ -92,10 +92,29 @@ Phase 0は後続機能の依存関係に沿って分割し、検索契約を先�
 
 ### Phase 1: Saved searches
 
+**Status:** Completed on 2026-08-25. Saved searches are limited to the profile and target-analysis pages. Target analysis uses one integrated search/criteria form, uses the keyword as its name, and saves and executes it in one action without same-keyword duplication. Profile creation also executes immediately and refreshes the persisted result. Saved searches always run target analysis; market search is not involved.
+
 - `SavedSearch`と所有者限定CRUDを追加する。
-- 市場検索画面に「条件を保存」「保存条件を適用」を追加する。
-- ユーザーページに一覧、編集、削除、ワンクリック再実行を追加する。
+- 市場検索画面には「条件を保存」「保存条件を適用」を追加しない。頻出ワードの追加操作と役割が近く、検索画面を複雑にするため廃止する。
+- ユーザーページに新規作成、一覧、編集、削除、ワンクリック再実行を追加する。
+- ターゲット分析画面から現在の全条件を保存できるようにする。
+- 保存条件は検索種別を持たず、常にターゲット分析として実行する。
+- ユーザーページで保存条件の最新結果を永続表示し、手動の最近の検索履歴と分離する。
 - 実行時に`SearchRun.saved_search`と条件スナップショットを記録する。
+
+`SavedSearch`は検索画面の入力補助ではなく、本人だけが管理できる名前付きの検索条件と、Phase 5以降の自動実行・通知が参照する永続データとして扱う。頻出ワードは検索履歴から得た単語を現在のキーワードへ追加するだけで、保存条件のCRUDや自動実行の識別子にはしない。
+
+### Phase 1.5: Authentication security
+
+**Status:** Completed on 2026-08-25.
+
+- Add database-backed throttling for failed logins using hashed IP and account identities.
+- Rate limit signup and development-only initial administrator setup.
+- Disable the web initial-administrator endpoint in production; use `createsuperuser` instead.
+- Shorten authentication sessions, expire them when the browser closes, and explicitly secure cookie behavior.
+- Enforce a Django 6.x Content Security Policy compatible with the current application assets.
+- Upgrade Requests to a version containing the CVE-2024-47081 fix.
+- Cover throttling, production setup closure, security headers, CSRF, and ownership with focused tests.
 
 ### Phase 2: Watchlist enhancement and price history
 

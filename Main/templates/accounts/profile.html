@@ -1,3 +1,4 @@
+{% load static %}
 <!DOCTYPE html>
 <html lang="ja">
 <head>
@@ -58,6 +59,74 @@
                 {% empty %}<p class="text-muted mb-0">検索履歴はまだありません。</p>{% endfor %}
             </div>
         </section>
+                <section class="card mb-4">
+            <div class="card-header fw-bold">ウォッチ商品（上位20件）</div>
+            <div class="table-responsive">
+                <table class="table table-hover profile-table mb-0">
+                    <thead><tr><th>商品名</th><th>現在価格</th><th>追加時価格</th><th>状態</th><th>買い時判定</th><th>更新日時</th></tr></thead>
+                    <tbody>
+                    {% for item in watch_items %}
+                    <tr><td class="product-name"><a href="{{ item.url }}" target="_blank" rel="noopener noreferrer">{{ item.name }}</a></td><td>{{ item.current_price }}円</td><td>{{ item.added_price }}円</td><td>{{ item.condition_label }}</td><td>{{ item.buy_label }}（{{ item.buy_score }}）</td><td>{{ item.updated_at|date:'Y-m-d H:i' }}</td></tr>
+                    {% empty %}<tr><td colspan="6" class="text-muted">ウォッチ商品はありません。</td></tr>{% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </section>
+        <section id="saved-searches" class="card mb-4">
+            <div class="card-header fw-bold">保存条件</div>
+            <div class="card-body">
+                <p class="text-muted">検索条件はこのページで管理します。市場検索画面には保存・適用ボタンを追加しません。</p>
+                <form id="savedSearchCreateForm" class="row g-2 align-items-end mb-4">
+                    {% csrf_token %}
+                    <div class="col-md-3"><label class="form-label" for="savedKeyword">キーワード</label><input id="savedKeyword" name="keyword" class="form-control" maxlength="255" required></div>
+                    <div class="col-md-2"><label class="form-label" for="savedMinimum">最低価格</label><input id="savedMinimum" name="minimumPrice" type="number" min="0" value="0" class="form-control"></div>
+                    <div class="col-md-2"><label class="form-label" for="savedMaximum">最高価格</label><input id="savedMaximum" name="maximumPrice" type="number" min="0" class="form-control"></div>
+                    <div class="col-md-2"><label class="form-label" for="savedCondition">商品状態</label><select id="savedCondition" name="condition" class="form-select"><option value="">すべて</option><option value="new">新品</option><option value="used">中古</option><option value="junk">ジャンク</option></select></div>
+                    <div class="col-md-3"><label class="form-label" for="savedExcluded">除外語（カンマ区切り）</label><input id="savedExcluded" name="excludedKeywords" class="form-control"></div>
+                    <div class="col-md-2"><label class="form-label" for="savedEnding">終了まで（分）</label><input id="savedEnding" name="endingWithinMinutes" type="number" min="0" class="form-control"></div>
+                    <div class="col-md-2"><label class="form-label" for="savedSort">並び順</label><select id="savedSort" name="sortOrder" class="form-select"><option value="default">標準</option><option value="price-asc">価格が安い順</option><option value="price-desc">価格が高い順</option><option value="bidding-asc">入札が少ない順</option><option value="bidding-desc">入札が多い順</option></select></div>
+                    <div class="col-md-3"><button class="btn btn-primary w-100" type="submit"><span class="spinner-border spinner-border-sm d-none me-1" aria-hidden="true"></span>条件を作成して実行</button></div>
+                </form>
+                <div id="savedSearchMessage" class="alert d-none" role="status" aria-live="polite"></div>
+
+                {% for item in saved_searches %}
+                <details class="border rounded p-3 mb-2" data-saved-search-id="{{ item.pk }}">
+                    <summary class="d-flex flex-wrap justify-content-between gap-2 align-items-center">
+                        <span><strong>{{ item.keyword }}</strong></span>
+                        <span>{% if item.is_active %}<span class="badge bg-success">有効</span>{% else %}<span class="badge bg-secondary">無効</span>{% endif %}</span>
+                    </summary>
+                    <form class="saved-search-edit row g-2 align-items-end mt-2">
+                        <div class="col-md-3"><label class="form-label">キーワード</label><input name="keyword" class="form-control" maxlength="255" value="{{ item.keyword }}" required></div>
+                        <div class="col-md-2"><label class="form-label">最低価格</label><input name="minimumPrice" type="number" min="0" value="{{ item.minimum_price }}" class="form-control"></div>
+                        <div class="col-md-2"><label class="form-label">最高価格</label><input name="maximumPrice" type="number" min="0" value="{{ item.maximum_price|default_if_none:'' }}" class="form-control"></div>
+                        <div class="col-md-3"><label class="form-label">除外語（カンマ区切り）</label><input name="excludedKeywords" value="{{ item.excluded_keywords|join:',' }}" class="form-control"></div>
+                        <div class="col-md-2"><label class="form-label">終了まで（分）</label><input name="endingWithinMinutes" type="number" min="0" value="{{ item.ending_within_minutes|default_if_none:'' }}" class="form-control"></div>
+                        <div class="col-md-2"><label class="form-label">商品状態</label><select name="condition" class="form-select"><option value=""{% if not item.condition %} selected{% endif %}>すべて</option><option value="new"{% if item.condition == 'new' %} selected{% endif %}>新品</option><option value="used"{% if item.condition == 'used' %} selected{% endif %}>中古</option><option value="junk"{% if item.condition == 'junk' %} selected{% endif %}>ジャンク</option></select></div>
+                        <div class="col-md-2"><label class="form-label">並び順</label><select name="sortOrder" class="form-select"><option value="default"{% if item.sort_order == 'default' %} selected{% endif %}>標準</option><option value="price-asc"{% if item.sort_order == 'price-asc' %} selected{% endif %}>価格が安い順</option><option value="price-desc"{% if item.sort_order == 'price-desc' %} selected{% endif %}>価格が高い順</option><option value="bidding-asc"{% if item.sort_order == 'bidding-asc' %} selected{% endif %}>入札が少ない順</option><option value="bidding-desc"{% if item.sort_order == 'bidding-desc' %} selected{% endif %}>入札が多い順</option></select></div>
+                        <div class="col-md-2 form-check ms-2"><input name="isActive" type="checkbox" class="form-check-input"{% if item.is_active %} checked{% endif %}><label class="form-check-label">有効</label></div>
+                        <div class="col-12 d-flex flex-wrap gap-2 mt-3"><button class="btn btn-sm btn-outline-primary" type="submit">変更を保存</button><button class="btn btn-sm btn-success saved-search-run" type="button">今すぐ実行</button><button class="btn btn-sm btn-outline-danger saved-search-delete" type="button">削除</button></div>
+                    </form>
+                </details>
+                {% empty %}<p id="savedSearchEmpty" class="text-muted mb-0">保存条件はまだありません。</p>{% endfor %}
+            </div>
+        </section>
+
+        <section id="saved-search-results" class="card mb-4">
+            <div class="card-header fw-bold">保存条件の最新取得結果</div>
+            <div class="card-body">
+                {% if selected_saved_search %}
+                <div class="d-flex flex-wrap justify-content-between gap-2 mb-3">
+                    <div><strong>{{ selected_saved_search.name }}</strong> — {{ selected_saved_search.keyword }}{% if saved_result_run %}<span class="text-muted ms-2">{{ saved_result_run.created_at|date:'Y-m-d H:i' }}</span>{% endif %}</div>
+                    {% if saved_result.medianPrice != None %}<span class="badge bg-primary fs-6">落札中央値 {{ saved_result.medianPrice|floatformat:0 }}円</span>{% endif %}
+                </div>
+                {% if saved_result_items %}
+                <div class="table-responsive"><table class="table table-hover profile-table mb-0"><thead><tr><th>商品名</th><th>現在価格</th><th>商品状態</th><th>買い時判定</th><th>入札</th><th>残り時間</th><th>URL</th></tr></thead><tbody>
+                {% for item in saved_result_items %}<tr><td class="product-name">{{ item.name }}</td><td>{{ item.price|floatformat:0 }}円</td><td>{{ item.conditionLabel }}</td><td>{{ item.buyDecision.label }}（{{ item.buyDecision.score }}）<div class="small text-muted">{{ item.buyDecision.reason }}</div></td><td>{{ item.bidding }}</td><td>{{ item.remainingTime }}</td><td><a href="{{ item.url }}" target="_blank" rel="noopener noreferrer">商品</a></td></tr>{% endfor %}
+                </tbody></table></div>
+                {% else %}<p class="text-muted mb-0">この保存条件はまだ実行されていません。</p>{% endif %}
+                {% else %}<p class="text-muted mb-0">保存条件はまだありません。</p>{% endif %}
+            </div>
+        </section>
 
         <section class="card mb-4">
             <div class="card-header fw-bold">最近の検索履歴</div>
@@ -93,21 +162,8 @@
                 </table>
             </div>
         </section>
-
-        <section class="card mb-4">
-            <div class="card-header fw-bold">ウォッチ商品（上位20件）</div>
-            <div class="table-responsive">
-                <table class="table table-hover profile-table mb-0">
-                    <thead><tr><th>商品名</th><th>現在価格</th><th>追加時価格</th><th>状態</th><th>買い時判定</th><th>更新日時</th></tr></thead>
-                    <tbody>
-                    {% for item in watch_items %}
-                    <tr><td class="product-name"><a href="{{ item.url }}" target="_blank" rel="noopener noreferrer">{{ item.name }}</a></td><td>{{ item.current_price }}円</td><td>{{ item.added_price }}円</td><td>{{ item.condition_label }}</td><td>{{ item.buy_label }}（{{ item.buy_score }}）</td><td>{{ item.updated_at|date:'Y-m-d H:i' }}</td></tr>
-                    {% empty %}<tr><td colspan="6" class="text-muted">ウォッチ商品はありません。</td></tr>{% endfor %}
-                    </tbody>
-                </table>
-            </div>
-        </section>
     </main>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="{% static 'JS/SavedSearches.js' %}?v=20260825-create-and-run"></script>
 </body>
 </html>

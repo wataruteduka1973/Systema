@@ -99,40 +99,63 @@
                 <p class="lead">落札相場と現在価格を比較し、狙い目と注意点をひとつの画面で確認します</p>
             </div>
         </section>
-        <div class="container search-container">
-            <div class="target-card mt-4">
-            <div class="d-flex flex-wrap gap-2 align-items-center mb-4">
-                <span class="fw-bold me-2">関連機能</span>
-                <a href="{% url 'market_search' %}" class="btn btn-outline-danger btn-sm">市場検索</a>
-                <a href="{% url 'Yahuoku_prediction' %}" class="btn btn-outline-danger btn-sm">相場予想</a>
-            </div>
-            <div class="row justify-content-center search-button">
-                <h2 class="h4">比較する商品を検索</h2>
-                <p class="text-muted">複数の語句はスペースで区切ってください。落札相場の中央値と現在の出品価格を自動比較します。</p>
-                <div class="col-12">
-                    <div class="col-md-8">
-                        <div class="input-group mb-3">
-                            <input type="text" class="form-control" id="search" placeholder="検索キーワード"
-                                aria-label="検索キーワード" aria-describedby="button-search">
-                            <button class="btn btn-custom" type="button" id="button-search" onclick="TargetSearch()">
-                                <span class="spinner-border spinner-border-sm" role="status" id="searchSpinner"
-                                    style="display: none;"></span>
-                                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor"
-                                    class="bi bi-search" viewBox="0 0 16 16">
-                                    <path
-                                        d="M11.742 10.344a6.5 6.5 0 1 0-1.397 1.398h-.001q.044.06.098.115l3.85 3.85a1 1 0 0 0 1.415-1.414l-3.85-3.85a1 1 0 0 0-.115-.1zM12 6.5a5.5 5.5 0 1 1-11 0 5.5 5.5 0 0 1 11 0" />
-                                </svg>
-                            </button>
-                        </div>
-                    </div>
+        <section class="container search-container mb-3" aria-labelledby="targetConditionsHeading">
+            <div class="target-card">
+                <div class="d-flex flex-wrap gap-2 align-items-center mb-4">
+                    <span class="fw-bold me-2">関連機能</span>
+                    <a href="{% url 'market_search' %}" class="btn btn-outline-danger btn-sm">市場検索</a>
+                    <a href="{% url 'Yahuoku_prediction' %}" class="btn btn-outline-danger btn-sm">相場予想</a>
                 </div>
+                <h2 id="targetConditionsHeading" class="h5">ターゲット分析条件</h2>
+                <p class="text-muted">条件を指定して検索します。ログイン中は、同じ条件と表示結果が自動保存されます。</p>
+                <form id="targetSearchForm" class="row g-2 align-items-end">
+                    {% csrf_token %}
+                    <div class="col-md-4"><label class="form-label" for="search">検索キーワード</label><input type="text" class="form-control" id="search" name="keyword" maxlength="255" required></div>
+                    <div class="col-md-2"><label class="form-label" for="targetCondition">商品状態</label><select id="targetCondition" name="condition" class="form-select"><option value="">すべて</option><option value="new">新品</option><option value="used">中古</option><option value="junk">ジャンク</option></select></div>
+                    <div class="col-md-2"><label class="form-label" for="targetMinimumPrice">最低価格</label><input id="targetMinimumPrice" name="minimumPrice" type="number" min="0" value="0" class="form-control"></div>
+                    <div class="col-md-2"><label class="form-label" for="targetMaximumPrice">最高価格</label><input id="targetMaximumPrice" name="maximumPrice" type="number" min="0" class="form-control"></div>
+                    <div class="col-md-3"><label class="form-label" for="targetExcludedKeywords">除外語（カンマ区切り）</label><input id="targetExcludedKeywords" name="excludedKeywords" class="form-control"></div>
+                    <div class="col-md-2"><label class="form-label" for="targetEndingWithinMinutes">終了まで（分）</label><input id="targetEndingWithinMinutes" name="endingWithinMinutes" type="number" min="0" class="form-control"></div>
+                    <div class="col-md-2"><label class="form-label" for="targetSortOrder">並び順</label><select id="targetSortOrder" name="sortOrder" class="form-select"><option value="default">標準</option><option value="price-asc">価格が安い順</option><option value="price-desc">価格が高い順</option><option value="bidding-asc">入札が少ない順</option><option value="bidding-desc">入札が多い順</option></select></div>
+                    <div class="col-md-3"><button class="btn btn-custom w-100" type="submit" id="button-search"><span class="spinner-border spinner-border-sm me-1" role="status" id="searchSpinner" aria-hidden="true" style="display:none;"></span><span id="searchButtonLabel">検索・分析{% if request.user.is_authenticated %}・自動保存{% endif %}</span></button></div>
+                </form>
+                <div id="savedSearchMessage" class="alert d-none mt-3" role="status" aria-live="polite"></div>
+                <div id="popularWordsArea" class="mt-4">
+                    <label class="fw-bold">よく使われるキーワード:</label>
+                    <div id="popularWordsBtnGroup" class="d-flex flex-wrap gap-2 mt-2"></div>
+                </div>
+                {% if request.user.is_authenticated %}
+                <hr class="my-4">
+                <section aria-labelledby="targetSavedSearchesHeading">
+                    <h2 id="targetSavedSearchesHeading" class="h5">保存した分析条件</h2>
+                    <p class="text-muted">条件の詳細を確認し、このページで再実行できます。</p>
+                    {% for item in saved_searches %}
+                    <details class="border rounded p-3 mb-2" data-saved-search-id="{{ item.pk }}" data-saved-search-surface="target">
+                        <summary class="d-flex flex-wrap justify-content-between align-items-center gap-2">
+                            <strong>{{ item.keyword }}</strong>
+                            <span>{% if item.is_active %}<span class="badge bg-success">有効</span>{% else %}<span class="badge bg-secondary">無効</span>{% endif %}</span>
+                        </summary>
+                        <form class="saved-search-edit row g-2 align-items-end mt-2">
+                            <div class="col-md-3"><label class="form-label">キーワード</label><input name="keyword" class="form-control" maxlength="255" value="{{ item.keyword }}" required></div>
+                            <div class="col-md-2"><label class="form-label">商品状態</label><select name="condition" class="form-select"><option value=""{% if not item.condition %} selected{% endif %}>すべて</option><option value="new"{% if item.condition == 'new' %} selected{% endif %}>新品</option><option value="used"{% if item.condition == 'used' %} selected{% endif %}>中古</option><option value="junk"{% if item.condition == 'junk' %} selected{% endif %}>ジャンク</option></select></div>
+                            <div class="col-md-2"><label class="form-label">最低価格</label><input name="minimumPrice" type="number" min="0" value="{{ item.minimum_price }}" class="form-control"></div>
+                            <div class="col-md-2"><label class="form-label">最高価格</label><input name="maximumPrice" type="number" min="0" value="{{ item.maximum_price|default_if_none:'' }}" class="form-control"></div>
+                            <div class="col-md-3"><label class="form-label">除外語（カンマ区切り）</label><input name="excludedKeywords" value="{{ item.excluded_keywords|join:',' }}" class="form-control"></div>
+                            <div class="col-md-2"><label class="form-label">終了まで（分）</label><input name="endingWithinMinutes" type="number" min="0" value="{{ item.ending_within_minutes|default_if_none:'' }}" class="form-control"></div>
+                            <div class="col-md-2"><label class="form-label">並び順</label><select name="sortOrder" class="form-select"><option value="default"{% if item.sort_order == 'default' %} selected{% endif %}>標準</option><option value="price-asc"{% if item.sort_order == 'price-asc' %} selected{% endif %}>価格が安い順</option><option value="price-desc"{% if item.sort_order == 'price-desc' %} selected{% endif %}>価格が高い順</option><option value="bidding-asc"{% if item.sort_order == 'bidding-asc' %} selected{% endif %}>入札が少ない順</option><option value="bidding-desc"{% if item.sort_order == 'bidding-desc' %} selected{% endif %}>入札が多い順</option></select></div>
+                            <div class="col-md-2 form-check ms-2"><input name="isActive" type="checkbox" class="form-check-input"{% if item.is_active %} checked{% endif %}><label class="form-check-label">有効</label></div>
+                            <div class="col-12 d-flex flex-wrap gap-2 mt-3">
+                                <button class="btn btn-sm btn-outline-primary" type="submit">変更を保存</button>
+                                <button class="btn btn-sm btn-success saved-search-run" type="button"{% if not item.is_active %} disabled{% endif %}><span class="spinner-border spinner-border-sm d-none me-1" aria-hidden="true"></span>この条件で分析</button>
+                                <button class="btn btn-sm btn-outline-danger saved-search-delete" type="button">削除</button>
+                            </div>
+                        </form>
+                    </details>
+                    {% empty %}<p class="text-muted mb-0">保存した条件はまだありません。</p>{% endfor %}
+                </section>
+                {% endif %}
             </div>
-            </div>
-        </div>
-        <div id="popularWordsArea" class="container mb-3 mt-3">
-            <label class="fw-bold">よく使われるキーワード:</label>
-            <div id="popularWordsBtnGroup" class="d-flex flex-wrap gap-2 mt-2"></div>
-        </div>
+        </section>
         <div class="container mt-3">
             <div class="alert alert-info text-center" id="medianPriceBox" style="display:none;">
                 落札価格の中央値: <span id="medianPrice"></span> 円
@@ -196,7 +219,8 @@
     <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.9.2/dist/umd/popper.min.js"></script>
     <script src="{% static 'JS/csrf.js' %}?v=20260821-security"></script>
     <script src="{% static 'JS/MarketComparison.js' %}?v=20260821-target"></script>
-    <script src="{% static 'JS/Deep_Analysis_now.js' %}?v=20260821-security"></script>
+    <script src="{% static 'JS/Deep_Analysis_now.js' %}?v=20260825-target-form-fix"></script>
+    <script src="{% static 'JS/SavedSearches.js' %}?v=20260825-target-integrated"></script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 
