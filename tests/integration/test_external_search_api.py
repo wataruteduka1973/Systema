@@ -47,7 +47,11 @@ def test_search_returns_safe_503_and_records_failure(monkeypatch):
         "code": "external_service_unavailable",
     }
     assert "private upstream detail" not in response.content.decode("utf-8")
-    assert SearchRun.objects.get().succeeded is False
+    run = SearchRun.objects.get()
+    assert run.succeeded is False
+    assert run.duration_ms is not None
+    assert run.failure_code == "external_service_unavailable"
+    assert "private upstream detail" not in run.failure_code
 
 
 def test_search_rate_limit_uses_429_and_retry_after(monkeypatch):
@@ -92,6 +96,8 @@ def test_search_applies_and_records_normalized_criteria(monkeypatch):
     assert run.trigger == "manual"
     assert run.criteria_snapshot["keyword"] == "カメラ"
     assert run.criteria_snapshot["condition"] == "used"
+    assert run.duration_ms is not None
+    assert run.failure_code == ""
 
 
 def test_saved_data_refresh_reuses_and_records_common_criteria(monkeypatch):
@@ -150,3 +156,45 @@ def test_target_analysis_records_original_target_criteria_for_both_runs(monkeypa
     assert {run.search_type for run in runs} == {SearchRun.CLOSED, SearchRun.CURRENT}
     assert all(run.criteria_snapshot["searchType"] == "target" for run in runs)
     assert all(run.criteria_snapshot["endingWithinMinutes"] == 60 for run in runs)
+    assert all(run.duration_ms is not None for run in runs)
+    assert all(run.failure_code == "" for run in runs)
+
+
+def test_target_analysis_records_current_failure_without_overwriting_closed_run(monkeypatch):
+    monkeypatch.setattr(
+        utils,
+        "scrape_data",
+        lambda keyword: [{"name": "落札商品", "price": 10000}],
+    )
+    monkeypatch.setattr(
+        utils,
+        "scrape_current_listings",
+        lambda keyword: (_ for _ in ()).throw(ExternalServiceError("private detail")),
+    )
+    monkeypatch.setattr(utils, "save_to_database", lambda keyword, items, run=None: None)
+
+    response = api.complex_market_data(
+        RequestFactory().get("/taskle/complex_market_data", {"keyword": "カメラ"})
+    )
+    runs = {run.search_type: run for run in SearchRun.objects.all()}
+
+    assert response.status_code == 503
+    assert runs[SearchRun.CLOSED].succeeded is True
+    assert runs[SearchRun.CLOSED].failure_code == ""
+    assert runs[SearchRun.CURRENT].succeeded is False
+    assert runs[SearchRun.CURRENT].failure_code == "external_service_unavailable"
+    assert all(run.duration_ms is not None for run in runs.values())
+
+
+def test_prediction_records_no_data_as_safe_failure(monkeypatch):
+    monkeypatch.setattr(utils, "scrape_data", lambda keyword: [])
+
+    response = api.prediction_market(
+        RequestFactory().get("/taskle/prediction_market", {"keyword": "カメラ"})
+    )
+    run = SearchRun.objects.get()
+
+    assert response.status_code == 404
+    assert run.succeeded is False
+    assert run.failure_code == "no_data"
+    assert run.duration_ms is not None

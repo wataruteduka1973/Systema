@@ -79,7 +79,8 @@ Phase 0は後続機能の依存関係に沿って分割し、検索契約を先�
 
 #### Phase 0B: Minimum observability
 
-- `SearchRun`へdurationと個人情報を含まないfailure codeを追加する。
+- `SearchRun`へ`duration_ms`と個人情報を含まない`failure_code`を追加する。
+- failure codeは`external_service_unavailable`、`unexpected_error`、`no_data`、`insufficient_data`に限定し、例外詳細を保存しない。
 - 詳細な監視画面や運用イベントはPhase 8で完成させる。
 
 #### Later release prerequisites

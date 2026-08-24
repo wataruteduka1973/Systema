@@ -11,6 +11,8 @@ Search closed auctions, current listings, or saved snapshots through one screen.
 - Sorting: end/current price, start price, and bid count in both directions
 - External search and saved-data refresh send the same normalized criteria to the server.
 - Applied criteria are stored on `SearchRun.criteria_snapshot`; UI-only interpretation is not authoritative.
+- Each completed attempt stores `SearchRun.duration_ms`. Failed attempts use only the privacy-safe codes
+  `external_service_unavailable`, `unexpected_error`, `no_data`, or `insufficient_data`; exception details are not stored.
 
 ## Boundaries
 

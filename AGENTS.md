@@ -14,7 +14,7 @@ Token optimization is a project requirement, not an optional preference.
 4. Do not scan the whole repository, load unrelated feature documents, or reread known files by default.
 5. Keep one task focused on one theme. Do not mix unrelated cleanup or refactoring.
 6. Prefer focused diffs, narrow line ranges, concise failure output, and summaries of successful checks. Do not return full files or full successful logs unless requested.
-7. Run the narrowest relevant tests first. Run the full suite only for cross-cutting changes or final regression verification.
+7. Run `python manage.py verify` or one `--feature` suite during implementation. Run `--full` only once after a roadmap Phase is complete or in CI; a cross-cutting change alone does not require repeated full-suite runs.
 8. For a clear request, inspect, implement, self-review, and verify in one pass. Do not add proposal rounds unless a material decision is unresolved.
 9. Record durable behavior or architecture decisions in the matching feature document or ADR so future agents do not need chat history.
 10. Keep this guide concise. Put detailed feature knowledge in routed documents rather than expanding global instructions.

@@ -28,6 +28,8 @@ class SearchRun(models.Model):
     succeeded = models.BooleanField(default=True)
     criteria_snapshot = models.JSONField(default=dict)
     trigger = models.CharField(max_length=20, default="manual", db_index=True)
+    duration_ms = models.PositiveIntegerField(blank=True, null=True)
+    failure_code = models.CharField(blank=True, db_index=True, max_length=40)
     created_at = models.DateTimeField(auto_now_add=True, db_index=True)
 
     def __str__(self) -> str:

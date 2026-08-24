@@ -5,7 +5,6 @@ from collections import Counter
 from datetime import datetime
 from urllib.parse import urlencode
 
-import numpy as np
 from django.http import JsonResponse
 
 from Main.domain.auction_time import format_remaining_time, parse_duration_seconds
@@ -18,15 +17,25 @@ from Main.models.searchwordlog import searchwordlog
 from Main.scraping.yahoo import YahooAuctionParser
 from Main.services.exceptions import ExternalServiceError
 from Main.services.external_search import normalize_search_keyword
-from Main.services.market_statistics import analyze_market_prices, enrich_items_with_market_comparison
+from Main.services.market_statistics import (
+    analyze_market_prices,
+    enrich_items_with_market_comparison,
+)
 from Main.services.ownership import get_request_owner, owner_query
 from Main.services.search_criteria import SearchCriteria
-from Main.services.watchlist import refresh_watched_item
+from Main.services.search_observability import (
+    FAILURE_EXTERNAL_SERVICE,
+    FAILURE_INSUFFICIENT_DATA,
+    FAILURE_NO_DATA,
+    FAILURE_UNEXPECTED,
+    SearchTimer,
+)
 from Main.services.time_series_analysis import (
     analyze_snapshot_history,
     analyze_stored_market,
     predict_market_prices,
 )
+from Main.services.watchlist import refresh_watched_item
 
 logger = logging.getLogger("search_logger")
 EXTERNAL_SERVICE_MESSAGE = "外部サービスからデータを取得できませんでした"
@@ -224,6 +233,8 @@ def record_search_run(
     record_word=True,
     criteria_snapshot=None,
     trigger="manual",
+    duration_ms=None,
+    failure_code="",
 ):
     owner = get_request_owner(request)
     run = SearchRun.objects.create(
@@ -234,9 +245,19 @@ def record_search_run(
         succeeded=succeeded,
         criteria_snapshot=criteria_snapshot or {},
         trigger=trigger,
+        duration_ms=duration_ms,
+        failure_code=failure_code,
     )
     if record_word:
         searchwordlog.objects.create(**owner.model_values, word=searchname)
+    return run
+
+
+def update_search_run_observability(run, *, duration_ms, succeeded=True, failure_code=""):
+    run.duration_ms = duration_ms
+    run.succeeded = succeeded
+    run.failure_code = failure_code
+    run.save(update_fields=("duration_ms", "succeeded", "failure_code"))
     return run
 
 
@@ -255,9 +276,7 @@ def save_to_database(searchname, scraped_data_list, search_run=None):
                 SearchDay=SearchDay,
                 Name=scraped_data["name"],
                 EndPrice=scraped_data.get("price", scraped_data.get("currentPrice", 0)),
-                StartPrice=scraped_data.get(
-                    "startPrice", scraped_data.get("currentPrice", 0)
-                ),
+                StartPrice=scraped_data.get("startPrice", scraped_data.get("currentPrice", 0)),
                 Bidding=scraped_data.get("bidding", 0),
                 URL=scraped_data.get("url", "#"),
             )
@@ -327,13 +346,9 @@ def get_market_data_logic(request):
             for item in data
         ]
         enriched = enrich_market_items(normalized)
-        enriched = enrich_items_with_market_comparison(
-            enriched, analysis["summary"]["median"]
-        )
-        response_data = [original | extra for original, extra in zip(data, enriched)]
-        return JsonResponse(
-            {"data": response_data, "searchDay": search_day, "analysis": analysis}
-        )
+        enriched = enrich_items_with_market_comparison(enriched, analysis["summary"]["median"])
+        response_data = [original | extra for original, extra in zip(data, enriched, strict=True)]
+        return JsonResponse({"data": response_data, "searchDay": search_day, "analysis": analysis})
     except Exception as e:
         return JsonResponse({"error": str(e)}, status=500)
 
@@ -350,6 +365,8 @@ def update_market_data_logic(request, criteria=None):
         except Exception as error:
             return JsonResponse({"error": str(error), "code": "invalid_keyword"}, status=400)
     searchname = criteria.keyword
+    timer = SearchTimer.start()
+    run = None
     try:
         scraped_data_list = criteria.apply(scrape_data(searchname))
         run = record_search_run(
@@ -358,25 +375,55 @@ def update_market_data_logic(request, criteria=None):
             SearchRun.CLOSED,
             len(scraped_data_list),
             criteria_snapshot=criteria.snapshot(),
+            duration_ms=timer.elapsed_ms(),
         )
         save_to_database(searchname, scraped_data_list, run)
+        update_search_run_observability(run, duration_ms=timer.elapsed_ms())
         return JsonResponse({"message": "相場データを更新しました"})
     except ExternalServiceError:
         logger.exception("Market data update failed")
-        record_search_run(
-            request,
-            searchname,
-            SearchRun.CLOSED,
-            0,
-            succeeded=False,
-            criteria_snapshot=criteria.snapshot(),
-        )
+        if run is None:
+            record_search_run(
+                request,
+                searchname,
+                SearchRun.CLOSED,
+                0,
+                succeeded=False,
+                criteria_snapshot=criteria.snapshot(),
+                duration_ms=timer.elapsed_ms(),
+                failure_code=FAILURE_EXTERNAL_SERVICE,
+            )
+        else:
+            update_search_run_observability(
+                run,
+                duration_ms=timer.elapsed_ms(),
+                succeeded=False,
+                failure_code=FAILURE_EXTERNAL_SERVICE,
+            )
         return JsonResponse(
             {"error": EXTERNAL_SERVICE_MESSAGE, "code": "external_service_unavailable"},
             status=503,
         )
     except Exception:
         logger.exception("Unexpected market data update error")
+        if run is None:
+            record_search_run(
+                request,
+                searchname,
+                SearchRun.CLOSED,
+                0,
+                succeeded=False,
+                criteria_snapshot=criteria.snapshot(),
+                duration_ms=timer.elapsed_ms(),
+                failure_code=FAILURE_UNEXPECTED,
+            )
+        else:
+            update_search_run_observability(
+                run,
+                duration_ms=timer.elapsed_ms(),
+                succeeded=False,
+                failure_code=FAILURE_UNEXPECTED,
+            )
         return JsonResponse({"error": "相場データを更新できませんでした"}, status=500)
 
 
@@ -414,6 +461,9 @@ def complex_market_data_logic(request, criteria=None):
         except Exception as error:
             return JsonResponse({"error": str(error), "code": "invalid_keyword"}, status=400)
     searchname = criteria.keyword
+    active_search_type = SearchRun.CLOSED
+    active_timer = SearchTimer.start()
+    active_run = None
 
     try:
         # 落札履歴データ取得＆DB更新
@@ -424,8 +474,11 @@ def complex_market_data_logic(request, criteria=None):
             SearchRun.CLOSED,
             len(closed_data),
             criteria_snapshot=criteria.snapshot(),
+            duration_ms=active_timer.elapsed_ms(),
         )
+        active_run = closed_run
         save_to_database(searchname, closed_data, closed_run)
+        update_search_run_observability(closed_run, duration_ms=active_timer.elapsed_ms())
         closed_prices = [
             item["price"]
             for item in closed_data
@@ -434,6 +487,9 @@ def complex_market_data_logic(request, criteria=None):
         closed_names = [item["name"] for item in closed_data if "name" in item]
 
         # 現在出品中データ
+        active_search_type = SearchRun.CURRENT
+        active_timer = SearchTimer.start()
+        active_run = None
         now_data = criteria.apply(
             scrape_current_listings(searchname), search_type=SearchRun.CURRENT
         )
@@ -444,7 +500,9 @@ def complex_market_data_logic(request, criteria=None):
             len(now_data),
             record_word=False,
             criteria_snapshot=criteria.snapshot(),
+            duration_ms=active_timer.elapsed_ms(),
         )
+        active_run = current_run
         save_to_database(searchname, now_data, current_run)
 
         now_items = []
@@ -474,9 +532,7 @@ def complex_market_data_logic(request, criteria=None):
             median_price = 0
 
         enriched_now_items = enrich_market_items(now_items)
-        enriched_now_items = enrich_items_with_market_comparison(
-            enriched_now_items, median_price
-        )
+        enriched_now_items = enrich_items_with_market_comparison(enriched_now_items, median_price)
         for item in enriched_now_items:
             item["marketMedian"] = median_price
             item["buyDecision"] = evaluate_buying_opportunity(
@@ -501,9 +557,9 @@ def complex_market_data_logic(request, criteria=None):
                 "name": item["name"],
                 "url": item["url"],
                 "remainingTime": item["remainingTime"],
-                "remainingSeconds": item["remainingSeconds"]
-                if math.isfinite(item["remainingSeconds"])
-                else None,
+                "remainingSeconds": (
+                    item["remainingSeconds"] if math.isfinite(item["remainingSeconds"]) else None
+                ),
                 "bidding": item["bidding"],
                 "marketMedian": median_price,
                 "condition": item["condition"],
@@ -516,6 +572,7 @@ def complex_market_data_logic(request, criteria=None):
             for item in now_items_sorted
         ]
 
+        update_search_run_observability(current_run, duration_ms=active_timer.elapsed_ms())
         return JsonResponse(
             {
                 "closed_prices": closed_prices,
@@ -529,12 +586,50 @@ def complex_market_data_logic(request, criteria=None):
         )
     except ExternalServiceError:
         logger.exception("Complex market search failed")
+        if active_run is None:
+            record_search_run(
+                request,
+                searchname,
+                active_search_type,
+                0,
+                succeeded=False,
+                record_word=active_search_type == SearchRun.CLOSED,
+                criteria_snapshot=criteria.snapshot(),
+                duration_ms=active_timer.elapsed_ms(),
+                failure_code=FAILURE_EXTERNAL_SERVICE,
+            )
+        else:
+            update_search_run_observability(
+                active_run,
+                duration_ms=active_timer.elapsed_ms(),
+                succeeded=False,
+                failure_code=FAILURE_EXTERNAL_SERVICE,
+            )
         return JsonResponse(
             {"error": EXTERNAL_SERVICE_MESSAGE, "code": "external_service_unavailable"},
             status=503,
         )
     except Exception:
         logger.exception("Unexpected complex market search error")
+        if active_run is None:
+            record_search_run(
+                request,
+                searchname,
+                active_search_type,
+                0,
+                succeeded=False,
+                record_word=active_search_type == SearchRun.CLOSED,
+                criteria_snapshot=criteria.snapshot(),
+                duration_ms=active_timer.elapsed_ms(),
+                failure_code=FAILURE_UNEXPECTED,
+            )
+        else:
+            update_search_run_observability(
+                active_run,
+                duration_ms=active_timer.elapsed_ms(),
+                succeeded=False,
+                failure_code=FAILURE_UNEXPECTED,
+            )
         return JsonResponse({"error": "市場分析を実行できませんでした"}, status=500)
 
 
@@ -551,42 +646,81 @@ def prediction_market_logic(request, criteria=None):
         except Exception as error:
             return JsonResponse({"error": str(error), "code": "invalid_keyword"}, status=400)
     searchname = criteria.keyword
+    timer = SearchTimer.start()
+    run = None
 
     try:
         # 過去180日間の落札データを取得
         closed_data = criteria.apply(scrape_data(searchname))
-        record_search_run(
+        run = record_search_run(
             request,
             searchname,
             SearchRun.PREDICTION,
             len(closed_data),
             bool(closed_data),
             criteria_snapshot=criteria.snapshot(),
+            duration_ms=timer.elapsed_ms(),
+            failure_code="" if closed_data else FAILURE_NO_DATA,
         )
         if not closed_data:
             return JsonResponse({"error": "No data available"}, status=404)
 
         prediction = predict_market_prices(closed_data, datetime.now())
         if prediction is None:
+            update_search_run_observability(
+                run,
+                duration_ms=timer.elapsed_ms(),
+                succeeded=False,
+                failure_code=FAILURE_INSUFFICIENT_DATA,
+            )
             return JsonResponse({"error": "No price data in the last 90 days"}, status=404)
+        update_search_run_observability(run, duration_ms=timer.elapsed_ms())
         return JsonResponse({"keyword": searchname, **prediction})
 
     except ExternalServiceError:
         logger.exception("Prediction market search failed")
-        record_search_run(
-            request,
-            searchname,
-            SearchRun.PREDICTION,
-            0,
-            succeeded=False,
-            criteria_snapshot=criteria.snapshot(),
-        )
+        if run is None:
+            record_search_run(
+                request,
+                searchname,
+                SearchRun.PREDICTION,
+                0,
+                succeeded=False,
+                criteria_snapshot=criteria.snapshot(),
+                duration_ms=timer.elapsed_ms(),
+                failure_code=FAILURE_EXTERNAL_SERVICE,
+            )
+        else:
+            update_search_run_observability(
+                run,
+                duration_ms=timer.elapsed_ms(),
+                succeeded=False,
+                failure_code=FAILURE_EXTERNAL_SERVICE,
+            )
         return JsonResponse(
             {"error": EXTERNAL_SERVICE_MESSAGE, "code": "external_service_unavailable"},
             status=503,
         )
     except Exception:
         logger.exception("Unexpected prediction market error")
+        if run is None:
+            record_search_run(
+                request,
+                searchname,
+                SearchRun.PREDICTION,
+                0,
+                succeeded=False,
+                criteria_snapshot=criteria.snapshot(),
+                duration_ms=timer.elapsed_ms(),
+                failure_code=FAILURE_UNEXPECTED,
+            )
+        else:
+            update_search_run_observability(
+                run,
+                duration_ms=timer.elapsed_ms(),
+                succeeded=False,
+                failure_code=FAILURE_UNEXPECTED,
+            )
         return JsonResponse({"error": "相場予想を実行できませんでした"}, status=500)
 
 

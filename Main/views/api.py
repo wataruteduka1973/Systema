@@ -17,6 +17,11 @@ from Main.services.market_statistics import (
 )
 from Main.services.ownership import get_request_owner, owner_query
 from Main.services.search_criteria import SearchCriteria
+from Main.services.search_observability import (
+    FAILURE_EXTERNAL_SERVICE,
+    FAILURE_UNEXPECTED,
+    SearchTimer,
+)
 from Main.services.watchlist import (
     list_watch_items,
     save_watch_item,
@@ -35,6 +40,7 @@ from .utils import (
     scrape_current_listings,
     scrape_data,
     update_market_data_logic,
+    update_search_run_observability,
 )
 
 logger = logging.getLogger("search_logger")
@@ -50,9 +56,7 @@ def _external_search_guard(request, search_type="closed"):
     except SearchInputError as error:
         return None, JsonResponse({"error": str(error), "code": "invalid_keyword"}, status=400)
     except SearchRateLimitError as error:
-        response = JsonResponse(
-            {"error": str(error), "code": "rate_limit_exceeded"}, status=429
-        )
+        response = JsonResponse({"error": str(error), "code": "rate_limit_exceeded"}, status=429)
         response["Retry-After"] = str(error.retry_after)
         return None, response
 
@@ -77,6 +81,8 @@ def handle_search_response(
         return guard_response
     searchname = criteria.keyword
     logger.info("External search started keyword_length=%s", len(searchname))
+    timer = SearchTimer.start()
+    search_run = None
 
     try:
         scraped_data_list = criteria.apply(data_fetch_func(searchname))
@@ -87,6 +93,7 @@ def handle_search_response(
             search_type,
             len(scraped_data_list),
             criteria_snapshot=criteria.snapshot(),
+            duration_ms=timer.elapsed_ms(),
         )
         if save_func:
             save_func(searchname, scraped_data_list, search_run)
@@ -103,23 +110,52 @@ def handle_search_response(
                 "conditionSummary": summarize_condition_market(enriched_items),
                 "marketStatistics": market_statistics,
             }
+        update_search_run_observability(search_run, duration_ms=timer.elapsed_ms())
         return JsonResponse(response_data)
     except ExternalServiceError:
         logger.exception("External search failed")
-        record_search_run(
-            request,
-            searchname,
-            search_type,
-            0,
-            succeeded=False,
-            criteria_snapshot=criteria.snapshot(),
-        )
+        if search_run is None:
+            record_search_run(
+                request,
+                searchname,
+                search_type,
+                0,
+                succeeded=False,
+                criteria_snapshot=criteria.snapshot(),
+                duration_ms=timer.elapsed_ms(),
+                failure_code=FAILURE_EXTERNAL_SERVICE,
+            )
+        else:
+            update_search_run_observability(
+                search_run,
+                duration_ms=timer.elapsed_ms(),
+                succeeded=False,
+                failure_code=FAILURE_EXTERNAL_SERVICE,
+            )
         return JsonResponse(
             {"error": EXTERNAL_SERVICE_MESSAGE, "code": "external_service_unavailable"},
             status=503,
         )
     except Exception:
         logger.exception("Unexpected external search error")
+        if search_run is None:
+            record_search_run(
+                request,
+                searchname,
+                search_type,
+                0,
+                succeeded=False,
+                criteria_snapshot=criteria.snapshot(),
+                duration_ms=timer.elapsed_ms(),
+                failure_code=FAILURE_UNEXPECTED,
+            )
+        else:
+            update_search_run_observability(
+                search_run,
+                duration_ms=timer.elapsed_ms(),
+                succeeded=False,
+                failure_code=FAILURE_UNEXPECTED,
+            )
         return JsonResponse(
             {"error": "検索処理中にエラーが発生しました", "code": "search_failed"},
             status=500,
