@@ -53,9 +53,7 @@ class SearchCriteria:
         if maximum_price is not None and minimum_price > maximum_price:
             raise SearchInputError("最低価格は最高価格以下にしてください")
 
-        ending = _optional_non_negative_int(
-            query.get("endingWithinMinutes"), "終了までの時間"
-        )
+        ending = _optional_non_negative_int(query.get("endingWithinMinutes"), "終了までの時間")
         if ending is not None and search_type not in {"current", "target"}:
             raise SearchInputError("終了までの時間は現在出品検索でのみ指定できます")
 

@@ -68,9 +68,7 @@ def consume_registration_attempt(request: HttpRequest, action: str) -> None:
 
 def _check_allowed(action: str, identities: tuple[str, ...]) -> None:
     now = timezone.now()
-    action_names = (
-        ("login-ip", "login-account") if action == "login" else (action,)
-    )
+    action_names = ("login-ip", "login-account") if action == "login" else (action,)
     retry_after = 0
     for action_name, identity in zip(action_names, identities, strict=True):
         blocked_until = (
@@ -111,9 +109,7 @@ def _record_attempt(
         record.attempt_count += 1
         if record.attempt_count >= limit:
             exponent = min(record.attempt_count - limit, 6)
-            lock_seconds = min(
-                lock_base_seconds * (2**exponent), settings.AUTH_MAX_LOCK_SECONDS
-            )
+            lock_seconds = min(lock_base_seconds * (2**exponent), settings.AUTH_MAX_LOCK_SECONDS)
             record.blocked_until = now + timedelta(seconds=lock_seconds)
         record.save()
 
@@ -134,4 +130,3 @@ def _remote_ip(request: HttpRequest) -> str:
 def _digest(identity: str) -> str:
     material = f"{settings.SECRET_KEY}|{identity}".encode("utf-8")
     return hashlib.sha256(material).hexdigest()
-

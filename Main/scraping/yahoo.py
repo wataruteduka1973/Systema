@@ -1,16 +1,19 @@
 import json
 import re
+from collections.abc import Mapping
+from typing import Any
 
 from bs4 import BeautifulSoup
+from bs4.element import Tag
 
 
 class YahooAuctionParser:
     @staticmethod
-    def _is_valid_auction_id(value):
+    def _is_valid_auction_id(value: object) -> bool:
         return re.fullmatch(r"[a-z]?\d{8,}", str(value or ""), re.I) is not None
 
     @staticmethod
-    def _safe_int(value):
+    def _safe_int(value: object) -> int:
         if value is None:
             return 0
         if isinstance(value, (int, float)):
@@ -21,7 +24,7 @@ class YahooAuctionParser:
         return 0
 
     @staticmethod
-    def _normalize_time_value(value):
+    def _normalize_time_value(value: object) -> str:
         if value is None or value == "N/A":
             return "N/A"
 
@@ -38,7 +41,7 @@ class YahooAuctionParser:
         return "".join(f"{amount}{unit}" for amount, unit in tokens)
 
     @staticmethod
-    def _is_valid_title_text(text):
+    def _is_valid_title_text(text: str) -> bool:
         if not text:
             return False
 
@@ -71,7 +74,7 @@ class YahooAuctionParser:
         return True
 
     @staticmethod
-    def _pick_title_tag(card):
+    def _pick_title_tag(card: Tag) -> Tag | None:
         selectors = [
             ".Product__titleLink.js-browseHistory-add.js-rapid-override",
             ".Product__titleLink.js-browseHistory-add",
@@ -93,7 +96,7 @@ class YahooAuctionParser:
         return None
 
     @staticmethod
-    def _find_item_list(node):
+    def _find_item_list(node: object) -> list[dict[str, Any]] | None:
         if isinstance(node, list):
             for item in node:
                 result = YahooAuctionParser._find_item_list(item)
@@ -115,7 +118,7 @@ class YahooAuctionParser:
         return None
 
     @classmethod
-    def extract_listing_items(cls, html):
+    def extract_listing_items(cls, html: str) -> list[dict[str, Any]]:
         if not html:
             return []
 
@@ -154,7 +157,7 @@ class YahooAuctionParser:
                 if not YahooAuctionParser._is_valid_title_text(title_text):
                     continue
 
-                href = title_tag.get("href") or ""
+                href = str(title_tag.get("href") or "")
                 auction_id = (
                     card.get("data-auction-id")
                     or card.get("data-item-id")
@@ -197,11 +200,8 @@ class YahooAuctionParser:
                 time_tag = card.select_one('.Product__time, [class*="Product__time"]')
                 time_text = time_tag.get_text(" ", strip=True) if time_tag else "N/A"
 
-                key = str(
-                    auction_id
-                    or (re.search(r"z\d+", href or "") and re.search(r"z\d+", href or "").group(0))
-                    or title_text
-                )
+                flea_match = re.search(r"z\d+", href)
+                key = str(auction_id or (flea_match.group(0) if flea_match else None) or title_text)
                 if key in seen_ids:
                     continue
                 seen_ids.add(key)
@@ -243,7 +243,7 @@ class YahooAuctionParser:
             title_tag = card.select_one(
                 'a[href*="/jp/auction/"], a[href*="/item/"], a[href*="yahoo.co.jp/jp/auction/"], a[href*="paypayfleamarket.yahoo.co.jp/item/"], h3, h4, span.title, .title, .item-name'
             )
-            href = title_tag.get("href") if title_tag else ""
+            href = str(title_tag.get("href") or "") if title_tag else ""
             if not (title_tag or auction_id or href):
                 continue
 
@@ -266,21 +266,21 @@ class YahooAuctionParser:
                 href or str(auction_id or ""),
                 re.I,
             )
-            normalized_id = (
-                auction_id
+            normalized_id: str | None = (
+                str(auction_id)
                 if cls._is_valid_auction_id(auction_id)
                 else (auction_match.group(1) if auction_match else None)
             )
             if not cls._is_valid_auction_id(normalized_id):
                 continue
 
-            price_text = None
+            fallback_price_text: str | None = None
             for candidate in card.select("span, strong, div, p"):
                 text = candidate.get_text(" ", strip=True)
                 if re.search(r"\d", text) and len(text) <= 40:
-                    price_text = text
+                    fallback_price_text = text
                     break
-            price = cls._safe_int(price_text) if price_text else 0
+            price = cls._safe_int(fallback_price_text) if fallback_price_text else 0
             if price <= 0:
                 continue
 
@@ -301,7 +301,11 @@ class YahooAuctionParser:
         return extracted
 
     @staticmethod
-    def build_item_url(raw_url, auction_id=None, item=None):
+    def build_item_url(
+        raw_url: object,
+        auction_id: object = None,
+        item: Mapping[str, Any] | None = None,
+    ) -> str:
         if raw_url:
             value = str(raw_url).strip()
             if value.startswith("http://") or value.startswith("https://"):
@@ -337,7 +341,7 @@ class YahooAuctionParser:
         return f"https://auctions.yahoo.co.jp/jp/auction/{auction_id}"
 
     @classmethod
-    def normalize_item(cls, item):
+    def normalize_item(cls, item: object) -> dict[str, Any]:
         if not isinstance(item, dict):
             return {}
 

@@ -182,7 +182,7 @@ PATCHで変更できるユーザー項目と、検索更新が変更する観測
 
 ### 6.4 Inventory and seller listings
 
-Phase 3A implements the inventory endpoints below on the existing v1 path. Seller-listing endpoints remain planned.
+Phase 3A implements the inventory endpoints below on the existing v1 path. Phase 3B implements seller-listing CRUD, refresh, and snapshots using the common v1 `data`/`meta` and structured-error envelopes (inventory retains its existing response shape).
 
 | Method | Path | Purpose |
 |---|---|---|
@@ -194,9 +194,9 @@ Phase 3A implements the inventory endpoints below on the existing v1 path. Selle
 | GET/PATCH/DELETE | `/api/v1/seller-listings/{id}` | 出品詳細・費用/状態更新・削除 |
 | POST | `/api/v1/seller-listings/{id}/refresh` | 公開出品ページを再取得 |
 | GET | `/api/v1/seller-listings/{id}/snapshots` | 価格・入札・見込み利益推移 |
-| POST | `/api/v1/seller-listings/{id}/profit-simulations` | 保存せず価格・費用シミュレーション |
-| PUT | `/api/v1/seller-listings/{id}/sale` | 販売実績を確定または修正 |
-| GET | `/api/v1/seller-analytics/summary` | 期間別売上・利益・販売日数 |
+| POST | `/api/v1/seller-listings/{id}/profit-simulations` | Phase 7予定：保存せず価格・費用シミュレーション |
+| PUT | `/api/v1/seller-listings/{id}/sale` | Phase 7予定：販売実績を確定または修正 |
+| GET | `/api/v1/seller-analytics/summary` | Phase 7予定：期間別売上・利益・販売日数 |
 
 Seller listing create request:
 
@@ -233,6 +233,15 @@ Profit simulation response:
 - URL host allowlistと商品識別子正規化を行う。
 - Yahooログイン情報、Cookie、アクセストークンは受け取らない。
 - refreshは検索APIと別のユーザー単位レート制限を持つ。
+
+Phase 3B specifics:
+
+- Actual routes are prefixed by `/taskle`. Lists and snapshots use `page` and `pageSize` (1–100, default 20), returning `data` plus `meta.page/pageSize/total`. Listing filter: `status`. Creation returns 201; update/detail/refresh return 200; delete returns 204.
+- A canonical URL is mandatory on creation; `inventoryItemId` is optional and must belong to the user. Registration does not fetch Yahoo. URL and inventory link cannot be patched; a repeated canonical URL returns 409 without changing costs.
+- Creation/PATCH accepts `name`, `condition`, `note`, `status`, `acquisitionCost`, `shippingCostEstimate`, `packagingCostEstimate`, `otherCostEstimate`, `feeRate`, `targetProfit`, `marketMedian`, and nullable `predictedSalePrice`. Money is integer yen (0–1 trillion); fee rate is 0–1 with at most five decimal places. Unknown keys are rejected.
+- Responses include `profit`, `priceSource`, `observedStatus`, `remainingSeconds` and `lastCheckedAt`. Current price and bids remain null until observed. `profit` is null until a usable price exists. Manual median 0 means unknown; explicit expected price 0 is a valid loss scenario.
+- Refresh accepts an empty JSON object. 429 includes `Retry-After`; 409 means concurrent modification; 502 separates `listing_parse_failed` from `external_service_unavailable`. Neither failure writes a snapshot or erases prior data.
+- History preserves signed `estimatedProfit` and `calculationInputs` at observation time, and is owner-filtered through its parent listing. No raw upstream HTML, cookies, tokens, or seller profile data are stored.
 
 ### 6.5 Seller recommendations (Phase 7)
 

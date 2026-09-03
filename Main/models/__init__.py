@@ -5,4 +5,5 @@ from .savedsearch import *
 from .scraping import *
 from .searchrun import *
 from .searchwordlog import *
+from .sellerlisting import *
 from .watchitem import *

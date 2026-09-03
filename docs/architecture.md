@@ -66,3 +66,5 @@ This project keeps the existing Django layout, but the scraper/parser boundary s
 将来APIとDBの詳細は`docs/design/api.md`と`docs/design/database.md`を正とします。既存`/taskle/` APIは互換層として維持し、新機能はversioned APIへ追加します。購入候補の`WatchItem`とユーザー自身の`SellerListing`は責務を分け、Yahoo認証情報を保存せず公開出品URLの手動登録から開始します。利益計算はdomain serviceへ集約し、在庫、出品観測、販売実績を分離して、仕入れ時予測と確定利益を比較できる構造にします。
 
 Phase 3Aでは`InventoryItem`をログインユーザー所有とし、`WatchItem`からの変換だけをtransactional serviceで行う。出品前の利益計算は`Main/domain/profitability.py`に置き、HTTP入力やDjangoモデルへ依存させない。クライアントが送る仕入価格や計算済み利益は信用せず、保存済み仕入価格からサーバーで再計算する。
+
+Phase 3Bは`SellerListing`と`SellerListingSnapshot`を追加する。APIは認証・入力と応答、`services/seller_listings.py`は所有者・費用・更新トランザクション、`scraping/seller_listing.py`は公開詳細ページ取得・解析、`domain/seller_listing.py`はURLと金額検証を担当する。HTTPは既存のallowlist・転送拒否・サイズ制限を再利用し、Yahoo認証情報は扱わない。外部通信中はDBトランザクションを保持せず、保存直前に所有者とupdated_atを再確認する。観測値と当時の計算条件を一括保存し、取得失敗や競合は旧データを維持する。出品費用は在庫からコピーするが以後は独立し、過去履歴を現在の費用で再計算しない。

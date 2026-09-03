@@ -18,11 +18,31 @@
         <section class="hero-section mb-4">
             <div class="container">
                 <h1>出品・在庫管理</h1>
-                <p class="lead mb-0">購入候補を在庫へ移し、仕入情報と出品前の見込み利益を管理します。</p>
+                <p class="lead mb-0">仕入れから出品管理まで。公開出品情報と費用を記録し、見込み利益の推移を確認します。</p>
             </div>
         </section>
 
         <div class="container mb-5">
+            <section class="mb-5" aria-labelledby="sellerHeading">
+                <h2 id="sellerHeading" class="h3">自分の出品</h2>
+                <p class="text-muted">Yahooの商品URLを登録し、公開情報を手動更新します。Yahooへの出品操作・ログイン連携は行いません。利益は見込み値です。</p>
+                <div id="sellerMessage" class="alert d-none" role="status" aria-live="polite"></div>
+                <details class="card card-body mb-3">
+                    <summary class="fw-bold">出品URLを登録</summary>
+                    <form id="sellerCreateForm" class="row g-3 mt-1">
+                        <div class="col-12"><label for="sellerUrl" class="form-label">Yahooオークション商品URL</label><input id="sellerUrl" name="url" type="url" class="form-control" placeholder="https://auctions.yahoo.co.jp/jp/auction/…" required></div>
+                        <div class="col-md-6"><label for="sellerInventory" class="form-label">元の在庫（任意）</label><select id="sellerInventory" name="inventoryItemId" class="form-select"><option value="">紐付けなし</option></select><div class="form-text">在庫を選ぶと商品名と仕入価格をコピーします。</div></div>
+                        <div class="col-md-6"><label for="sellerName" class="form-label">商品名（任意）</label><input id="sellerName" name="name" maxlength="1000" class="form-control"></div>
+                        <div class="col-12"><button class="btn btn-primary" type="submit">出品を登録</button></div>
+                    </form>
+                </details>
+                <div class="d-flex flex-wrap align-items-end gap-2 mb-3">
+                    <div><label for="sellerStatus" class="form-label">出品状態</label><select id="sellerStatus" class="form-select"><option value="">すべて</option><option value="draft">登録済み</option><option value="active">出品中</option><option value="ended">終了</option><option value="sold">落札済み</option><option value="cancelled">見送り</option><option value="relist">再出品待ち</option></select></div>
+                    <button id="sellerReload" type="button" class="btn btn-outline-secondary">一覧を再読込</button>
+                </div>
+                <div id="sellerList" aria-live="polite"></div>
+                <div id="sellerPages" class="d-flex flex-wrap gap-2 align-items-center mt-3"></div>
+            </section>
             <div id="inventoryMessage" class="alert d-none" role="status"></div>
             <section class="row g-4 mb-4" aria-label="在庫登録">
                 <div class="col-lg-6">
@@ -66,6 +86,7 @@
     {% include 'footer.html' %}
     <script src="{% static 'JS/csrf.js' %}?v=20260821-security"></script>
     <script src="{% static 'JS/InventoryManagement.js' %}?v=20260902-phase3a-2"></script>
+    <script src="{% static 'JS/SellerListings.js' %}?v=20260903-phase3b"></script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>

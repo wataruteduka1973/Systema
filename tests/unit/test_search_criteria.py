@@ -36,7 +36,9 @@ def test_criteria_normalizes_and_serializes_contract():
 
 def test_criteria_rejects_invalid_price_range_and_search_specific_fields():
     with pytest.raises(SearchInputError):
-        SearchCriteria.from_query(query(keyword="camera", minimumPrice=10, maximumPrice=5), "closed")
+        SearchCriteria.from_query(
+            query(keyword="camera", minimumPrice=10, maximumPrice=5), "closed"
+        )
     with pytest.raises(SearchInputError):
         SearchCriteria.from_query(query(keyword="camera", endingWithinMinutes=30), "closed")
 

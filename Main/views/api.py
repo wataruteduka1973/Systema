@@ -7,7 +7,9 @@ from django.utils import timezone
 from Main.domain.product_condition import enrich_market_items, summarize_condition_market
 from Main.models.inventoryitem import InventoryItem
 from Main.models.savedsearch import SavedSearch
+from Main.models.sellerlisting import SellerListing
 from Main.models.watchitem import WatchItem
+from Main.scraping.seller_listing import ListingParseError
 from Main.services.exceptions import (
     ExternalServiceError,
     SearchInputError,
@@ -36,6 +38,16 @@ from Main.services.search_observability import (
     FAILURE_EXTERNAL_SERVICE,
     FAILURE_UNEXPECTED,
     SearchTimer,
+)
+from Main.services.seller_listings import (
+    ListingConflictError,
+    create_listing,
+    listing_queryset,
+    owned_listing,
+    refresh_listing,
+    serialize_listing,
+    serialize_snapshot,
+    update_listing,
 )
 from Main.services.watchlist import (
     list_watch_items,
@@ -356,6 +368,114 @@ def _json_payload(request):
     if not isinstance(payload, dict):
         raise ValueError("リクエスト形式が正しくありません")
     return payload
+
+
+def _seller_error(message, code, status):
+    return JsonResponse({"error": {"code": code, "message": message}}, status=status)
+
+
+def _seller_page(request, items, serializer):
+    try:
+        page = int(request.GET.get("page", "1"))
+        size = int(request.GET.get("pageSize", "20"))
+        if page < 1 or page > 1_000_000 or size < 1 or size > 100:
+            raise ValueError
+    except ValueError:
+        return _seller_error("ページ指定が正しくありません", "validation_error", 400)
+    return JsonResponse(
+        {
+            "data": [serializer(item) for item in items[(page - 1) * size : page * size]],
+            "meta": {"page": page, "pageSize": size, "total": items.count()},
+        }
+    )
+
+
+def seller_listings(request):
+    if not request.user.is_authenticated:
+        return _seller_error("ログインが必要です", "authentication_required", 401)
+    try:
+        if request.method == "GET":
+            return _seller_page(
+                request,
+                listing_queryset(request.user, request.GET.get("status", "")),
+                serialize_listing,
+            )
+        if request.method == "POST":
+            item = create_listing(request.user, _json_payload(request))
+            return JsonResponse({"data": serialize_listing(item)}, status=201)
+        return _seller_error("許可されていないメソッドです", "method_not_allowed", 405)
+    except SellerListing.DoesNotExist:
+        return _seller_error("在庫が見つかりません", "not_found", 404)
+    except ListingConflictError as error:
+        return _seller_error(str(error), "conflict", 409)
+    except ValueError as error:
+        return _seller_error(str(error), "validation_error", 400)
+
+
+def seller_listing_item(request, listing_id):
+    if not request.user.is_authenticated:
+        return _seller_error("ログインが必要です", "authentication_required", 401)
+    try:
+        item = owned_listing(request.user, listing_id)
+        if request.method == "GET":
+            return JsonResponse({"data": serialize_listing(item)})
+        if request.method == "PATCH":
+            return JsonResponse(
+                {
+                    "data": serialize_listing(
+                        update_listing(request.user, listing_id, _json_payload(request))
+                    )
+                }
+            )
+        if request.method == "DELETE":
+            item.delete()
+            return JsonResponse({}, status=204)
+        return _seller_error("許可されていないメソッドです", "method_not_allowed", 405)
+    except SellerListing.DoesNotExist:
+        return _seller_error("出品が見つかりません", "not_found", 404)
+    except ValueError as error:
+        return _seller_error(str(error), "validation_error", 400)
+
+
+def seller_listing_refresh(request, listing_id):
+    if not request.user.is_authenticated:
+        return _seller_error("ログインが必要です", "authentication_required", 401)
+    if request.method != "POST":
+        return _seller_error("許可されていないメソッドです", "method_not_allowed", 405)
+    try:
+        if _json_payload(request):
+            raise ValueError("更新時の追加データや認証情報は受け付けません")
+        return JsonResponse({"data": serialize_listing(refresh_listing(request.user, listing_id))})
+    except SellerListing.DoesNotExist:
+        return _seller_error("出品が見つかりません", "not_found", 404)
+    except SearchRateLimitError as error:
+        response = _seller_error("出品更新回数の上限に達しました", "rate_limit_exceeded", 429)
+        response["Retry-After"] = str(error.retry_after)
+        return response
+    except ListingConflictError as error:
+        return _seller_error(str(error), "conflict", 409)
+    except ListingParseError as error:
+        return _seller_error(str(error), "listing_parse_failed", 502)
+    except ExternalServiceError:
+        return _seller_error(
+            "公開ページを取得できませんでした。保存済み情報は変更していません",
+            "external_service_unavailable",
+            502,
+        )
+    except ValueError as error:
+        return _seller_error(str(error), "validation_error", 400)
+
+
+def seller_listing_snapshots(request, listing_id):
+    if not request.user.is_authenticated:
+        return _seller_error("ログインが必要です", "authentication_required", 401)
+    if request.method != "GET":
+        return _seller_error("許可されていないメソッドです", "method_not_allowed", 405)
+    try:
+        item = owned_listing(request.user, listing_id)
+        return _seller_page(request, item.snapshots.all(), serialize_snapshot)
+    except SellerListing.DoesNotExist:
+        return _seller_error("出品が見つかりません", "not_found", 404)
 
 
 def inventory_items(request):

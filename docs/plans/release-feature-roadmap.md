@@ -129,7 +129,7 @@ Phase 0は後続機能の依存関係に沿って分割し、検索契約を先�
 
 ### Phase 3: Seller listing and profitability foundation
 
-**Status:** Phase 3A completed locally on 2026-09-02. Login-only inventory CRUD, transactional/idempotent WatchItem conversion, the dedicated seller-management screen, and server-side pre-listing profit simulation are implemented and covered by the `inventory` verification suite. Local browser verification covered login, conversion, profit simulation, console errors, and mobile overflow. SellerListing, Yahoo public listing refresh, and listing snapshots remain for Phase 3B.
+**Status:** Phase 3A implemented and locally feature-verified on 2026-09-02. Phase 3B implemented on 2026-09-03: owner-scoped seller CRUD, explicit public-page refresh, cost-preserving snapshots, lifecycle UI, and paginated history deltas. The user confirmed the added workflow on 2026-09-03. Repository-wide Black, mypy, Ruff, the 231-test full regression suite, Django/migration checks, documentation build, JavaScript syntax check, diff check, and isolated SQLite browser workflow passed locally; one live public page was parsed successfully. Production DB migration, PostgreSQL concurrency and GitHub CI remain NOT VERIFIED. No real user DB migration was applied by this implementation.
 
 - 購入候補から在庫へ移す操作と、在庫の手動登録を追加する。
 - 自分の出品URLを手動登録し、現在価格、入札、残り時間、状態を取得する。

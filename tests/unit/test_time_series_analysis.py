@@ -87,7 +87,10 @@ def test_prediction_keeps_dates_aligned_and_marks_iqr_outlier():
 
 def test_backtest_uses_only_data_available_at_each_cutoff():
     reference = datetime(2026, 8, 15, 12, 0)
-    items = [{"time": (reference - timedelta(days=120 - day)).isoformat(), "price": 1000 + day * 10} for day in range(121)]
+    items = [
+        {"time": (reference - timedelta(days=120 - day)).isoformat(), "price": 1000 + day * 10}
+        for day in range(121)
+    ]
     result = backtest_market_prediction(items, reference)
     assert result["available"] is True
     assert result["windowCount"] >= 3
@@ -98,7 +101,9 @@ def test_backtest_uses_only_data_available_at_each_cutoff():
 
 def test_backtest_reports_when_history_is_too_short():
     reference = datetime(2026, 8, 15, 12, 0)
-    items = [{"time": (reference - timedelta(days=day)).isoformat(), "price": 1000} for day in range(10)]
+    items = [
+        {"time": (reference - timedelta(days=day)).isoformat(), "price": 1000} for day in range(10)
+    ]
     result = backtest_market_prediction(items, reference)
     assert result["available"] is False
     assert result["windowCount"] == 0

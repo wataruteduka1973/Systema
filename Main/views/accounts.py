@@ -176,9 +176,7 @@ def admin_setup(request):
             consume_registration_attempt(request, "admin-setup")
         except AuthRateLimitError as error:
             form.add_error(None, str(error))
-            response = render(
-                request, "accounts/admin_setup.html", {"form": form}, status=429
-            )
+            response = render(request, "accounts/admin_setup.html", {"form": form}, status=429)
             response["Retry-After"] = str(error.retry_after)
             return response
     if request.method == "POST" and form.is_valid():

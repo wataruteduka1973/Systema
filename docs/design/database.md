@@ -175,7 +175,7 @@ WatchItemから変換するときはtransaction内でInventoryItemを作り、Wa
 
 ### 7.2 SellerListing
 
-Not implemented; planned for Phase 3B.
+Implemented in Phase 3B migration `0017_seller_listing_phase3b` (additive tables; no existing-row backfill).
 
 | Field | Type/constraint |
 |---|---|
@@ -186,23 +186,25 @@ Not implemented; planned for Phase 3B.
 | name | TextField |
 | condition | CharField(20), indexed |
 | status | draft/active/ended/sold/cancelled/relist, indexed |
+| observed_status | unknown/active/ended; independent of manual outcome |
 | start_price/current_price/buyout_price | PositiveBigInteger; buyout nullable |
 | bidding | PositiveInteger default=0 |
 | starts_at/ends_at | nullable DateTime |
 | market_median | PositiveBigInteger default=0 |
+| predicted_sale_price | nullable PositiveBigInteger; null selects latest current price or manual median |
 | acquisition_cost | PositiveBigInteger default=0 |
 | shipping_cost_estimate | PositiveBigInteger default=0 |
 | packaging_cost_estimate | PositiveBigInteger default=0 |
 | other_cost_estimate | PositiveBigInteger default=0 |
 | fee_rate | Decimal(6,5), default configured rate |
 | target_profit | PositiveBigInteger default=0 |
+| note | TextField blank |
 | last_checked_at | nullable DateTime |
 | created_at/updated_at | DateTime |
 
 Constraints and indexes:
 
-- partial unique `(user, external_listing_id)` when id is not blank
-- fallback partial unique `(user, url)`
+- unique `(user, external_listing_id)` and `(user, url)`; Phase 3B requires a valid external ID on every registration, so blank-ID fallback is unnecessary
 - checks: `0 <= fee_rate <= 1`、全金額非負
 - indexes: `(user, status, -updated_at)`、`(user, ends_at)`
 
@@ -213,11 +215,15 @@ Constraints and indexes:
 - seller_listing FK CASCADE
 - current_price、bidding、remaining_seconds、market_median
 - predicted_sale_price、estimated_fee、estimated_profit
-- sell_through_risk: unknown/low/medium/high
+- calculation_inputs JSON: acquisition/shipping/packaging/other cost, fee rate as decimal string, sale price, price source, target profit
+- observed_status: active/ended
+- sell_through_risk is deferred to Phase 7 (not persisted yet)
 - observed_at DateTime indexed
-- uniqueまたはdedupe rule `(seller_listing, observed_at bucket, current_price, bidding)`
+- unique `(seller_listing, observed_at)`; one row per accepted manual refresh, including unchanged values. Refresh rejects a stale updated_at under a row lock before writing.
 
 Index `(seller_listing, -observed_at)`。推奨根拠を再現するため、計算に使った時点値を保存する。
+
+Both models are added without changing existing tables or ownership. Inventory deletion uses SET_NULL; listing deletion cascades snapshots. Reversing `0017` drops these two new tables and loses their data: export/backup before any real rollback. SQLite local tests do not prove PostgreSQL row-lock behavior under production concurrency.
 
 ### 7.4 SaleRecord
 

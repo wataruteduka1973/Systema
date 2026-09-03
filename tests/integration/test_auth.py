@@ -69,8 +69,12 @@ class TestAuthentication:
         get_user_model().objects.create_user("rate-user", password="correct-password")
         endpoint = reverse("login")
 
-        assert client.post(endpoint, {"username": "rate-user", "password": "wrong"}).status_code == 200
-        assert client.post(endpoint, {"username": "rate-user", "password": "wrong"}).status_code == 200
+        assert (
+            client.post(endpoint, {"username": "rate-user", "password": "wrong"}).status_code == 200
+        )
+        assert (
+            client.post(endpoint, {"username": "rate-user", "password": "wrong"}).status_code == 200
+        )
         blocked = client.post(endpoint, {"username": "rate-user", "password": "wrong"})
 
         assert blocked.status_code == 429
@@ -118,10 +122,16 @@ class TestAuthentication:
         }
 
         client.force_login(first)
-        assert client.post(endpoint, json.dumps(payload), content_type="application/json").status_code == 201
+        assert (
+            client.post(endpoint, json.dumps(payload), content_type="application/json").status_code
+            == 201
+        )
         client.force_login(second)
         assert client.get(endpoint).json()["items"] == []
-        assert client.post(endpoint, json.dumps(payload), content_type="application/json").status_code == 201
+        assert (
+            client.post(endpoint, json.dumps(payload), content_type="application/json").status_code
+            == 201
+        )
 
         assert WatchItem.objects.filter(url=payload["url"]).count() == 2
 
@@ -133,16 +143,15 @@ class TestAuthentication:
             "currentPrice": 4000,
             "marketMedian": 6000,
         }
-        assert client.post(
-            endpoint, json.dumps(payload), content_type="application/json"
-        ).status_code == 201
+        assert (
+            client.post(endpoint, json.dumps(payload), content_type="application/json").status_code
+            == 201
+        )
         anonymous_item = WatchItem.objects.get(url=payload["url"])
         assert anonymous_item.user is None
         assert anonymous_item.session_key
 
-        user = get_user_model().objects.create_user(
-            "claim-user", password="claim-password-2026"
-        )
+        user = get_user_model().objects.create_user("claim-user", password="claim-password-2026")
         response = client.post(
             reverse("login"),
             {"username": user.username, "password": "claim-password-2026"},
@@ -152,9 +161,7 @@ class TestAuthentication:
         assert anonymous_item.user == user
         assert anonymous_item.session_key == ""
 
-    def test_search_history_is_isolated_between_anonymous_sessions(
-        self, client, monkeypatch
-    ):
+    def test_search_history_is_isolated_between_anonymous_sessions(self, client, monkeypatch):
         monkeypatch.setattr(
             api,
             "scrape_data",
@@ -168,10 +175,10 @@ class TestAuthentication:
                 }
             ],
         )
-        assert client.get(reverse("perform_search"), {"keyword": "private-keyword"}).status_code == 200
-        assert client.get(reverse("get_search_words")).json()["searchWords"] == [
-            "private-keyword"
-        ]
+        assert (
+            client.get(reverse("perform_search"), {"keyword": "private-keyword"}).status_code == 200
+        )
+        assert client.get(reverse("get_search_words")).json()["searchWords"] == ["private-keyword"]
 
         from django.test import Client
 
@@ -206,9 +213,7 @@ class TestAuthentication:
         first = get_user_model().objects.create_user(
             "profile-first", email="first@example.com", password="password"
         )
-        second = get_user_model().objects.create_user(
-            "profile-second", password="password"
-        )
+        second = get_user_model().objects.create_user("profile-second", password="password")
         first_run = SearchRun.objects.create(
             user=first, keyword="first-keyword", search_type=SearchRun.CLOSED, item_count=1
         )

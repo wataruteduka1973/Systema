@@ -8,6 +8,12 @@ from pathlib import Path
 from django.core.management.base import BaseCommand, CommandError
 
 FEATURE_TESTS = {
+    "seller-management": (
+        "tests/unit/test_seller_listing.py",
+        "tests/unit/test_profitability.py",
+        "tests/integration/test_seller_listings.py",
+        "tests/integration/test_inventory.py",
+    ),
     "market-search": (
         "tests/unit/test_search_criteria.py",
         "tests/unit/test_search_observability.py",
@@ -41,6 +47,11 @@ FEATURE_TESTS = {
 }
 
 PATH_FEATURES = {
+    "Main/domain/seller_listing.py": "seller-management",
+    "Main/models/sellerlisting.py": "seller-management",
+    "Main/scraping/seller_listing.py": "seller-management",
+    "Main/services/seller_listings.py": "seller-management",
+    "Main/static/JS/SellerListings.js": "seller-management",
     "Main/services/search_criteria.py": "market-search",
     "Main/services/search_observability.py": "market-search",
     "Main/views/api.py": "market-search",
@@ -62,7 +73,7 @@ PATH_FEATURES = {
     "Main/models/inventoryitem.py": "inventory",
     "Main/services/inventory.py": "inventory",
     "Main/static/JS/InventoryManagement.js": "inventory",
-    "Main/templates/seller_management.html": "inventory",
+    "Main/templates/seller_management.html": "seller-management",
 }
 
 

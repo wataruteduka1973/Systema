@@ -16,6 +16,10 @@ from Main.views.api import (
     run_saved_search,
     saved_search_item,
     saved_searches,
+    seller_listing_item,
+    seller_listing_refresh,
+    seller_listing_snapshots,
+    seller_listings,
     update_market_data,
     watchlist,
     watchlist_item,
@@ -65,6 +69,20 @@ urlpatterns = [
     ),
     path("api/v1/saved-searches", saved_searches, name="saved_searches"),
     path("api/v1/inventory-items", inventory_items, name="inventory_items"),
+    path("api/v1/seller-listings", seller_listings, name="seller_listings"),
+    path(
+        "api/v1/seller-listings/<int:listing_id>", seller_listing_item, name="seller_listing_item"
+    ),
+    path(
+        "api/v1/seller-listings/<int:listing_id>/refresh",
+        seller_listing_refresh,
+        name="seller_listing_refresh",
+    ),
+    path(
+        "api/v1/seller-listings/<int:listing_id>/snapshots",
+        seller_listing_snapshots,
+        name="seller_listing_snapshots",
+    ),
     path(
         "api/v1/inventory-items/<int:item_id>",
         inventory_item,

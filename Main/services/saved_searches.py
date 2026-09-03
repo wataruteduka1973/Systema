@@ -42,7 +42,9 @@ def criteria_from_saved_search(saved_search: SavedSearch) -> SearchCriteria:
     )
 
 
-def save_saved_search(user, payload: Mapping[str, Any], instance=None) -> SavedSearch:
+def save_saved_search(
+    user: Any, payload: Mapping[str, Any], instance: SavedSearch | None = None
+) -> SavedSearch:
     if not isinstance(payload, Mapping):
         raise SearchInputError("リクエスト形式が正しくありません")
 

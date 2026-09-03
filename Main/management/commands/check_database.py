@@ -20,6 +20,8 @@ STANDARD_TABLES = {
 SYSTEMA_TABLES = {
     "Main_errorlog",
     "Main_inventoryitem",
+    "Main_sellerlisting",
+    "Main_sellerlistingsnapshot",
     "Main_searchrun",
     "Main_scraping",
     "Main_searchwordlog",

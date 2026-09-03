@@ -3,7 +3,7 @@ from django.conf import settings
 from django.db import models
 
 
-def _price_range_constraint():
+def _price_range_constraint() -> models.CheckConstraint:
     price_range = models.Q(maximum_price__isnull=True) | models.Q(
         minimum_price__lte=models.F("maximum_price")
     )

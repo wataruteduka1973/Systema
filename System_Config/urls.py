@@ -26,9 +26,7 @@ urlpatterns = [
     ),
     path(
         "accounts/password-change/done/",
-        PasswordChangeDoneView.as_view(
-            template_name="registration/password_change_done.html"
-        ),
+        PasswordChangeDoneView.as_view(template_name="registration/password_change_done.html"),
         name="password_change_done",
     ),
     path("accounts/admin-setup/", admin_setup, name="admin_setup"),

@@ -19,4 +19,3 @@ class AuthThrottle(models.Model):
             )
         ]
         indexes = [models.Index(fields=("action", "blocked_until"))]
-

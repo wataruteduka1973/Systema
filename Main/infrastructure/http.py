@@ -65,7 +65,6 @@ def get_with_retry(
                     response.close()
                     raise ExternalServiceError("外部ページの応答サイズが上限を超えました")
             response._content = bytes(content)
-            response._content_consumed = True
             return response
         except requests.RequestException as exc:
             last_error = exc
