@@ -3,10 +3,14 @@ from django.urls import path
 from Main.views.api import (
     RealtimeSearch,
     complex_market_data,
+    convert_watch_item_to_inventory,
     delete_market_data,
     get_market_data,
     get_popular_words,
     get_search_words,
+    inventory_item,
+    inventory_items,
+    inventory_profit_simulation,
     perform_search,
     prediction_market,
     run_saved_search,
@@ -15,6 +19,7 @@ from Main.views.api import (
     update_market_data,
     watchlist,
     watchlist_item,
+    watchlist_snapshots,
 )
 from Main.views.developer import developer_dashboard
 from Main.views.urls import (
@@ -27,6 +32,7 @@ from Main.views.urls import (
     index,
     introduction,
     market_search,
+    seller_management,
 )
 
 urlpatterns = [
@@ -40,6 +46,7 @@ urlpatterns = [
     path("Yahuoku_prediction", Yahuoku_prediction, name="Yahuoku_prediction"),
     path("introduction", introduction, name="introduction"),
     path("developer/", developer_dashboard, name="developer_dashboard"),
+    path("seller-management", seller_management, name="seller_management"),
     path("perform_search", perform_search, name="perform_search"),
     path("RealtimeSearch", RealtimeSearch, name="RealtimeSearch"),
     path("get_search_words", get_search_words, name="get_search_words"),
@@ -51,7 +58,28 @@ urlpatterns = [
     path("get_popular_words", get_popular_words, name="get_popular_words"),
     path("watchlist", watchlist, name="watchlist"),
     path("watchlist/<int:item_id>", watchlist_item, name="watchlist_item"),
+    path(
+        "watchlist/<int:item_id>/snapshots",
+        watchlist_snapshots,
+        name="watchlist_snapshots",
+    ),
     path("api/v1/saved-searches", saved_searches, name="saved_searches"),
+    path("api/v1/inventory-items", inventory_items, name="inventory_items"),
+    path(
+        "api/v1/inventory-items/<int:item_id>",
+        inventory_item,
+        name="inventory_item",
+    ),
+    path(
+        "api/v1/inventory-items/<int:item_id>/profit-simulation",
+        inventory_profit_simulation,
+        name="inventory_profit_simulation",
+    ),
+    path(
+        "api/v1/watch-items/<int:watch_item_id>/convert-to-inventory",
+        convert_watch_item_to_inventory,
+        name="convert_watch_item_to_inventory",
+    ),
     path(
         "api/v1/saved-searches/<int:saved_search_id>",
         saved_search_item,

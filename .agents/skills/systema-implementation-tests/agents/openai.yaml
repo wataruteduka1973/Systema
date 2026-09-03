@@ -1,0 +1,3 @@
+interface:
+  display_name: "Systema 実装・テスト"
+  short_description: "規約準拠の実装とリスク別テストを作成"

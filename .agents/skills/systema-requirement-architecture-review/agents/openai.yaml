@@ -1,0 +1,3 @@
+interface:
+  display_name: "Systema 要件・設計レビュー"
+  short_description: "曖昧な要件と設計境界を実装前に確認"

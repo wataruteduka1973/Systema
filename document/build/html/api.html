@@ -53,16 +53,24 @@
 <li class="toctree-l1 current"><a class="current reference internal" href="#">API</a><ul>
 <li class="toctree-l2"><a class="reference internal" href="#Main.views.api.RealtimeSearch"><code class="docutils literal notranslate"><span class="pre">RealtimeSearch()</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="#Main.views.api.complex_market_data"><code class="docutils literal notranslate"><span class="pre">complex_market_data()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#Main.views.api.convert_watch_item_to_inventory"><code class="docutils literal notranslate"><span class="pre">convert_watch_item_to_inventory()</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="#Main.views.api.delete_market_data"><code class="docutils literal notranslate"><span class="pre">delete_market_data()</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="#Main.views.api.get_market_data"><code class="docutils literal notranslate"><span class="pre">get_market_data()</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="#Main.views.api.get_popular_words"><code class="docutils literal notranslate"><span class="pre">get_popular_words()</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="#Main.views.api.get_search_words"><code class="docutils literal notranslate"><span class="pre">get_search_words()</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="#Main.views.api.handle_search_response"><code class="docutils literal notranslate"><span class="pre">handle_search_response()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#Main.views.api.inventory_item"><code class="docutils literal notranslate"><span class="pre">inventory_item()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#Main.views.api.inventory_items"><code class="docutils literal notranslate"><span class="pre">inventory_items()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#Main.views.api.inventory_profit_simulation"><code class="docutils literal notranslate"><span class="pre">inventory_profit_simulation()</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="#Main.views.api.perform_search"><code class="docutils literal notranslate"><span class="pre">perform_search()</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="#Main.views.api.prediction_market"><code class="docutils literal notranslate"><span class="pre">prediction_market()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#Main.views.api.run_saved_search"><code class="docutils literal notranslate"><span class="pre">run_saved_search()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#Main.views.api.saved_search_item"><code class="docutils literal notranslate"><span class="pre">saved_search_item()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#Main.views.api.saved_searches"><code class="docutils literal notranslate"><span class="pre">saved_searches()</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="#Main.views.api.update_market_data"><code class="docutils literal notranslate"><span class="pre">update_market_data()</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="#Main.views.api.watchlist"><code class="docutils literal notranslate"><span class="pre">watchlist()</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="#Main.views.api.watchlist_item"><code class="docutils literal notranslate"><span class="pre">watchlist_item()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#Main.views.api.watchlist_snapshots"><code class="docutils literal notranslate"><span class="pre">watchlist_snapshots()</span></code></a></li>
 </ul>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="utils.html">ユーティリティ</a></li>
@@ -109,6 +117,12 @@
 </dd></dl>
 
 <dl class="py function">
+<dt class="sig sig-object py" id="Main.views.api.convert_watch_item_to_inventory">
+<span class="sig-prename descclassname"><span class="pre">Main.views.api.</span></span><span class="sig-name descname"><span class="pre">convert_watch_item_to_inventory</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">request</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">watch_item_id</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/Main/views/api.html#convert_watch_item_to_inventory"><span class="viewcode-link"><span class="pre">[ソース]</span></span></a><a class="headerlink" href="#Main.views.api.convert_watch_item_to_inventory" title="Link to this definition"></a></dt>
+<dd><p>本人の購入候補を重複なく仕入済み在庫へ変換する。</p>
+</dd></dl>
+
+<dl class="py function">
 <dt class="sig sig-object py" id="Main.views.api.delete_market_data">
 <span class="sig-prename descclassname"><span class="pre">Main.views.api.</span></span><span class="sig-name descname"><span class="pre">delete_market_data</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">request</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/Main/views/api.html#delete_market_data"><span class="viewcode-link"><span class="pre">[ソース]</span></span></a><a class="headerlink" href="#Main.views.api.delete_market_data" title="Link to this definition"></a></dt>
 <dd><p>フロントエンドから取得した対象を削除する</p>
@@ -134,8 +148,26 @@
 
 <dl class="py function">
 <dt class="sig sig-object py" id="Main.views.api.handle_search_response">
-<span class="sig-prename descclassname"><span class="pre">Main.views.api.</span></span><span class="sig-name descname"><span class="pre">handle_search_response</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">request</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">data_fetch_func</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">save_func</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">include_condition_analysis</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/Main/views/api.html#handle_search_response"><span class="viewcode-link"><span class="pre">[ソース]</span></span></a><a class="headerlink" href="#Main.views.api.handle_search_response" title="Link to this definition"></a></dt>
+<span class="sig-prename descclassname"><span class="pre">Main.views.api.</span></span><span class="sig-name descname"><span class="pre">handle_search_response</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">request</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">data_fetch_func</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">save_func</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">include_condition_analysis</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">search_type</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'closed'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">criteria</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/Main/views/api.html#handle_search_response"><span class="viewcode-link"><span class="pre">[ソース]</span></span></a><a class="headerlink" href="#Main.views.api.handle_search_response" title="Link to this definition"></a></dt>
 <dd><p>共通の検索処理を行うヘルパー関数。</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="Main.views.api.inventory_item">
+<span class="sig-prename descclassname"><span class="pre">Main.views.api.</span></span><span class="sig-name descname"><span class="pre">inventory_item</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">request</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">item_id</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/Main/views/api.html#inventory_item"><span class="viewcode-link"><span class="pre">[ソース]</span></span></a><a class="headerlink" href="#Main.views.api.inventory_item" title="Link to this definition"></a></dt>
+<dd><p>本人の在庫だけを参照、更新、削除する。</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="Main.views.api.inventory_items">
+<span class="sig-prename descclassname"><span class="pre">Main.views.api.</span></span><span class="sig-name descname"><span class="pre">inventory_items</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">request</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/Main/views/api.html#inventory_items"><span class="viewcode-link"><span class="pre">[ソース]</span></span></a><a class="headerlink" href="#Main.views.api.inventory_items" title="Link to this definition"></a></dt>
+<dd><p>本人の在庫を一覧、または手動登録する。</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="Main.views.api.inventory_profit_simulation">
+<span class="sig-prename descclassname"><span class="pre">Main.views.api.</span></span><span class="sig-name descname"><span class="pre">inventory_profit_simulation</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">request</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">item_id</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/Main/views/api.html#inventory_profit_simulation"><span class="viewcode-link"><span class="pre">[ソース]</span></span></a><a class="headerlink" href="#Main.views.api.inventory_profit_simulation" title="Link to this definition"></a></dt>
+<dd><p>本人の在庫について、入力値を保存せず見込み利益を計算する。</p>
 </dd></dl>
 
 <dl class="py function">
@@ -148,6 +180,24 @@
 <dt class="sig sig-object py" id="Main.views.api.prediction_market">
 <span class="sig-prename descclassname"><span class="pre">Main.views.api.</span></span><span class="sig-name descname"><span class="pre">prediction_market</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">request</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/Main/views/api.html#prediction_market"><span class="viewcode-link"><span class="pre">[ソース]</span></span></a><a class="headerlink" href="#Main.views.api.prediction_market" title="Link to this definition"></a></dt>
 <dd><p>過去90日間の価格推移を分析し、異常値を排除した90日移動平均と1ヶ月予測を返す。</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="Main.views.api.run_saved_search">
+<span class="sig-prename descclassname"><span class="pre">Main.views.api.</span></span><span class="sig-name descname"><span class="pre">run_saved_search</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">request</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">saved_search_id</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/Main/views/api.html#run_saved_search"><span class="viewcode-link"><span class="pre">[ソース]</span></span></a><a class="headerlink" href="#Main.views.api.run_saved_search" title="Link to this definition"></a></dt>
+<dd><p>本人の有効な保存条件を共通検索処理で即時実行する。</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="Main.views.api.saved_search_item">
+<span class="sig-prename descclassname"><span class="pre">Main.views.api.</span></span><span class="sig-name descname"><span class="pre">saved_search_item</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">request</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">saved_search_id</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/Main/views/api.html#saved_search_item"><span class="viewcode-link"><span class="pre">[ソース]</span></span></a><a class="headerlink" href="#Main.views.api.saved_search_item" title="Link to this definition"></a></dt>
+<dd><p>本人の保存条件だけを参照、更新、削除する。</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="Main.views.api.saved_searches">
+<span class="sig-prename descclassname"><span class="pre">Main.views.api.</span></span><span class="sig-name descname"><span class="pre">saved_searches</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">request</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/Main/views/api.html#saved_searches"><span class="viewcode-link"><span class="pre">[ソース]</span></span></a><a class="headerlink" href="#Main.views.api.saved_searches" title="Link to this definition"></a></dt>
+<dd><p>本人の保存条件を一覧、または作成する。</p>
 </dd></dl>
 
 <dl class="py function">
@@ -165,7 +215,13 @@
 <dl class="py function">
 <dt class="sig sig-object py" id="Main.views.api.watchlist_item">
 <span class="sig-prename descclassname"><span class="pre">Main.views.api.</span></span><span class="sig-name descname"><span class="pre">watchlist_item</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">request</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">item_id</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/Main/views/api.html#watchlist_item"><span class="viewcode-link"><span class="pre">[ソース]</span></span></a><a class="headerlink" href="#Main.views.api.watchlist_item" title="Link to this definition"></a></dt>
-<dd><p>ウォッチ商品を解除する。</p>
+<dd><p>ウォッチ商品のユーザー管理情報を更新、または解除する。</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="Main.views.api.watchlist_snapshots">
+<span class="sig-prename descclassname"><span class="pre">Main.views.api.</span></span><span class="sig-name descname"><span class="pre">watchlist_snapshots</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">request</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">item_id</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/Main/views/api.html#watchlist_snapshots"><span class="viewcode-link"><span class="pre">[ソース]</span></span></a><a class="headerlink" href="#Main.views.api.watchlist_snapshots" title="Link to this definition"></a></dt>
+<dd><p>本人所有のウォッチ商品の価格履歴と分析結果を返す。</p>
 </dd></dl>
 
 <p>このモジュールはDjangoのAPIエンドポイント（検索・データ取得・更新・削除など）を提供します。</p>

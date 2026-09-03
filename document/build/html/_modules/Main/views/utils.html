@@ -79,42 +79,66 @@
              
   <h1>Main.views.utils のソースコード</h1><div class="highlight"><pre>
 <span></span><span class="kn">import</span><span class="w"> </span><span class="nn">logging</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">math</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">re</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">collections</span><span class="w"> </span><span class="kn">import</span> <span class="n">Counter</span>
-<span class="kn">from</span><span class="w"> </span><span class="nn">datetime</span><span class="w"> </span><span class="kn">import</span> <span class="n">datetime</span><span class="p">,</span> <span class="n">timedelta</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">datetime</span><span class="w"> </span><span class="kn">import</span> <span class="n">datetime</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">urllib.parse</span><span class="w"> </span><span class="kn">import</span> <span class="n">urlencode</span>
 
-<span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">django.http</span><span class="w"> </span><span class="kn">import</span> <span class="n">JsonResponse</span>
-<span class="kn">from</span><span class="w"> </span><span class="nn">django.views.decorators.csrf</span><span class="w"> </span><span class="kn">import</span> <span class="n">csrf_exempt</span>
-<span class="kn">from</span><span class="w"> </span><span class="nn">sklearn.cluster</span><span class="w"> </span><span class="kn">import</span> <span class="n">KMeans</span>
 
 <span class="kn">from</span><span class="w"> </span><span class="nn">Main.domain.auction_time</span><span class="w"> </span><span class="kn">import</span> <span class="n">format_remaining_time</span><span class="p">,</span> <span class="n">parse_duration_seconds</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">Main.domain.buying_opportunity</span><span class="w"> </span><span class="kn">import</span> <span class="n">evaluate_buying_opportunity</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">Main.domain.product_condition</span><span class="w"> </span><span class="kn">import</span> <span class="n">enrich_market_items</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">Main.infrastructure.http</span><span class="w"> </span><span class="kn">import</span> <span class="n">get_with_retry</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">Main.models.scraping</span><span class="w"> </span><span class="kn">import</span> <span class="n">scraping</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">Main.models.searchrun</span><span class="w"> </span><span class="kn">import</span> <span class="n">SearchRun</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">Main.models.searchwordlog</span><span class="w"> </span><span class="kn">import</span> <span class="n">searchwordlog</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">Main.scraping.yahoo</span><span class="w"> </span><span class="kn">import</span> <span class="n">YahooAuctionParser</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">Main.services.exceptions</span><span class="w"> </span><span class="kn">import</span> <span class="n">ExternalServiceError</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">Main.services.external_search</span><span class="w"> </span><span class="kn">import</span> <span class="n">normalize_search_keyword</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">Main.services.market_statistics</span><span class="w"> </span><span class="kn">import</span> <span class="p">(</span>
+    <span class="n">analyze_market_prices</span><span class="p">,</span>
+    <span class="n">enrich_items_with_market_comparison</span><span class="p">,</span>
+<span class="p">)</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">Main.services.ownership</span><span class="w"> </span><span class="kn">import</span> <span class="n">get_request_owner</span><span class="p">,</span> <span class="n">owner_query</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">Main.services.search_criteria</span><span class="w"> </span><span class="kn">import</span> <span class="n">SearchCriteria</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">Main.services.search_observability</span><span class="w"> </span><span class="kn">import</span> <span class="p">(</span>
+    <span class="n">FAILURE_EXTERNAL_SERVICE</span><span class="p">,</span>
+    <span class="n">FAILURE_INSUFFICIENT_DATA</span><span class="p">,</span>
+    <span class="n">FAILURE_NO_DATA</span><span class="p">,</span>
+    <span class="n">FAILURE_UNEXPECTED</span><span class="p">,</span>
+    <span class="n">SearchTimer</span><span class="p">,</span>
+<span class="p">)</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">Main.services.time_series_analysis</span><span class="w"> </span><span class="kn">import</span> <span class="p">(</span>
+    <span class="n">analyze_snapshot_history</span><span class="p">,</span>
+    <span class="n">analyze_stored_market</span><span class="p">,</span>
+    <span class="n">predict_market_prices</span><span class="p">,</span>
+<span class="p">)</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">Main.services.watchlist</span><span class="w"> </span><span class="kn">import</span> <span class="n">refresh_watched_item</span>
 
-<span class="n">logger</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="s2">&quot;search_logger&quot;</span><span class="p">)</span>
+<span class="n">logger</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="s2">"search_logger"</span><span class="p">)</span>
+<span class="n">EXTERNAL_SERVICE_MESSAGE</span> <span class="o">=</span> <span class="s2">"外部サービスからデータを取得できませんでした"</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_build_search_url</span><span class="p">(</span><span class="n">base_url</span><span class="p">,</span> <span class="n">parameters</span><span class="p">):</span>
+    <span class="k">return</span> <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">base_url</span><span class="si">}</span><span class="s2">?</span><span class="si">{</span><span class="n">urlencode</span><span class="p">(</span><span class="n">parameters</span><span class="p">)</span><span class="si">}</span><span class="s2">"</span>
 
 
 <span class="k">def</span><span class="w"> </span><span class="nf">_normalize_url</span><span class="p">(</span><span class="n">raw_url</span><span class="p">):</span>
     <span class="k">if</span> <span class="ow">not</span> <span class="n">raw_url</span><span class="p">:</span>
-        <span class="k">return</span> <span class="s2">&quot;#&quot;</span>
+        <span class="k">return</span> <span class="s2">"#"</span>
     <span class="n">value</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">raw_url</span><span class="p">)</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span>
-    <span class="k">if</span> <span class="ow">not</span> <span class="n">value</span> <span class="ow">or</span> <span class="n">value</span> <span class="o">==</span> <span class="s2">&quot;#&quot;</span><span class="p">:</span>
-        <span class="k">return</span> <span class="s2">&quot;#&quot;</span>
-    <span class="k">if</span> <span class="n">value</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s2">&quot;http://&quot;</span><span class="p">)</span> <span class="ow">or</span> <span class="n">value</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s2">&quot;https://&quot;</span><span class="p">):</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">value</span> <span class="ow">or</span> <span class="n">value</span> <span class="o">==</span> <span class="s2">"#"</span><span class="p">:</span>
+        <span class="k">return</span> <span class="s2">"#"</span>
+    <span class="k">if</span> <span class="n">value</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s2">"http://"</span><span class="p">)</span> <span class="ow">or</span> <span class="n">value</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s2">"https://"</span><span class="p">):</span>
         <span class="k">return</span> <span class="n">value</span>
-    <span class="k">if</span> <span class="n">value</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s2">&quot;//&quot;</span><span class="p">):</span>
-        <span class="k">return</span> <span class="s2">&quot;https:&quot;</span> <span class="o">+</span> <span class="n">value</span>
-    <span class="k">if</span> <span class="n">value</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s2">&quot;/&quot;</span><span class="p">):</span>
-        <span class="k">return</span> <span class="s2">&quot;https://auctions.yahoo.co.jp&quot;</span> <span class="o">+</span> <span class="n">value</span>
-    <span class="k">if</span> <span class="n">value</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s2">&quot;jp/auction/&quot;</span><span class="p">)</span> <span class="ow">or</span> <span class="n">value</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s2">&quot;auction/&quot;</span><span class="p">):</span>
-        <span class="k">return</span> <span class="s2">&quot;https://auctions.yahoo.co.jp/&quot;</span> <span class="o">+</span> <span class="n">value</span>
+    <span class="k">if</span> <span class="n">value</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s2">"//"</span><span class="p">):</span>
+        <span class="k">return</span> <span class="s2">"https:"</span> <span class="o">+</span> <span class="n">value</span>
+    <span class="k">if</span> <span class="n">value</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s2">"/"</span><span class="p">):</span>
+        <span class="k">return</span> <span class="s2">"https://auctions.yahoo.co.jp"</span> <span class="o">+</span> <span class="n">value</span>
+    <span class="k">if</span> <span class="n">value</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s2">"jp/auction/"</span><span class="p">)</span> <span class="ow">or</span> <span class="n">value</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s2">"auction/"</span><span class="p">):</span>
+        <span class="k">return</span> <span class="s2">"https://auctions.yahoo.co.jp/"</span> <span class="o">+</span> <span class="n">value</span>
     <span class="k">return</span> <span class="n">value</span>
 
 
@@ -138,63 +162,91 @@
     <span class="k">return</span> <span class="n">YahooAuctionParser</span><span class="o">.</span><span class="n">normalize_item</span><span class="p">(</span><span class="n">item</span><span class="p">)</span>
 
 
+<span class="k">def</span><span class="w"> </span><span class="nf">_is_valid_listing</span><span class="p">(</span><span class="n">normalized</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">"""商品ID・価格・商品名を持つ実際の出品だけを許可する。"""</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">normalized</span><span class="p">:</span>
+        <span class="k">return</span> <span class="kc">False</span>
+    <span class="n">title</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">normalized</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"name"</span><span class="p">)</span> <span class="ow">or</span> <span class="s2">""</span><span class="p">)</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span>
+    <span class="n">price</span> <span class="o">=</span> <span class="n">normalized</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"price"</span><span class="p">)</span>
+    <span class="n">auction_id</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">normalized</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"auctionId"</span><span class="p">)</span> <span class="ow">or</span> <span class="s2">""</span><span class="p">)</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">auction_id</span><span class="p">:</span>
+        <span class="n">url_match</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">search</span><span class="p">(</span>
+            <span class="sa">r</span><span class="s2">"/(?:auction|item)/([a-z]?\d{8,})(?:[/?#]|$)"</span><span class="p">,</span>
+            <span class="nb">str</span><span class="p">(</span><span class="n">normalized</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"url"</span><span class="p">)</span> <span class="ow">or</span> <span class="s2">""</span><span class="p">),</span>
+            <span class="n">re</span><span class="o">.</span><span class="n">I</span><span class="p">,</span>
+        <span class="p">)</span>
+        <span class="n">auction_id</span> <span class="o">=</span> <span class="n">url_match</span><span class="o">.</span><span class="n">group</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span> <span class="k">if</span> <span class="n">url_match</span> <span class="k">else</span> <span class="s2">""</span>
+    <span class="k">return</span> <span class="p">(</span>
+        <span class="n">YahooAuctionParser</span><span class="o">.</span><span class="n">_is_valid_title_text</span><span class="p">(</span><span class="n">title</span><span class="p">)</span>
+        <span class="ow">and</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">price</span><span class="p">,</span> <span class="p">(</span><span class="nb">int</span><span class="p">,</span> <span class="nb">float</span><span class="p">))</span>
+        <span class="ow">and</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">price</span><span class="p">,</span> <span class="nb">bool</span><span class="p">)</span>
+        <span class="ow">and</span> <span class="n">price</span> <span class="o">&gt;</span> <span class="mi">0</span>
+        <span class="ow">and</span> <span class="n">re</span><span class="o">.</span><span class="n">fullmatch</span><span class="p">(</span><span class="sa">r</span><span class="s2">"[a-z]?\d{8,}"</span><span class="p">,</span> <span class="n">auction_id</span><span class="p">,</span> <span class="n">re</span><span class="o">.</span><span class="n">I</span><span class="p">)</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span>
+    <span class="p">)</span>
+
+
 <span class="k">def</span><span class="w"> </span><span class="nf">_format_remaining_time</span><span class="p">(</span><span class="n">end_time</span><span class="p">):</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;後方互換のため公開名を維持し、ドメイン層へ委譲する。&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">"""後方互換のため公開名を維持し、ドメイン層へ委譲する。"""</span>
     <span class="k">return</span> <span class="n">format_remaining_time</span><span class="p">(</span><span class="n">end_time</span><span class="p">)</span>
 
 
 <span class="k">def</span><span class="w"> </span><span class="nf">_request_with_retry</span><span class="p">(</span><span class="n">url</span><span class="p">,</span> <span class="n">headers</span><span class="p">,</span> <span class="n">max_retries</span><span class="o">=</span><span class="mi">3</span><span class="p">,</span> <span class="n">timeout</span><span class="o">=</span><span class="mi">15</span><span class="p">):</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;後方互換のため公開名を維持し、infrastructure層へ委譲する。&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">"""後方互換のため公開名を維持し、infrastructure層へ委譲する。"""</span>
     <span class="k">return</span> <span class="n">get_with_retry</span><span class="p">(</span><span class="n">url</span><span class="p">,</span> <span class="n">headers</span><span class="p">,</span> <span class="n">max_retries</span><span class="o">=</span><span class="n">max_retries</span><span class="p">,</span> <span class="n">timeout</span><span class="o">=</span><span class="n">timeout</span><span class="p">)</span>
 
 
 <div class="viewcode-block" id="scrape_data">
 <a class="viewcode-back" href="../../../utils.html#Main.views.utils.scrape_data">[ドキュメント]</a>
 <span class="k">def</span><span class="w"> </span><span class="nf">scrape_data</span><span class="p">(</span><span class="n">searchname</span><span class="p">):</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">"""</span>
 <span class="sd">    指定されたキーワードでヤフオクの落札履歴をスクレイピングする。</span>
-<span class="sd">    &quot;&quot;&quot;</span>
-    <span class="n">base_url</span> <span class="o">=</span> <span class="s2">&quot;https://auctions.yahoo.co.jp/closedsearch/closedsearch&quot;</span>
+<span class="sd">    """</span>
+    <span class="n">base_url</span> <span class="o">=</span> <span class="s2">"https://auctions.yahoo.co.jp/closedsearch/closedsearch"</span>
+    <span class="n">searchname</span> <span class="o">=</span> <span class="n">normalize_search_keyword</span><span class="p">(</span><span class="n">searchname</span><span class="p">)</span>
     <span class="n">urls</span> <span class="o">=</span> <span class="p">[</span>
-        <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">base_url</span><span class="si">}</span><span class="s2">?p=</span><span class="si">{</span><span class="n">searchname</span><span class="si">}</span><span class="s2">&amp;va=</span><span class="si">{</span><span class="n">searchname</span><span class="si">}</span><span class="s2">&amp;b=1&amp;n=100&amp;select=6&quot;</span><span class="p">,</span>
-        <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">base_url</span><span class="si">}</span><span class="s2">?p=</span><span class="si">{</span><span class="n">searchname</span><span class="si">}</span><span class="s2">&amp;va=</span><span class="si">{</span><span class="n">searchname</span><span class="si">}</span><span class="s2">&amp;b=101&amp;n=100&amp;select=6&quot;</span><span class="p">,</span>
+        <span class="n">_build_search_url</span><span class="p">(</span>
+            <span class="n">base_url</span><span class="p">,</span>
+            <span class="p">{</span><span class="s2">"p"</span><span class="p">:</span> <span class="n">searchname</span><span class="p">,</span> <span class="s2">"va"</span><span class="p">:</span> <span class="n">searchname</span><span class="p">,</span> <span class="s2">"b"</span><span class="p">:</span> <span class="n">offset</span><span class="p">,</span> <span class="s2">"n"</span><span class="p">:</span> <span class="mi">100</span><span class="p">,</span> <span class="s2">"select"</span><span class="p">:</span> <span class="mi">6</span><span class="p">},</span>
+        <span class="p">)</span>
+        <span class="k">for</span> <span class="n">offset</span> <span class="ow">in</span> <span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">101</span><span class="p">)</span>
     <span class="p">]</span>
 
     <span class="n">scraped_data_list</span> <span class="o">=</span> <span class="p">[]</span>
-    <span class="n">headers</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;User-Agent&quot;</span><span class="p">:</span> <span class="s2">&quot;Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36&quot;</span><span class="p">}</span>
-    <span class="k">if</span> <span class="n">searchname</span><span class="p">:</span>
-        <span class="n">searchwordlog</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">create</span><span class="p">(</span><span class="n">word</span><span class="o">=</span><span class="n">searchname</span><span class="p">)</span>
-
+    <span class="n">successful_pages</span> <span class="o">=</span> <span class="mi">0</span>
+    <span class="n">headers</span> <span class="o">=</span> <span class="p">{</span><span class="s2">"User-Agent"</span><span class="p">:</span> <span class="s2">"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"</span><span class="p">}</span>
     <span class="k">for</span> <span class="n">url</span> <span class="ow">in</span> <span class="n">urls</span><span class="p">:</span>
         <span class="k">try</span><span class="p">:</span>
             <span class="n">response</span> <span class="o">=</span> <span class="n">_request_with_retry</span><span class="p">(</span><span class="n">url</span><span class="p">,</span> <span class="n">headers</span><span class="o">=</span><span class="n">headers</span><span class="p">)</span>
+            <span class="n">successful_pages</span> <span class="o">+=</span> <span class="mi">1</span>
             <span class="n">html</span> <span class="o">=</span> <span class="n">response</span><span class="o">.</span><span class="n">text</span>
             <span class="n">items</span> <span class="o">=</span> <span class="n">_extract_listing_items</span><span class="p">(</span><span class="n">html</span><span class="p">)</span>
             <span class="k">if</span> <span class="ow">not</span> <span class="n">items</span><span class="p">:</span>
-                <span class="n">logger</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;No Yahoo item data extracted from </span><span class="si">{</span><span class="n">url</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+                <span class="n">logger</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="sa">f</span><span class="s2">"No Yahoo item data extracted from </span><span class="si">{</span><span class="n">url</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
                 <span class="k">continue</span>
 
             <span class="k">for</span> <span class="n">item</span> <span class="ow">in</span> <span class="n">items</span><span class="p">:</span>
                 <span class="n">normalized</span> <span class="o">=</span> <span class="n">_normalize_yahoo_item</span><span class="p">(</span><span class="n">item</span><span class="p">)</span>
-                <span class="k">if</span> <span class="n">normalized</span><span class="p">:</span>
+                <span class="k">if</span> <span class="n">_is_valid_listing</span><span class="p">(</span><span class="n">normalized</span><span class="p">):</span>
                     <span class="n">scraped_data_list</span><span class="o">.</span><span class="n">append</span><span class="p">(</span>
                         <span class="p">{</span>
-                            <span class="s2">&quot;name&quot;</span><span class="p">:</span> <span class="n">normalized</span><span class="p">[</span><span class="s2">&quot;name&quot;</span><span class="p">],</span>
-                            <span class="s2">&quot;price&quot;</span><span class="p">:</span> <span class="n">normalized</span><span class="p">[</span><span class="s2">&quot;price&quot;</span><span class="p">],</span>
-                            <span class="s2">&quot;startPrice&quot;</span><span class="p">:</span> <span class="n">normalized</span><span class="p">[</span><span class="s2">&quot;startPrice&quot;</span><span class="p">],</span>
-                            <span class="s2">&quot;bidding&quot;</span><span class="p">:</span> <span class="n">normalized</span><span class="p">[</span><span class="s2">&quot;bidding&quot;</span><span class="p">],</span>
-                            <span class="s2">&quot;time&quot;</span><span class="p">:</span> <span class="n">normalized</span><span class="p">[</span><span class="s2">&quot;time&quot;</span><span class="p">],</span>
-                            <span class="s2">&quot;url&quot;</span><span class="p">:</span> <span class="n">normalized</span><span class="p">[</span><span class="s2">&quot;url&quot;</span><span class="p">],</span>
+                            <span class="s2">"name"</span><span class="p">:</span> <span class="n">normalized</span><span class="p">[</span><span class="s2">"name"</span><span class="p">],</span>
+                            <span class="s2">"price"</span><span class="p">:</span> <span class="n">normalized</span><span class="p">[</span><span class="s2">"price"</span><span class="p">],</span>
+                            <span class="s2">"startPrice"</span><span class="p">:</span> <span class="n">normalized</span><span class="p">[</span><span class="s2">"startPrice"</span><span class="p">],</span>
+                            <span class="s2">"bidding"</span><span class="p">:</span> <span class="n">normalized</span><span class="p">[</span><span class="s2">"bidding"</span><span class="p">],</span>
+                            <span class="s2">"time"</span><span class="p">:</span> <span class="n">normalized</span><span class="p">[</span><span class="s2">"time"</span><span class="p">],</span>
+                            <span class="s2">"url"</span><span class="p">:</span> <span class="n">normalized</span><span class="p">[</span><span class="s2">"url"</span><span class="p">],</span>
                         <span class="p">}</span>
                     <span class="p">)</span>
 
         <span class="k">except</span> <span class="n">ExternalServiceError</span><span class="p">:</span>
-            <span class="n">logger</span><span class="o">.</span><span class="n">exception</span><span class="p">(</span><span class="s2">&quot;Yahoo終了商品ページの取得に失敗しました url=</span><span class="si">%s</span><span class="s2">&quot;</span><span class="p">,</span> <span class="n">url</span><span class="p">)</span>
+            <span class="n">logger</span><span class="o">.</span><span class="n">exception</span><span class="p">(</span><span class="s2">"Yahoo終了商品ページの取得に失敗しました"</span><span class="p">)</span>
             <span class="k">continue</span>
-        <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
-            <span class="n">logger</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Error processing URL </span><span class="si">{</span><span class="n">url</span><span class="si">}</span><span class="s2">: </span><span class="si">{</span><span class="nb">str</span><span class="p">(</span><span class="n">e</span><span class="p">)</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="k">except</span> <span class="ne">Exception</span><span class="p">:</span>
+            <span class="n">logger</span><span class="o">.</span><span class="n">exception</span><span class="p">(</span><span class="s2">"Yahoo終了商品ページの解析に失敗しました"</span><span class="p">)</span>
             <span class="k">continue</span>
 
+    <span class="k">if</span> <span class="n">successful_pages</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="n">ExternalServiceError</span><span class="p">(</span><span class="n">EXTERNAL_SERVICE_MESSAGE</span><span class="p">)</span>
     <span class="k">return</span> <span class="n">scraped_data_list</span><span class="p">[:</span><span class="mi">200</span><span class="p">]</span></div>
 
 
@@ -202,199 +254,387 @@
 <div class="viewcode-block" id="scrape_current_listings">
 <a class="viewcode-back" href="../../../utils.html#Main.views.utils.scrape_current_listings">[ドキュメント]</a>
 <span class="k">def</span><span class="w"> </span><span class="nf">scrape_current_listings</span><span class="p">(</span><span class="n">searchname</span><span class="p">):</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">"""</span>
 <span class="sd">    指定されたキーワードでヤフオクの現在出品されている商品をスクレイピングする。</span>
-<span class="sd">    &quot;&quot;&quot;</span>
-    <span class="n">base_url</span> <span class="o">=</span> <span class="s2">&quot;https://auctions.yahoo.co.jp/search/search&quot;</span>
+<span class="sd">    """</span>
+    <span class="n">base_url</span> <span class="o">=</span> <span class="s2">"https://auctions.yahoo.co.jp/search/search"</span>
+    <span class="n">searchname</span> <span class="o">=</span> <span class="n">normalize_search_keyword</span><span class="p">(</span><span class="n">searchname</span><span class="p">)</span>
     <span class="n">urls</span> <span class="o">=</span> <span class="p">[</span>
-        <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">base_url</span><span class="si">}</span><span class="s2">?auccat=&amp;tab_ex=commerce&amp;aq=-&amp;p=</span><span class="si">{</span><span class="n">searchname</span><span class="si">}</span><span class="s2">&amp;f=0:1&amp;b=1&amp;n=100&quot;</span><span class="p">,</span>
-        <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">base_url</span><span class="si">}</span><span class="s2">?auccat=&amp;tab_ex=commerce&amp;aq=-&amp;p=</span><span class="si">{</span><span class="n">searchname</span><span class="si">}</span><span class="s2">&amp;f=0:1&amp;b=101&amp;n=100&quot;</span><span class="p">,</span>
+        <span class="n">_build_search_url</span><span class="p">(</span>
+            <span class="n">base_url</span><span class="p">,</span>
+            <span class="p">{</span>
+                <span class="s2">"auccat"</span><span class="p">:</span> <span class="s2">""</span><span class="p">,</span>
+                <span class="s2">"tab_ex"</span><span class="p">:</span> <span class="s2">"commerce"</span><span class="p">,</span>
+                <span class="s2">"aq"</span><span class="p">:</span> <span class="s2">"-"</span><span class="p">,</span>
+                <span class="s2">"p"</span><span class="p">:</span> <span class="n">searchname</span><span class="p">,</span>
+                <span class="s2">"f"</span><span class="p">:</span> <span class="s2">"0:1"</span><span class="p">,</span>
+                <span class="s2">"b"</span><span class="p">:</span> <span class="n">offset</span><span class="p">,</span>
+                <span class="s2">"n"</span><span class="p">:</span> <span class="mi">100</span><span class="p">,</span>
+            <span class="p">},</span>
+        <span class="p">)</span>
+        <span class="k">for</span> <span class="n">offset</span> <span class="ow">in</span> <span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">101</span><span class="p">)</span>
     <span class="p">]</span>
-    <span class="k">if</span> <span class="n">searchname</span><span class="p">:</span>
-        <span class="n">searchwordlog</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">create</span><span class="p">(</span><span class="n">word</span><span class="o">=</span><span class="n">searchname</span><span class="p">)</span>
     <span class="n">scraped_data_list</span> <span class="o">=</span> <span class="p">[]</span>
-    <span class="n">headers</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;User-Agent&quot;</span><span class="p">:</span> <span class="s2">&quot;Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36&quot;</span><span class="p">}</span>
+    <span class="n">successful_pages</span> <span class="o">=</span> <span class="mi">0</span>
+    <span class="n">headers</span> <span class="o">=</span> <span class="p">{</span><span class="s2">"User-Agent"</span><span class="p">:</span> <span class="s2">"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"</span><span class="p">}</span>
 
     <span class="k">for</span> <span class="n">url</span> <span class="ow">in</span> <span class="n">urls</span><span class="p">:</span>
         <span class="k">try</span><span class="p">:</span>
             <span class="n">response</span> <span class="o">=</span> <span class="n">_request_with_retry</span><span class="p">(</span><span class="n">url</span><span class="p">,</span> <span class="n">headers</span><span class="o">=</span><span class="n">headers</span><span class="p">)</span>
+            <span class="n">successful_pages</span> <span class="o">+=</span> <span class="mi">1</span>
             <span class="n">items</span> <span class="o">=</span> <span class="n">_extract_listing_items</span><span class="p">(</span><span class="n">response</span><span class="o">.</span><span class="n">text</span><span class="p">)</span>
             <span class="k">for</span> <span class="n">item</span> <span class="ow">in</span> <span class="n">items</span><span class="p">:</span>
                 <span class="n">normalized</span> <span class="o">=</span> <span class="n">_normalize_yahoo_item</span><span class="p">(</span><span class="n">item</span><span class="p">)</span>
-                <span class="k">if</span> <span class="ow">not</span> <span class="n">normalized</span><span class="p">:</span>
+                <span class="k">if</span> <span class="ow">not</span> <span class="n">_is_valid_listing</span><span class="p">(</span><span class="n">normalized</span><span class="p">):</span>
                     <span class="k">continue</span>
                 <span class="n">scraped_data_list</span><span class="o">.</span><span class="n">append</span><span class="p">(</span>
                     <span class="p">{</span>
-                        <span class="s2">&quot;name&quot;</span><span class="p">:</span> <span class="n">normalized</span><span class="p">[</span><span class="s2">&quot;name&quot;</span><span class="p">],</span>
-                        <span class="s2">&quot;currentPrice&quot;</span><span class="p">:</span> <span class="n">normalized</span><span class="p">[</span><span class="s2">&quot;price&quot;</span><span class="p">],</span>
-                        <span class="s2">&quot;bidding&quot;</span><span class="p">:</span> <span class="n">normalized</span><span class="p">[</span><span class="s2">&quot;bidding&quot;</span><span class="p">],</span>
-                        <span class="s2">&quot;remainingTime&quot;</span><span class="p">:</span> <span class="n">_format_remaining_time</span><span class="p">(</span><span class="n">normalized</span><span class="p">[</span><span class="s2">&quot;time&quot;</span><span class="p">]),</span>
-                        <span class="s2">&quot;url&quot;</span><span class="p">:</span> <span class="n">normalized</span><span class="p">[</span><span class="s2">&quot;url&quot;</span><span class="p">],</span>
+                        <span class="s2">"name"</span><span class="p">:</span> <span class="n">normalized</span><span class="p">[</span><span class="s2">"name"</span><span class="p">],</span>
+                        <span class="s2">"currentPrice"</span><span class="p">:</span> <span class="n">normalized</span><span class="p">[</span><span class="s2">"price"</span><span class="p">],</span>
+                        <span class="s2">"bidding"</span><span class="p">:</span> <span class="n">normalized</span><span class="p">[</span><span class="s2">"bidding"</span><span class="p">],</span>
+                        <span class="s2">"remainingTime"</span><span class="p">:</span> <span class="n">_format_remaining_time</span><span class="p">(</span><span class="n">normalized</span><span class="p">[</span><span class="s2">"time"</span><span class="p">]),</span>
+                        <span class="s2">"url"</span><span class="p">:</span> <span class="n">normalized</span><span class="p">[</span><span class="s2">"url"</span><span class="p">],</span>
                     <span class="p">}</span>
                 <span class="p">)</span>
 
         <span class="k">except</span> <span class="n">ExternalServiceError</span><span class="p">:</span>
-            <span class="n">logger</span><span class="o">.</span><span class="n">exception</span><span class="p">(</span><span class="s2">&quot;Yahoo出品中ページの取得に失敗しました url=</span><span class="si">%s</span><span class="s2">&quot;</span><span class="p">,</span> <span class="n">url</span><span class="p">)</span>
+            <span class="n">logger</span><span class="o">.</span><span class="n">exception</span><span class="p">(</span><span class="s2">"Yahoo出品中ページの取得に失敗しました"</span><span class="p">)</span>
             <span class="k">continue</span>
-        <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
-            <span class="n">logger</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Error processing URL </span><span class="si">{</span><span class="n">url</span><span class="si">}</span><span class="s2">: </span><span class="si">{</span><span class="nb">str</span><span class="p">(</span><span class="n">e</span><span class="p">)</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="k">except</span> <span class="ne">Exception</span><span class="p">:</span>
+            <span class="n">logger</span><span class="o">.</span><span class="n">exception</span><span class="p">(</span><span class="s2">"Yahoo出品中ページの解析に失敗しました"</span><span class="p">)</span>
             <span class="k">continue</span>
 
+    <span class="k">if</span> <span class="n">successful_pages</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="n">ExternalServiceError</span><span class="p">(</span><span class="n">EXTERNAL_SERVICE_MESSAGE</span><span class="p">)</span>
     <span class="k">return</span> <span class="n">scraped_data_list</span><span class="p">[:</span><span class="mi">200</span><span class="p">]</span></div>
+
+
+
+<div class="viewcode-block" id="record_search_run">
+<a class="viewcode-back" href="../../../utils.html#Main.views.utils.record_search_run">[ドキュメント]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">record_search_run</span><span class="p">(</span>
+    <span class="n">request</span><span class="p">,</span>
+    <span class="n">searchname</span><span class="p">,</span>
+    <span class="n">search_type</span><span class="p">,</span>
+    <span class="n">item_count</span><span class="p">,</span>
+    <span class="n">succeeded</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+    <span class="n">record_word</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+    <span class="n">criteria_snapshot</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+    <span class="n">trigger</span><span class="o">=</span><span class="s2">"manual"</span><span class="p">,</span>
+    <span class="n">duration_ms</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+    <span class="n">failure_code</span><span class="o">=</span><span class="s2">""</span><span class="p">,</span>
+    <span class="n">saved_search</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+<span class="p">):</span>
+    <span class="n">owner</span> <span class="o">=</span> <span class="n">get_request_owner</span><span class="p">(</span><span class="n">request</span><span class="p">)</span>
+    <span class="n">saved_search</span> <span class="o">=</span> <span class="n">saved_search</span> <span class="ow">or</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">request</span><span class="p">,</span> <span class="s2">"saved_search"</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">trigger</span> <span class="o">==</span> <span class="s2">"manual"</span><span class="p">:</span>
+        <span class="n">trigger</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">request</span><span class="p">,</span> <span class="s2">"search_trigger"</span><span class="p">,</span> <span class="n">trigger</span><span class="p">)</span>
+    <span class="n">run</span> <span class="o">=</span> <span class="n">SearchRun</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">create</span><span class="p">(</span>
+        <span class="o">**</span><span class="n">owner</span><span class="o">.</span><span class="n">model_values</span><span class="p">,</span>
+        <span class="n">saved_search</span><span class="o">=</span><span class="n">saved_search</span><span class="p">,</span>
+        <span class="n">keyword</span><span class="o">=</span><span class="n">searchname</span><span class="p">,</span>
+        <span class="n">search_type</span><span class="o">=</span><span class="n">search_type</span><span class="p">,</span>
+        <span class="n">item_count</span><span class="o">=</span><span class="n">item_count</span><span class="p">,</span>
+        <span class="n">succeeded</span><span class="o">=</span><span class="n">succeeded</span><span class="p">,</span>
+        <span class="n">criteria_snapshot</span><span class="o">=</span><span class="n">criteria_snapshot</span> <span class="ow">or</span> <span class="p">{},</span>
+        <span class="n">trigger</span><span class="o">=</span><span class="n">trigger</span><span class="p">,</span>
+        <span class="n">duration_ms</span><span class="o">=</span><span class="n">duration_ms</span><span class="p">,</span>
+        <span class="n">failure_code</span><span class="o">=</span><span class="n">failure_code</span><span class="p">,</span>
+    <span class="p">)</span>
+    <span class="k">if</span> <span class="n">record_word</span><span class="p">:</span>
+        <span class="n">searchwordlog</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">create</span><span class="p">(</span><span class="o">**</span><span class="n">owner</span><span class="o">.</span><span class="n">model_values</span><span class="p">,</span> <span class="n">word</span><span class="o">=</span><span class="n">searchname</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">run</span></div>
+
+
+
+<div class="viewcode-block" id="update_search_run_observability">
+<a class="viewcode-back" href="../../../utils.html#Main.views.utils.update_search_run_observability">[ドキュメント]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">update_search_run_observability</span><span class="p">(</span><span class="n">run</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">duration_ms</span><span class="p">,</span> <span class="n">succeeded</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">failure_code</span><span class="o">=</span><span class="s2">""</span><span class="p">):</span>
+    <span class="n">run</span><span class="o">.</span><span class="n">duration_ms</span> <span class="o">=</span> <span class="n">duration_ms</span>
+    <span class="n">run</span><span class="o">.</span><span class="n">succeeded</span> <span class="o">=</span> <span class="n">succeeded</span>
+    <span class="n">run</span><span class="o">.</span><span class="n">failure_code</span> <span class="o">=</span> <span class="n">failure_code</span>
+    <span class="n">run</span><span class="o">.</span><span class="n">save</span><span class="p">(</span><span class="n">update_fields</span><span class="o">=</span><span class="p">(</span><span class="s2">"duration_ms"</span><span class="p">,</span> <span class="s2">"succeeded"</span><span class="p">,</span> <span class="s2">"failure_code"</span><span class="p">))</span>
+    <span class="k">return</span> <span class="n">run</span></div>
 
 
 
 <div class="viewcode-block" id="save_to_database">
 <a class="viewcode-back" href="../../../utils.html#Main.views.utils.save_to_database">[ドキュメント]</a>
-<span class="k">def</span><span class="w"> </span><span class="nf">save_to_database</span><span class="p">(</span><span class="n">searchname</span><span class="p">,</span> <span class="n">scraped_data_list</span><span class="p">):</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">save_to_database</span><span class="p">(</span><span class="n">searchname</span><span class="p">,</span> <span class="n">scraped_data_list</span><span class="p">,</span> <span class="n">search_run</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">"""</span>
 <span class="sd">    スクレイピングされたデータをデータベースに保存する。</span>
-<span class="sd">    &quot;&quot;&quot;</span>
+<span class="sd">    """</span>
     <span class="n">now_time</span> <span class="o">=</span> <span class="n">datetime</span><span class="o">.</span><span class="n">now</span><span class="p">()</span>
-    <span class="n">SearchDay</span> <span class="o">=</span> <span class="n">now_time</span><span class="o">.</span><span class="n">strftime</span><span class="p">(</span><span class="s2">&quot;%Y-%m-</span><span class="si">%d</span><span class="s2"> %H:%M:%S&quot;</span><span class="p">)</span>
-
-    <span class="c1"># 同名のSearchWordが存在する場合、削除</span>
-    <span class="n">scraping</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">filter</span><span class="p">(</span><span class="n">SearchWord</span><span class="o">=</span><span class="n">searchname</span><span class="p">)</span><span class="o">.</span><span class="n">delete</span><span class="p">()</span>
+    <span class="n">SearchDay</span> <span class="o">=</span> <span class="n">now_time</span><span class="o">.</span><span class="n">strftime</span><span class="p">(</span><span class="s2">"%Y-%m-</span><span class="si">%d</span><span class="s2"> %H:%M:%S"</span><span class="p">)</span>
 
     <span class="k">for</span> <span class="n">scraped_data</span> <span class="ow">in</span> <span class="n">scraped_data_list</span><span class="p">:</span>
         <span class="k">try</span><span class="p">:</span>
             <span class="n">scraping</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">create</span><span class="p">(</span>
+                <span class="n">search_run</span><span class="o">=</span><span class="n">search_run</span><span class="p">,</span>
                 <span class="n">SearchWord</span><span class="o">=</span><span class="n">searchname</span><span class="p">,</span>
                 <span class="n">SearchDay</span><span class="o">=</span><span class="n">SearchDay</span><span class="p">,</span>
-                <span class="n">Name</span><span class="o">=</span><span class="n">scraped_data</span><span class="p">[</span><span class="s2">&quot;name&quot;</span><span class="p">],</span>
-                <span class="n">EndPrice</span><span class="o">=</span><span class="n">scraped_data</span><span class="p">[</span><span class="s2">&quot;price&quot;</span><span class="p">],</span>
-                <span class="n">StartPrice</span><span class="o">=</span><span class="n">scraped_data</span><span class="p">[</span><span class="s2">&quot;startPrice&quot;</span><span class="p">],</span>
-                <span class="n">Bidding</span><span class="o">=</span><span class="n">scraped_data</span><span class="p">[</span><span class="s2">&quot;bidding&quot;</span><span class="p">],</span>
-                <span class="n">URL</span><span class="o">=</span><span class="n">scraped_data</span><span class="p">[</span><span class="s2">&quot;url&quot;</span><span class="p">],</span>
+                <span class="n">Name</span><span class="o">=</span><span class="n">scraped_data</span><span class="p">[</span><span class="s2">"name"</span><span class="p">],</span>
+                <span class="n">EndPrice</span><span class="o">=</span><span class="n">scraped_data</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"price"</span><span class="p">,</span> <span class="n">scraped_data</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"currentPrice"</span><span class="p">,</span> <span class="mi">0</span><span class="p">)),</span>
+                <span class="n">StartPrice</span><span class="o">=</span><span class="n">scraped_data</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"startPrice"</span><span class="p">,</span> <span class="n">scraped_data</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"currentPrice"</span><span class="p">,</span> <span class="mi">0</span><span class="p">)),</span>
+                <span class="n">Bidding</span><span class="o">=</span><span class="n">scraped_data</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"bidding"</span><span class="p">,</span> <span class="mi">0</span><span class="p">),</span>
+                <span class="n">URL</span><span class="o">=</span><span class="n">scraped_data</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"url"</span><span class="p">,</span> <span class="s2">"#"</span><span class="p">),</span>
             <span class="p">)</span>
         <span class="k">except</span> <span class="ne">Exception</span><span class="p">:</span>
-            <span class="n">logger</span><span class="o">.</span><span class="n">exception</span><span class="p">(</span><span class="s2">&quot;相場データの保存に失敗しました keyword=</span><span class="si">%s</span><span class="s2">&quot;</span><span class="p">,</span> <span class="n">searchname</span><span class="p">)</span></div>
+            <span class="n">logger</span><span class="o">.</span><span class="n">exception</span><span class="p">(</span><span class="s2">"相場データの保存に失敗しました keyword=</span><span class="si">%s</span><span class="s2">"</span><span class="p">,</span> <span class="n">searchname</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">search_run</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">owner</span> <span class="o">=</span> <span class="p">{</span><span class="s2">"user"</span><span class="p">:</span> <span class="n">search_run</span><span class="o">.</span><span class="n">user</span><span class="p">,</span> <span class="s2">"session_key"</span><span class="p">:</span> <span class="n">search_run</span><span class="o">.</span><span class="n">session_key</span><span class="p">}</span>
+        <span class="n">retained_ids</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span>
+            <span class="n">SearchRun</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">filter</span><span class="p">(</span>
+                <span class="o">**</span><span class="n">owner</span><span class="p">,</span> <span class="n">keyword</span><span class="o">=</span><span class="n">searchname</span><span class="p">,</span> <span class="n">search_type</span><span class="o">=</span><span class="n">search_run</span><span class="o">.</span><span class="n">search_type</span>
+            <span class="p">)</span><span class="o">.</span><span class="n">values_list</span><span class="p">(</span><span class="s2">"id"</span><span class="p">,</span> <span class="n">flat</span><span class="o">=</span><span class="kc">True</span><span class="p">)[:</span><span class="mi">50</span><span class="p">]</span>
+        <span class="p">)</span>
+        <span class="n">SearchRun</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">filter</span><span class="p">(</span>
+            <span class="o">**</span><span class="n">owner</span><span class="p">,</span> <span class="n">keyword</span><span class="o">=</span><span class="n">searchname</span><span class="p">,</span> <span class="n">search_type</span><span class="o">=</span><span class="n">search_run</span><span class="o">.</span><span class="n">search_type</span>
+        <span class="p">)</span><span class="o">.</span><span class="n">exclude</span><span class="p">(</span><span class="n">pk__in</span><span class="o">=</span><span class="n">retained_ids</span><span class="p">)</span><span class="o">.</span><span class="n">delete</span><span class="p">()</span></div>
 
 
 
 <div class="viewcode-block" id="get_search_words_logic">
 <a class="viewcode-back" href="../../../utils.html#Main.views.utils.get_search_words_logic">[ドキュメント]</a>
 <span class="k">def</span><span class="w"> </span><span class="nf">get_search_words_logic</span><span class="p">(</span><span class="n">request</span><span class="p">):</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">"""</span>
 <span class="sd">    データベースからユニークな検索ワードのリストを取得する。</span>
-<span class="sd">    &quot;&quot;&quot;</span>
-    <span class="k">if</span> <span class="n">request</span><span class="o">.</span><span class="n">method</span> <span class="o">!=</span> <span class="s2">&quot;GET&quot;</span><span class="p">:</span>
-        <span class="k">return</span> <span class="n">JsonResponse</span><span class="p">({</span><span class="s2">&quot;error&quot;</span><span class="p">:</span> <span class="s2">&quot;Invalid request method&quot;</span><span class="p">},</span> <span class="n">status</span><span class="o">=</span><span class="mi">400</span><span class="p">)</span>
+<span class="sd">    """</span>
+    <span class="k">if</span> <span class="n">request</span><span class="o">.</span><span class="n">method</span> <span class="o">!=</span> <span class="s2">"GET"</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">JsonResponse</span><span class="p">({</span><span class="s2">"error"</span><span class="p">:</span> <span class="s2">"Invalid request method"</span><span class="p">},</span> <span class="n">status</span><span class="o">=</span><span class="mi">400</span><span class="p">)</span>
     <span class="k">try</span><span class="p">:</span>
-        <span class="n">search_words</span> <span class="o">=</span> <span class="n">scraping</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">values_list</span><span class="p">(</span><span class="s2">&quot;SearchWord&quot;</span><span class="p">,</span> <span class="n">flat</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span><span class="o">.</span><span class="n">distinct</span><span class="p">()</span>
-        <span class="k">return</span> <span class="n">JsonResponse</span><span class="p">({</span><span class="s2">&quot;searchWords&quot;</span><span class="p">:</span> <span class="nb">list</span><span class="p">(</span><span class="n">search_words</span><span class="p">)})</span>
+        <span class="n">owner</span> <span class="o">=</span> <span class="n">get_request_owner</span><span class="p">(</span><span class="n">request</span><span class="p">)</span>
+        <span class="n">search_words</span> <span class="o">=</span> <span class="p">(</span>
+            <span class="n">SearchRun</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">filter</span><span class="p">(</span><span class="n">owner_query</span><span class="p">(</span><span class="n">owner</span><span class="p">),</span> <span class="n">search_type</span><span class="o">=</span><span class="n">SearchRun</span><span class="o">.</span><span class="n">CLOSED</span><span class="p">)</span>
+            <span class="o">.</span><span class="n">order_by</span><span class="p">(</span><span class="s2">"-created_at"</span><span class="p">)</span>
+            <span class="o">.</span><span class="n">values_list</span><span class="p">(</span><span class="s2">"keyword"</span><span class="p">,</span> <span class="n">flat</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        <span class="p">)</span>
+        <span class="n">unique_words</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="nb">dict</span><span class="o">.</span><span class="n">fromkeys</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">word</span><span class="p">)</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span> <span class="k">for</span> <span class="n">word</span> <span class="ow">in</span> <span class="n">search_words</span> <span class="k">if</span> <span class="n">word</span><span class="p">))</span>
+        <span class="k">return</span> <span class="n">JsonResponse</span><span class="p">({</span><span class="s2">"searchWords"</span><span class="p">:</span> <span class="n">unique_words</span><span class="p">})</span>
     <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
-        <span class="k">return</span> <span class="n">JsonResponse</span><span class="p">({</span><span class="s2">&quot;error&quot;</span><span class="p">:</span> <span class="nb">str</span><span class="p">(</span><span class="n">e</span><span class="p">)},</span> <span class="n">status</span><span class="o">=</span><span class="mi">500</span><span class="p">)</span></div>
+        <span class="k">return</span> <span class="n">JsonResponse</span><span class="p">({</span><span class="s2">"error"</span><span class="p">:</span> <span class="nb">str</span><span class="p">(</span><span class="n">e</span><span class="p">)},</span> <span class="n">status</span><span class="o">=</span><span class="mi">500</span><span class="p">)</span></div>
 
 
 
 <div class="viewcode-block" id="get_market_data_logic">
 <a class="viewcode-back" href="../../../utils.html#Main.views.utils.get_market_data_logic">[ドキュメント]</a>
 <span class="k">def</span><span class="w"> </span><span class="nf">get_market_data_logic</span><span class="p">(</span><span class="n">request</span><span class="p">):</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">"""</span>
 <span class="sd">    指定キーワードの取引データをデータベースから取得し、JSONで返す。</span>
-<span class="sd">    &quot;&quot;&quot;</span>
-    <span class="n">searchname</span> <span class="o">=</span> <span class="n">request</span><span class="o">.</span><span class="n">GET</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;keyword&quot;</span><span class="p">,</span> <span class="s2">&quot;&quot;</span><span class="p">)</span>
-    <span class="k">if</span> <span class="ow">not</span> <span class="n">searchname</span><span class="p">:</span>
-        <span class="k">return</span> <span class="n">JsonResponse</span><span class="p">({</span><span class="s2">&quot;error&quot;</span><span class="p">:</span> <span class="s2">&quot;Keyword is required&quot;</span><span class="p">},</span> <span class="n">status</span><span class="o">=</span><span class="mi">400</span><span class="p">)</span>
+<span class="sd">    """</span>
     <span class="k">try</span><span class="p">:</span>
-        <span class="n">data</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">scraping</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">filter</span><span class="p">(</span><span class="n">SearchWord</span><span class="o">=</span><span class="n">searchname</span><span class="p">)</span><span class="o">.</span><span class="n">values</span><span class="p">())</span>
-        <span class="n">search_day</span> <span class="o">=</span> <span class="p">(</span>
-            <span class="n">scraping</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">filter</span><span class="p">(</span><span class="n">SearchWord</span><span class="o">=</span><span class="n">searchname</span><span class="p">)</span>
-            <span class="o">.</span><span class="n">values_list</span><span class="p">(</span><span class="s2">&quot;SearchDay&quot;</span><span class="p">,</span> <span class="n">flat</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
-            <span class="o">.</span><span class="n">first</span><span class="p">()</span>
+        <span class="n">searchname</span> <span class="o">=</span> <span class="n">normalize_search_keyword</span><span class="p">(</span><span class="n">request</span><span class="o">.</span><span class="n">GET</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"keyword"</span><span class="p">,</span> <span class="s2">""</span><span class="p">))</span>
+    <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">error</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">JsonResponse</span><span class="p">({</span><span class="s2">"error"</span><span class="p">:</span> <span class="nb">str</span><span class="p">(</span><span class="n">error</span><span class="p">),</span> <span class="s2">"code"</span><span class="p">:</span> <span class="s2">"invalid_keyword"</span><span class="p">},</span> <span class="n">status</span><span class="o">=</span><span class="mi">400</span><span class="p">)</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">owner</span> <span class="o">=</span> <span class="n">get_request_owner</span><span class="p">(</span><span class="n">request</span><span class="p">)</span>
+        <span class="n">runs</span> <span class="o">=</span> <span class="n">SearchRun</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">filter</span><span class="p">(</span>
+            <span class="n">owner_query</span><span class="p">(</span><span class="n">owner</span><span class="p">),</span> <span class="n">keyword</span><span class="o">=</span><span class="n">searchname</span><span class="p">,</span> <span class="n">search_type</span><span class="o">=</span><span class="n">SearchRun</span><span class="o">.</span><span class="n">CLOSED</span>
         <span class="p">)</span>
-        <span class="k">return</span> <span class="n">JsonResponse</span><span class="p">({</span><span class="s2">&quot;data&quot;</span><span class="p">:</span> <span class="n">data</span><span class="p">,</span> <span class="s2">&quot;searchDay&quot;</span><span class="p">:</span> <span class="n">search_day</span><span class="p">})</span>
+        <span class="n">latest_run</span> <span class="o">=</span> <span class="n">runs</span><span class="o">.</span><span class="n">first</span><span class="p">()</span>
+        <span class="n">records</span> <span class="o">=</span> <span class="n">scraping</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">filter</span><span class="p">(</span><span class="n">search_run__in</span><span class="o">=</span><span class="n">runs</span><span class="p">)</span><span class="o">.</span><span class="n">order_by</span><span class="p">(</span><span class="s2">"SearchDay"</span><span class="p">)</span>
+        <span class="n">search_day</span> <span class="o">=</span> <span class="n">latest_run</span><span class="o">.</span><span class="n">created_at</span><span class="o">.</span><span class="n">isoformat</span><span class="p">()</span> <span class="k">if</span> <span class="n">latest_run</span> <span class="k">else</span> <span class="kc">None</span>
+        <span class="n">data</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">scraping</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">filter</span><span class="p">(</span><span class="n">search_run</span><span class="o">=</span><span class="n">latest_run</span><span class="p">)</span><span class="o">.</span><span class="n">values</span><span class="p">())</span> <span class="k">if</span> <span class="n">latest_run</span> <span class="k">else</span> <span class="p">[]</span>
+        <span class="n">history</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">records</span><span class="o">.</span><span class="n">values</span><span class="p">(</span><span class="s2">"SearchDay"</span><span class="p">,</span> <span class="s2">"EndPrice"</span><span class="p">))</span>
+        <span class="n">analysis</span> <span class="o">=</span> <span class="n">analyze_stored_market</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">datetime</span><span class="o">.</span><span class="n">now</span><span class="p">())</span>
+        <span class="n">analysis</span><span class="p">[</span><span class="s2">"timeSeries"</span><span class="p">]</span> <span class="o">=</span> <span class="n">analyze_snapshot_history</span><span class="p">(</span><span class="n">history</span><span class="p">)</span>
+        <span class="n">normalized</span> <span class="o">=</span> <span class="p">[</span>
+            <span class="p">{</span>
+                <span class="s2">"name"</span><span class="p">:</span> <span class="n">item</span><span class="p">[</span><span class="s2">"Name"</span><span class="p">],</span>
+                <span class="s2">"price"</span><span class="p">:</span> <span class="n">item</span><span class="p">[</span><span class="s2">"EndPrice"</span><span class="p">],</span>
+                <span class="s2">"startPrice"</span><span class="p">:</span> <span class="n">item</span><span class="p">[</span><span class="s2">"StartPrice"</span><span class="p">],</span>
+                <span class="s2">"bidding"</span><span class="p">:</span> <span class="n">item</span><span class="p">[</span><span class="s2">"Bidding"</span><span class="p">],</span>
+                <span class="s2">"url"</span><span class="p">:</span> <span class="n">item</span><span class="p">[</span><span class="s2">"URL"</span><span class="p">],</span>
+                <span class="s2">"searchDay"</span><span class="p">:</span> <span class="n">item</span><span class="p">[</span><span class="s2">"SearchDay"</span><span class="p">],</span>
+            <span class="p">}</span>
+            <span class="k">for</span> <span class="n">item</span> <span class="ow">in</span> <span class="n">data</span>
+        <span class="p">]</span>
+        <span class="n">enriched</span> <span class="o">=</span> <span class="n">enrich_market_items</span><span class="p">(</span><span class="n">normalized</span><span class="p">)</span>
+        <span class="n">enriched</span> <span class="o">=</span> <span class="n">enrich_items_with_market_comparison</span><span class="p">(</span><span class="n">enriched</span><span class="p">,</span> <span class="n">analysis</span><span class="p">[</span><span class="s2">"summary"</span><span class="p">][</span><span class="s2">"median"</span><span class="p">])</span>
+        <span class="n">response_data</span> <span class="o">=</span> <span class="p">[</span><span class="n">original</span> <span class="o">|</span> <span class="n">extra</span> <span class="k">for</span> <span class="n">original</span><span class="p">,</span> <span class="n">extra</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">enriched</span><span class="p">,</span> <span class="n">strict</span><span class="o">=</span><span class="kc">True</span><span class="p">)]</span>
+        <span class="k">return</span> <span class="n">JsonResponse</span><span class="p">({</span><span class="s2">"data"</span><span class="p">:</span> <span class="n">response_data</span><span class="p">,</span> <span class="s2">"searchDay"</span><span class="p">:</span> <span class="n">search_day</span><span class="p">,</span> <span class="s2">"analysis"</span><span class="p">:</span> <span class="n">analysis</span><span class="p">})</span>
     <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
-        <span class="k">return</span> <span class="n">JsonResponse</span><span class="p">({</span><span class="s2">&quot;error&quot;</span><span class="p">:</span> <span class="nb">str</span><span class="p">(</span><span class="n">e</span><span class="p">)},</span> <span class="n">status</span><span class="o">=</span><span class="mi">500</span><span class="p">)</span></div>
+        <span class="k">return</span> <span class="n">JsonResponse</span><span class="p">({</span><span class="s2">"error"</span><span class="p">:</span> <span class="nb">str</span><span class="p">(</span><span class="n">e</span><span class="p">)},</span> <span class="n">status</span><span class="o">=</span><span class="mi">500</span><span class="p">)</span></div>
 
 
 
 <div class="viewcode-block" id="update_market_data_logic">
 <a class="viewcode-back" href="../../../utils.html#Main.views.utils.update_market_data_logic">[ドキュメント]</a>
-<span class="nd">@csrf_exempt</span>
-<span class="k">def</span><span class="w"> </span><span class="nf">update_market_data_logic</span><span class="p">(</span><span class="n">request</span><span class="p">):</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">update_market_data_logic</span><span class="p">(</span><span class="n">request</span><span class="p">,</span> <span class="n">criteria</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">"""</span>
 <span class="sd">    指定キーワードで新たにデータを取得し、データベースを更新する。</span>
-<span class="sd">    &quot;&quot;&quot;</span>
-    <span class="k">if</span> <span class="n">request</span><span class="o">.</span><span class="n">method</span> <span class="o">!=</span> <span class="s2">&quot;POST&quot;</span><span class="p">:</span>
-        <span class="k">return</span> <span class="n">JsonResponse</span><span class="p">({</span><span class="s2">&quot;error&quot;</span><span class="p">:</span> <span class="s2">&quot;Invalid request method&quot;</span><span class="p">},</span> <span class="n">status</span><span class="o">=</span><span class="mi">400</span><span class="p">)</span>
-    <span class="n">searchname</span> <span class="o">=</span> <span class="n">request</span><span class="o">.</span><span class="n">GET</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;keyword&quot;</span><span class="p">,</span> <span class="s2">&quot;&quot;</span><span class="p">)</span>
-    <span class="k">if</span> <span class="ow">not</span> <span class="n">searchname</span><span class="p">:</span>
-        <span class="k">return</span> <span class="n">JsonResponse</span><span class="p">({</span><span class="s2">&quot;error&quot;</span><span class="p">:</span> <span class="s2">&quot;Keyword is required&quot;</span><span class="p">},</span> <span class="n">status</span><span class="o">=</span><span class="mi">400</span><span class="p">)</span>
+<span class="sd">    """</span>
+    <span class="k">if</span> <span class="n">request</span><span class="o">.</span><span class="n">method</span> <span class="o">!=</span> <span class="s2">"POST"</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">JsonResponse</span><span class="p">({</span><span class="s2">"error"</span><span class="p">:</span> <span class="s2">"Invalid request method"</span><span class="p">},</span> <span class="n">status</span><span class="o">=</span><span class="mi">400</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">criteria</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">criteria</span> <span class="o">=</span> <span class="n">SearchCriteria</span><span class="o">.</span><span class="n">from_query</span><span class="p">(</span><span class="n">request</span><span class="o">.</span><span class="n">GET</span><span class="p">,</span> <span class="n">SearchRun</span><span class="o">.</span><span class="n">CLOSED</span><span class="p">)</span>
+        <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">error</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">JsonResponse</span><span class="p">({</span><span class="s2">"error"</span><span class="p">:</span> <span class="nb">str</span><span class="p">(</span><span class="n">error</span><span class="p">),</span> <span class="s2">"code"</span><span class="p">:</span> <span class="s2">"invalid_keyword"</span><span class="p">},</span> <span class="n">status</span><span class="o">=</span><span class="mi">400</span><span class="p">)</span>
+    <span class="n">searchname</span> <span class="o">=</span> <span class="n">criteria</span><span class="o">.</span><span class="n">keyword</span>
+    <span class="n">timer</span> <span class="o">=</span> <span class="n">SearchTimer</span><span class="o">.</span><span class="n">start</span><span class="p">()</span>
+    <span class="n">run</span> <span class="o">=</span> <span class="kc">None</span>
     <span class="k">try</span><span class="p">:</span>
-        <span class="n">scraped_data_list</span> <span class="o">=</span> <span class="n">scrape_data</span><span class="p">(</span><span class="n">searchname</span><span class="p">)</span>
-        <span class="n">save_to_database</span><span class="p">(</span><span class="n">searchname</span><span class="p">,</span> <span class="n">scraped_data_list</span><span class="p">)</span>
-        <span class="k">return</span> <span class="n">JsonResponse</span><span class="p">({</span><span class="s2">&quot;message&quot;</span><span class="p">:</span> <span class="s2">&quot;相場データを更新しました&quot;</span><span class="p">})</span>
-    <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
-        <span class="k">return</span> <span class="n">JsonResponse</span><span class="p">({</span><span class="s2">&quot;error&quot;</span><span class="p">:</span> <span class="nb">str</span><span class="p">(</span><span class="n">e</span><span class="p">)},</span> <span class="n">status</span><span class="o">=</span><span class="mi">500</span><span class="p">)</span></div>
+        <span class="n">scraped_data_list</span> <span class="o">=</span> <span class="n">criteria</span><span class="o">.</span><span class="n">apply</span><span class="p">(</span><span class="n">scrape_data</span><span class="p">(</span><span class="n">searchname</span><span class="p">))</span>
+        <span class="n">run</span> <span class="o">=</span> <span class="n">record_search_run</span><span class="p">(</span>
+            <span class="n">request</span><span class="p">,</span>
+            <span class="n">searchname</span><span class="p">,</span>
+            <span class="n">SearchRun</span><span class="o">.</span><span class="n">CLOSED</span><span class="p">,</span>
+            <span class="nb">len</span><span class="p">(</span><span class="n">scraped_data_list</span><span class="p">),</span>
+            <span class="n">criteria_snapshot</span><span class="o">=</span><span class="n">criteria</span><span class="o">.</span><span class="n">snapshot</span><span class="p">(),</span>
+            <span class="n">duration_ms</span><span class="o">=</span><span class="n">timer</span><span class="o">.</span><span class="n">elapsed_ms</span><span class="p">(),</span>
+        <span class="p">)</span>
+        <span class="n">save_to_database</span><span class="p">(</span><span class="n">searchname</span><span class="p">,</span> <span class="n">scraped_data_list</span><span class="p">,</span> <span class="n">run</span><span class="p">)</span>
+        <span class="n">update_search_run_observability</span><span class="p">(</span><span class="n">run</span><span class="p">,</span> <span class="n">duration_ms</span><span class="o">=</span><span class="n">timer</span><span class="o">.</span><span class="n">elapsed_ms</span><span class="p">())</span>
+        <span class="k">return</span> <span class="n">JsonResponse</span><span class="p">({</span><span class="s2">"message"</span><span class="p">:</span> <span class="s2">"相場データを更新しました"</span><span class="p">})</span>
+    <span class="k">except</span> <span class="n">ExternalServiceError</span><span class="p">:</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">exception</span><span class="p">(</span><span class="s2">"Market data update failed"</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">run</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">record_search_run</span><span class="p">(</span>
+                <span class="n">request</span><span class="p">,</span>
+                <span class="n">searchname</span><span class="p">,</span>
+                <span class="n">SearchRun</span><span class="o">.</span><span class="n">CLOSED</span><span class="p">,</span>
+                <span class="mi">0</span><span class="p">,</span>
+                <span class="n">succeeded</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+                <span class="n">criteria_snapshot</span><span class="o">=</span><span class="n">criteria</span><span class="o">.</span><span class="n">snapshot</span><span class="p">(),</span>
+                <span class="n">duration_ms</span><span class="o">=</span><span class="n">timer</span><span class="o">.</span><span class="n">elapsed_ms</span><span class="p">(),</span>
+                <span class="n">failure_code</span><span class="o">=</span><span class="n">FAILURE_EXTERNAL_SERVICE</span><span class="p">,</span>
+            <span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">update_search_run_observability</span><span class="p">(</span>
+                <span class="n">run</span><span class="p">,</span>
+                <span class="n">duration_ms</span><span class="o">=</span><span class="n">timer</span><span class="o">.</span><span class="n">elapsed_ms</span><span class="p">(),</span>
+                <span class="n">succeeded</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+                <span class="n">failure_code</span><span class="o">=</span><span class="n">FAILURE_EXTERNAL_SERVICE</span><span class="p">,</span>
+            <span class="p">)</span>
+        <span class="k">return</span> <span class="n">JsonResponse</span><span class="p">(</span>
+            <span class="p">{</span><span class="s2">"error"</span><span class="p">:</span> <span class="n">EXTERNAL_SERVICE_MESSAGE</span><span class="p">,</span> <span class="s2">"code"</span><span class="p">:</span> <span class="s2">"external_service_unavailable"</span><span class="p">},</span>
+            <span class="n">status</span><span class="o">=</span><span class="mi">503</span><span class="p">,</span>
+        <span class="p">)</span>
+    <span class="k">except</span> <span class="ne">Exception</span><span class="p">:</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">exception</span><span class="p">(</span><span class="s2">"Unexpected market data update error"</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">run</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">record_search_run</span><span class="p">(</span>
+                <span class="n">request</span><span class="p">,</span>
+                <span class="n">searchname</span><span class="p">,</span>
+                <span class="n">SearchRun</span><span class="o">.</span><span class="n">CLOSED</span><span class="p">,</span>
+                <span class="mi">0</span><span class="p">,</span>
+                <span class="n">succeeded</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+                <span class="n">criteria_snapshot</span><span class="o">=</span><span class="n">criteria</span><span class="o">.</span><span class="n">snapshot</span><span class="p">(),</span>
+                <span class="n">duration_ms</span><span class="o">=</span><span class="n">timer</span><span class="o">.</span><span class="n">elapsed_ms</span><span class="p">(),</span>
+                <span class="n">failure_code</span><span class="o">=</span><span class="n">FAILURE_UNEXPECTED</span><span class="p">,</span>
+            <span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">update_search_run_observability</span><span class="p">(</span>
+                <span class="n">run</span><span class="p">,</span>
+                <span class="n">duration_ms</span><span class="o">=</span><span class="n">timer</span><span class="o">.</span><span class="n">elapsed_ms</span><span class="p">(),</span>
+                <span class="n">succeeded</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+                <span class="n">failure_code</span><span class="o">=</span><span class="n">FAILURE_UNEXPECTED</span><span class="p">,</span>
+            <span class="p">)</span>
+        <span class="k">return</span> <span class="n">JsonResponse</span><span class="p">({</span><span class="s2">"error"</span><span class="p">:</span> <span class="s2">"相場データを更新できませんでした"</span><span class="p">},</span> <span class="n">status</span><span class="o">=</span><span class="mi">500</span><span class="p">)</span></div>
 
 
 
 <div class="viewcode-block" id="delete_market_data_logic">
 <a class="viewcode-back" href="../../../utils.html#Main.views.utils.delete_market_data_logic">[ドキュメント]</a>
-<span class="nd">@csrf_exempt</span>
 <span class="k">def</span><span class="w"> </span><span class="nf">delete_market_data_logic</span><span class="p">(</span><span class="n">request</span><span class="p">):</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">"""</span>
 <span class="sd">    指定キーワードの取引データをデータベースから削除する。</span>
-<span class="sd">    &quot;&quot;&quot;</span>
-    <span class="k">if</span> <span class="n">request</span><span class="o">.</span><span class="n">method</span> <span class="o">!=</span> <span class="s2">&quot;DELETE&quot;</span><span class="p">:</span>
-        <span class="k">return</span> <span class="n">JsonResponse</span><span class="p">({</span><span class="s2">&quot;error&quot;</span><span class="p">:</span> <span class="s2">&quot;Invalid request method&quot;</span><span class="p">},</span> <span class="n">status</span><span class="o">=</span><span class="mi">400</span><span class="p">)</span>
-    <span class="n">searchname</span> <span class="o">=</span> <span class="n">request</span><span class="o">.</span><span class="n">GET</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;keyword&quot;</span><span class="p">,</span> <span class="s2">&quot;&quot;</span><span class="p">)</span>
-    <span class="k">if</span> <span class="ow">not</span> <span class="n">searchname</span><span class="p">:</span>
-        <span class="k">return</span> <span class="n">JsonResponse</span><span class="p">({</span><span class="s2">&quot;error&quot;</span><span class="p">:</span> <span class="s2">&quot;Keyword is required&quot;</span><span class="p">},</span> <span class="n">status</span><span class="o">=</span><span class="mi">400</span><span class="p">)</span>
+<span class="sd">    """</span>
+    <span class="k">if</span> <span class="n">request</span><span class="o">.</span><span class="n">method</span> <span class="o">!=</span> <span class="s2">"DELETE"</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">JsonResponse</span><span class="p">({</span><span class="s2">"error"</span><span class="p">:</span> <span class="s2">"Invalid request method"</span><span class="p">},</span> <span class="n">status</span><span class="o">=</span><span class="mi">400</span><span class="p">)</span>
     <span class="k">try</span><span class="p">:</span>
-        <span class="n">scraping</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">filter</span><span class="p">(</span><span class="n">SearchWord</span><span class="o">=</span><span class="n">searchname</span><span class="p">)</span><span class="o">.</span><span class="n">delete</span><span class="p">()</span>
-        <span class="k">return</span> <span class="n">JsonResponse</span><span class="p">({</span><span class="s2">&quot;message&quot;</span><span class="p">:</span> <span class="s2">&quot;相場データを削除しました&quot;</span><span class="p">})</span>
+        <span class="n">searchname</span> <span class="o">=</span> <span class="n">normalize_search_keyword</span><span class="p">(</span><span class="n">request</span><span class="o">.</span><span class="n">GET</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"keyword"</span><span class="p">,</span> <span class="s2">""</span><span class="p">))</span>
+    <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">error</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">JsonResponse</span><span class="p">({</span><span class="s2">"error"</span><span class="p">:</span> <span class="nb">str</span><span class="p">(</span><span class="n">error</span><span class="p">),</span> <span class="s2">"code"</span><span class="p">:</span> <span class="s2">"invalid_keyword"</span><span class="p">},</span> <span class="n">status</span><span class="o">=</span><span class="mi">400</span><span class="p">)</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">owner</span> <span class="o">=</span> <span class="n">get_request_owner</span><span class="p">(</span><span class="n">request</span><span class="p">)</span>
+        <span class="n">SearchRun</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">filter</span><span class="p">(</span>
+            <span class="n">owner_query</span><span class="p">(</span><span class="n">owner</span><span class="p">),</span> <span class="n">keyword</span><span class="o">=</span><span class="n">searchname</span><span class="p">,</span> <span class="n">search_type</span><span class="o">=</span><span class="n">SearchRun</span><span class="o">.</span><span class="n">CLOSED</span>
+        <span class="p">)</span><span class="o">.</span><span class="n">delete</span><span class="p">()</span>
+        <span class="k">return</span> <span class="n">JsonResponse</span><span class="p">({</span><span class="s2">"message"</span><span class="p">:</span> <span class="s2">"相場データを削除しました"</span><span class="p">})</span>
     <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
-        <span class="k">return</span> <span class="n">JsonResponse</span><span class="p">({</span><span class="s2">&quot;error&quot;</span><span class="p">:</span> <span class="nb">str</span><span class="p">(</span><span class="n">e</span><span class="p">)},</span> <span class="n">status</span><span class="o">=</span><span class="mi">500</span><span class="p">)</span></div>
+        <span class="k">return</span> <span class="n">JsonResponse</span><span class="p">({</span><span class="s2">"error"</span><span class="p">:</span> <span class="nb">str</span><span class="p">(</span><span class="n">e</span><span class="p">)},</span> <span class="n">status</span><span class="o">=</span><span class="mi">500</span><span class="p">)</span></div>
 
 
 
 <div class="viewcode-block" id="complex_market_data_logic">
 <a class="viewcode-back" href="../../../utils.html#Main.views.utils.complex_market_data_logic">[ドキュメント]</a>
-<span class="k">def</span><span class="w"> </span><span class="nf">complex_market_data_logic</span><span class="p">(</span><span class="n">request</span><span class="p">):</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">complex_market_data_logic</span><span class="p">(</span><span class="n">request</span><span class="p">,</span> <span class="n">criteria</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">"""</span>
 <span class="sd">    指定キーワードの落札履歴と現在出品中データから、価格リスト・商品名リスト・中央値・おすすめ出品リストを返す。</span>
 <span class="sd">    また、落札履歴データはデータベースにも保存・更新する。</span>
-<span class="sd">    &quot;&quot;&quot;</span>
-    <span class="k">if</span> <span class="n">request</span><span class="o">.</span><span class="n">method</span> <span class="o">!=</span> <span class="s2">&quot;GET&quot;</span><span class="p">:</span>
-        <span class="k">return</span> <span class="n">JsonResponse</span><span class="p">({</span><span class="s2">&quot;error&quot;</span><span class="p">:</span> <span class="s2">&quot;Invalid request method&quot;</span><span class="p">},</span> <span class="n">status</span><span class="o">=</span><span class="mi">400</span><span class="p">)</span>
+<span class="sd">    """</span>
+    <span class="k">if</span> <span class="n">request</span><span class="o">.</span><span class="n">method</span> <span class="o">!=</span> <span class="s2">"GET"</span> <span class="ow">and</span> <span class="n">criteria</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">JsonResponse</span><span class="p">({</span><span class="s2">"error"</span><span class="p">:</span> <span class="s2">"Invalid request method"</span><span class="p">},</span> <span class="n">status</span><span class="o">=</span><span class="mi">400</span><span class="p">)</span>
 
-    <span class="n">searchname</span> <span class="o">=</span> <span class="n">request</span><span class="o">.</span><span class="n">GET</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;keyword&quot;</span><span class="p">,</span> <span class="s2">&quot;&quot;</span><span class="p">)</span>
-    <span class="k">if</span> <span class="ow">not</span> <span class="n">searchname</span><span class="p">:</span>
-        <span class="k">return</span> <span class="n">JsonResponse</span><span class="p">({</span><span class="s2">&quot;error&quot;</span><span class="p">:</span> <span class="s2">&quot;Keyword is required&quot;</span><span class="p">},</span> <span class="n">status</span><span class="o">=</span><span class="mi">400</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">criteria</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">criteria</span> <span class="o">=</span> <span class="n">SearchCriteria</span><span class="o">.</span><span class="n">from_query</span><span class="p">(</span><span class="n">request</span><span class="o">.</span><span class="n">GET</span><span class="p">,</span> <span class="n">SearchRun</span><span class="o">.</span><span class="n">TARGET</span><span class="p">)</span>
+        <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">error</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">JsonResponse</span><span class="p">({</span><span class="s2">"error"</span><span class="p">:</span> <span class="nb">str</span><span class="p">(</span><span class="n">error</span><span class="p">),</span> <span class="s2">"code"</span><span class="p">:</span> <span class="s2">"invalid_keyword"</span><span class="p">},</span> <span class="n">status</span><span class="o">=</span><span class="mi">400</span><span class="p">)</span>
+    <span class="n">searchname</span> <span class="o">=</span> <span class="n">criteria</span><span class="o">.</span><span class="n">keyword</span>
+    <span class="n">active_search_type</span> <span class="o">=</span> <span class="n">SearchRun</span><span class="o">.</span><span class="n">CLOSED</span>
+    <span class="n">active_timer</span> <span class="o">=</span> <span class="n">SearchTimer</span><span class="o">.</span><span class="n">start</span><span class="p">()</span>
+    <span class="n">active_run</span> <span class="o">=</span> <span class="kc">None</span>
 
     <span class="k">try</span><span class="p">:</span>
         <span class="c1"># 落札履歴データ取得＆DB更新</span>
-        <span class="n">closed_data</span> <span class="o">=</span> <span class="n">scrape_data</span><span class="p">(</span><span class="n">searchname</span><span class="p">)</span>
-        <span class="n">save_to_database</span><span class="p">(</span><span class="n">searchname</span><span class="p">,</span> <span class="n">closed_data</span><span class="p">)</span>
+        <span class="n">closed_data</span> <span class="o">=</span> <span class="n">criteria</span><span class="o">.</span><span class="n">apply</span><span class="p">(</span><span class="n">scrape_data</span><span class="p">(</span><span class="n">searchname</span><span class="p">),</span> <span class="n">search_type</span><span class="o">=</span><span class="n">SearchRun</span><span class="o">.</span><span class="n">CLOSED</span><span class="p">)</span>
+        <span class="n">closed_run</span> <span class="o">=</span> <span class="n">record_search_run</span><span class="p">(</span>
+            <span class="n">request</span><span class="p">,</span>
+            <span class="n">searchname</span><span class="p">,</span>
+            <span class="n">SearchRun</span><span class="o">.</span><span class="n">CLOSED</span><span class="p">,</span>
+            <span class="nb">len</span><span class="p">(</span><span class="n">closed_data</span><span class="p">),</span>
+            <span class="n">criteria_snapshot</span><span class="o">=</span><span class="n">criteria</span><span class="o">.</span><span class="n">snapshot</span><span class="p">(),</span>
+            <span class="n">duration_ms</span><span class="o">=</span><span class="n">active_timer</span><span class="o">.</span><span class="n">elapsed_ms</span><span class="p">(),</span>
+        <span class="p">)</span>
+        <span class="n">active_run</span> <span class="o">=</span> <span class="n">closed_run</span>
+        <span class="n">save_to_database</span><span class="p">(</span><span class="n">searchname</span><span class="p">,</span> <span class="n">closed_data</span><span class="p">,</span> <span class="n">closed_run</span><span class="p">)</span>
+        <span class="n">update_search_run_observability</span><span class="p">(</span><span class="n">closed_run</span><span class="p">,</span> <span class="n">duration_ms</span><span class="o">=</span><span class="n">active_timer</span><span class="o">.</span><span class="n">elapsed_ms</span><span class="p">())</span>
         <span class="n">closed_prices</span> <span class="o">=</span> <span class="p">[</span>
-            <span class="n">item</span><span class="p">[</span><span class="s2">&quot;price&quot;</span><span class="p">]</span>
+            <span class="n">item</span><span class="p">[</span><span class="s2">"price"</span><span class="p">]</span>
             <span class="k">for</span> <span class="n">item</span> <span class="ow">in</span> <span class="n">closed_data</span>
-            <span class="k">if</span> <span class="s2">&quot;price&quot;</span> <span class="ow">in</span> <span class="n">item</span> <span class="ow">and</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">item</span><span class="p">[</span><span class="s2">&quot;price&quot;</span><span class="p">],</span> <span class="p">(</span><span class="nb">int</span><span class="p">,</span> <span class="nb">float</span><span class="p">))</span>
+            <span class="k">if</span> <span class="s2">"price"</span> <span class="ow">in</span> <span class="n">item</span> <span class="ow">and</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">item</span><span class="p">[</span><span class="s2">"price"</span><span class="p">],</span> <span class="p">(</span><span class="nb">int</span><span class="p">,</span> <span class="nb">float</span><span class="p">))</span>
         <span class="p">]</span>
-        <span class="n">closed_names</span> <span class="o">=</span> <span class="p">[</span><span class="n">item</span><span class="p">[</span><span class="s2">&quot;name&quot;</span><span class="p">]</span> <span class="k">for</span> <span class="n">item</span> <span class="ow">in</span> <span class="n">closed_data</span> <span class="k">if</span> <span class="s2">&quot;name&quot;</span> <span class="ow">in</span> <span class="n">item</span><span class="p">]</span>
+        <span class="n">closed_names</span> <span class="o">=</span> <span class="p">[</span><span class="n">item</span><span class="p">[</span><span class="s2">"name"</span><span class="p">]</span> <span class="k">for</span> <span class="n">item</span> <span class="ow">in</span> <span class="n">closed_data</span> <span class="k">if</span> <span class="s2">"name"</span> <span class="ow">in</span> <span class="n">item</span><span class="p">]</span>
 
         <span class="c1"># 現在出品中データ</span>
-        <span class="n">now_data</span> <span class="o">=</span> <span class="n">scrape_current_listings</span><span class="p">(</span><span class="n">searchname</span><span class="p">)</span>
+        <span class="n">active_search_type</span> <span class="o">=</span> <span class="n">SearchRun</span><span class="o">.</span><span class="n">CURRENT</span>
+        <span class="n">active_timer</span> <span class="o">=</span> <span class="n">SearchTimer</span><span class="o">.</span><span class="n">start</span><span class="p">()</span>
+        <span class="n">active_run</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="n">now_data</span> <span class="o">=</span> <span class="n">criteria</span><span class="o">.</span><span class="n">apply</span><span class="p">(</span>
+            <span class="n">scrape_current_listings</span><span class="p">(</span><span class="n">searchname</span><span class="p">),</span> <span class="n">search_type</span><span class="o">=</span><span class="n">SearchRun</span><span class="o">.</span><span class="n">CURRENT</span>
+        <span class="p">)</span>
+        <span class="n">current_run</span> <span class="o">=</span> <span class="n">record_search_run</span><span class="p">(</span>
+            <span class="n">request</span><span class="p">,</span>
+            <span class="n">searchname</span><span class="p">,</span>
+            <span class="n">SearchRun</span><span class="o">.</span><span class="n">CURRENT</span><span class="p">,</span>
+            <span class="nb">len</span><span class="p">(</span><span class="n">now_data</span><span class="p">),</span>
+            <span class="n">record_word</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+            <span class="n">criteria_snapshot</span><span class="o">=</span><span class="n">criteria</span><span class="o">.</span><span class="n">snapshot</span><span class="p">(),</span>
+            <span class="n">duration_ms</span><span class="o">=</span><span class="n">active_timer</span><span class="o">.</span><span class="n">elapsed_ms</span><span class="p">(),</span>
+        <span class="p">)</span>
+        <span class="n">active_run</span> <span class="o">=</span> <span class="n">current_run</span>
+        <span class="n">save_to_database</span><span class="p">(</span><span class="n">searchname</span><span class="p">,</span> <span class="n">now_data</span><span class="p">,</span> <span class="n">current_run</span><span class="p">)</span>
 
         <span class="n">now_items</span> <span class="o">=</span> <span class="p">[]</span>
         <span class="k">for</span> <span class="n">item</span> <span class="ow">in</span> <span class="n">now_data</span><span class="p">:</span>
-            <span class="n">price</span> <span class="o">=</span> <span class="n">item</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;currentPrice&quot;</span><span class="p">)</span>
-            <span class="n">name</span> <span class="o">=</span> <span class="n">item</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;name&quot;</span><span class="p">)</span>
-            <span class="n">url</span> <span class="o">=</span> <span class="n">item</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;url&quot;</span><span class="p">)</span>
-            <span class="n">remaining_time_str</span> <span class="o">=</span> <span class="n">item</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;remainingTime&quot;</span><span class="p">)</span>
-            <span class="n">bidding</span> <span class="o">=</span> <span class="n">item</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;bidding&quot;</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+            <span class="n">price</span> <span class="o">=</span> <span class="n">item</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"currentPrice"</span><span class="p">)</span>
+            <span class="n">name</span> <span class="o">=</span> <span class="n">item</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"name"</span><span class="p">)</span>
+            <span class="n">url</span> <span class="o">=</span> <span class="n">item</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"url"</span><span class="p">)</span>
+            <span class="n">remaining_time_str</span> <span class="o">=</span> <span class="n">item</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"remainingTime"</span><span class="p">)</span>
+            <span class="n">bidding</span> <span class="o">=</span> <span class="n">item</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"bidding"</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
             <span class="n">remaining_seconds</span> <span class="o">=</span> <span class="n">parse_duration_seconds</span><span class="p">(</span><span class="n">remaining_time_str</span><span class="p">)</span>
             <span class="n">now_items</span><span class="o">.</span><span class="n">append</span><span class="p">(</span>
                 <span class="p">{</span>
-                    <span class="s2">&quot;price&quot;</span><span class="p">:</span> <span class="n">price</span><span class="p">,</span>
-                    <span class="s2">&quot;name&quot;</span><span class="p">:</span> <span class="n">name</span><span class="p">,</span>
-                    <span class="s2">&quot;url&quot;</span><span class="p">:</span> <span class="n">url</span><span class="p">,</span>
-                    <span class="s2">&quot;remainingTime&quot;</span><span class="p">:</span> <span class="n">remaining_time_str</span><span class="p">,</span>
-                    <span class="s2">&quot;remainingSeconds&quot;</span><span class="p">:</span> <span class="n">remaining_seconds</span><span class="p">,</span>
-                    <span class="s2">&quot;bidding&quot;</span><span class="p">:</span> <span class="n">bidding</span><span class="p">,</span>
+                    <span class="s2">"price"</span><span class="p">:</span> <span class="n">price</span><span class="p">,</span>
+                    <span class="s2">"name"</span><span class="p">:</span> <span class="n">name</span><span class="p">,</span>
+                    <span class="s2">"url"</span><span class="p">:</span> <span class="n">url</span><span class="p">,</span>
+                    <span class="s2">"remainingTime"</span><span class="p">:</span> <span class="n">remaining_time_str</span><span class="p">,</span>
+                    <span class="s2">"remainingSeconds"</span><span class="p">:</span> <span class="n">remaining_seconds</span><span class="p">,</span>
+                    <span class="s2">"bidding"</span><span class="p">:</span> <span class="n">bidding</span><span class="p">,</span>
                 <span class="p">}</span>
             <span class="p">)</span>
 
@@ -406,186 +646,227 @@
             <span class="n">median_price</span> <span class="o">=</span> <span class="mi">0</span>
 
         <span class="n">enriched_now_items</span> <span class="o">=</span> <span class="n">enrich_market_items</span><span class="p">(</span><span class="n">now_items</span><span class="p">)</span>
+        <span class="n">enriched_now_items</span> <span class="o">=</span> <span class="n">enrich_items_with_market_comparison</span><span class="p">(</span><span class="n">enriched_now_items</span><span class="p">,</span> <span class="n">median_price</span><span class="p">)</span>
         <span class="k">for</span> <span class="n">item</span> <span class="ow">in</span> <span class="n">enriched_now_items</span><span class="p">:</span>
-            <span class="n">item</span><span class="p">[</span><span class="s2">&quot;marketMedian&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">median_price</span>
-            <span class="n">item</span><span class="p">[</span><span class="s2">&quot;buyDecision&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">evaluate_buying_opportunity</span><span class="p">(</span>
-                <span class="n">item</span><span class="p">[</span><span class="s2">&quot;price&quot;</span><span class="p">],</span>
+            <span class="n">item</span><span class="p">[</span><span class="s2">"marketMedian"</span><span class="p">]</span> <span class="o">=</span> <span class="n">median_price</span>
+            <span class="n">item</span><span class="p">[</span><span class="s2">"buyDecision"</span><span class="p">]</span> <span class="o">=</span> <span class="n">evaluate_buying_opportunity</span><span class="p">(</span>
+                <span class="n">item</span><span class="p">[</span><span class="s2">"price"</span><span class="p">],</span>
                 <span class="n">median_price</span><span class="p">,</span>
-                <span class="n">item</span><span class="p">[</span><span class="s2">&quot;condition&quot;</span><span class="p">],</span>
-                <span class="n">item</span><span class="p">[</span><span class="s2">&quot;remainingSeconds&quot;</span><span class="p">],</span>
+                <span class="n">item</span><span class="p">[</span><span class="s2">"condition"</span><span class="p">],</span>
+                <span class="n">item</span><span class="p">[</span><span class="s2">"remainingSeconds"</span><span class="p">],</span>
             <span class="p">)</span>
-            <span class="n">refresh_watched_item</span><span class="p">(</span><span class="n">item</span><span class="p">)</span>
+            <span class="n">refresh_watched_item</span><span class="p">(</span><span class="n">item</span><span class="p">,</span> <span class="n">get_request_owner</span><span class="p">(</span><span class="n">request</span><span class="p">))</span>
 
         <span class="n">now_items_sorted</span> <span class="o">=</span> <span class="nb">sorted</span><span class="p">(</span>
             <span class="n">enriched_now_items</span><span class="p">,</span>
             <span class="n">key</span><span class="o">=</span><span class="k">lambda</span> <span class="n">item</span><span class="p">:</span> <span class="p">(</span>
-                <span class="o">-</span><span class="n">item</span><span class="p">[</span><span class="s2">&quot;buyDecision&quot;</span><span class="p">][</span><span class="s2">&quot;score&quot;</span><span class="p">],</span>
-                <span class="n">item</span><span class="p">[</span><span class="s2">&quot;remainingSeconds&quot;</span><span class="p">],</span>
+                <span class="o">-</span><span class="n">item</span><span class="p">[</span><span class="s2">"buyDecision"</span><span class="p">][</span><span class="s2">"score"</span><span class="p">],</span>
+                <span class="n">item</span><span class="p">[</span><span class="s2">"remainingSeconds"</span><span class="p">],</span>
             <span class="p">),</span>
         <span class="p">)[:</span><span class="mi">30</span><span class="p">]</span>
 
         <span class="n">response_items</span> <span class="o">=</span> <span class="p">[</span>
             <span class="p">{</span>
-                <span class="s2">&quot;price&quot;</span><span class="p">:</span> <span class="n">item</span><span class="p">[</span><span class="s2">&quot;price&quot;</span><span class="p">],</span>
-                <span class="s2">&quot;name&quot;</span><span class="p">:</span> <span class="n">item</span><span class="p">[</span><span class="s2">&quot;name&quot;</span><span class="p">],</span>
-                <span class="s2">&quot;url&quot;</span><span class="p">:</span> <span class="n">item</span><span class="p">[</span><span class="s2">&quot;url&quot;</span><span class="p">],</span>
-                <span class="s2">&quot;remainingTime&quot;</span><span class="p">:</span> <span class="n">item</span><span class="p">[</span><span class="s2">&quot;remainingTime&quot;</span><span class="p">],</span>
-                <span class="s2">&quot;remainingSeconds&quot;</span><span class="p">:</span> <span class="n">item</span><span class="p">[</span><span class="s2">&quot;remainingSeconds&quot;</span><span class="p">],</span>
-                <span class="s2">&quot;bidding&quot;</span><span class="p">:</span> <span class="n">item</span><span class="p">[</span><span class="s2">&quot;bidding&quot;</span><span class="p">],</span>
-                <span class="s2">&quot;marketMedian&quot;</span><span class="p">:</span> <span class="n">median_price</span><span class="p">,</span>
-                <span class="s2">&quot;condition&quot;</span><span class="p">:</span> <span class="n">item</span><span class="p">[</span><span class="s2">&quot;condition&quot;</span><span class="p">],</span>
-                <span class="s2">&quot;conditionLabel&quot;</span><span class="p">:</span> <span class="n">item</span><span class="p">[</span><span class="s2">&quot;conditionLabel&quot;</span><span class="p">],</span>
-                <span class="s2">&quot;attributes&quot;</span><span class="p">:</span> <span class="n">item</span><span class="p">[</span><span class="s2">&quot;attributes&quot;</span><span class="p">],</span>
-                <span class="s2">&quot;attributeLabels&quot;</span><span class="p">:</span> <span class="n">item</span><span class="p">[</span><span class="s2">&quot;attributeLabels&quot;</span><span class="p">],</span>
-                <span class="s2">&quot;buyDecision&quot;</span><span class="p">:</span> <span class="n">item</span><span class="p">[</span><span class="s2">&quot;buyDecision&quot;</span><span class="p">],</span>
+                <span class="s2">"price"</span><span class="p">:</span> <span class="n">item</span><span class="p">[</span><span class="s2">"price"</span><span class="p">],</span>
+                <span class="s2">"name"</span><span class="p">:</span> <span class="n">item</span><span class="p">[</span><span class="s2">"name"</span><span class="p">],</span>
+                <span class="s2">"url"</span><span class="p">:</span> <span class="n">item</span><span class="p">[</span><span class="s2">"url"</span><span class="p">],</span>
+                <span class="s2">"remainingTime"</span><span class="p">:</span> <span class="n">item</span><span class="p">[</span><span class="s2">"remainingTime"</span><span class="p">],</span>
+                <span class="s2">"remainingSeconds"</span><span class="p">:</span> <span class="p">(</span>
+                    <span class="n">item</span><span class="p">[</span><span class="s2">"remainingSeconds"</span><span class="p">]</span> <span class="k">if</span> <span class="n">math</span><span class="o">.</span><span class="n">isfinite</span><span class="p">(</span><span class="n">item</span><span class="p">[</span><span class="s2">"remainingSeconds"</span><span class="p">])</span> <span class="k">else</span> <span class="kc">None</span>
+                <span class="p">),</span>
+                <span class="s2">"bidding"</span><span class="p">:</span> <span class="n">item</span><span class="p">[</span><span class="s2">"bidding"</span><span class="p">],</span>
+                <span class="s2">"marketMedian"</span><span class="p">:</span> <span class="n">median_price</span><span class="p">,</span>
+                <span class="s2">"condition"</span><span class="p">:</span> <span class="n">item</span><span class="p">[</span><span class="s2">"condition"</span><span class="p">],</span>
+                <span class="s2">"conditionLabel"</span><span class="p">:</span> <span class="n">item</span><span class="p">[</span><span class="s2">"conditionLabel"</span><span class="p">],</span>
+                <span class="s2">"attributes"</span><span class="p">:</span> <span class="n">item</span><span class="p">[</span><span class="s2">"attributes"</span><span class="p">],</span>
+                <span class="s2">"attributeLabels"</span><span class="p">:</span> <span class="n">item</span><span class="p">[</span><span class="s2">"attributeLabels"</span><span class="p">],</span>
+                <span class="s2">"buyDecision"</span><span class="p">:</span> <span class="n">item</span><span class="p">[</span><span class="s2">"buyDecision"</span><span class="p">],</span>
+                <span class="s2">"marketComparison"</span><span class="p">:</span> <span class="n">item</span><span class="p">[</span><span class="s2">"marketComparison"</span><span class="p">],</span>
             <span class="p">}</span>
             <span class="k">for</span> <span class="n">item</span> <span class="ow">in</span> <span class="n">now_items_sorted</span>
         <span class="p">]</span>
 
+        <span class="n">response_data</span> <span class="o">=</span> <span class="p">{</span>
+            <span class="s2">"closed_prices"</span><span class="p">:</span> <span class="n">closed_prices</span><span class="p">,</span>
+            <span class="s2">"closed_names"</span><span class="p">:</span> <span class="n">closed_names</span><span class="p">,</span>
+            <span class="s2">"medianPrice"</span><span class="p">:</span> <span class="n">median_price</span><span class="p">,</span>
+            <span class="s2">"marketStatistics"</span><span class="p">:</span> <span class="n">analyze_market_prices</span><span class="p">(</span>
+                <span class="p">[{</span><span class="s2">"price"</span><span class="p">:</span> <span class="n">price</span><span class="p">}</span> <span class="k">for</span> <span class="n">price</span> <span class="ow">in</span> <span class="n">closed_prices</span><span class="p">]</span>
+            <span class="p">),</span>
+            <span class="s2">"recommend_items"</span><span class="p">:</span> <span class="n">response_items</span><span class="p">,</span>
+        <span class="p">}</span>
+        <span class="n">current_run</span><span class="o">.</span><span class="n">result_snapshot</span> <span class="o">=</span> <span class="n">response_data</span>
+        <span class="n">current_run</span><span class="o">.</span><span class="n">save</span><span class="p">(</span><span class="n">update_fields</span><span class="o">=</span><span class="p">(</span><span class="s2">"result_snapshot"</span><span class="p">,))</span>
+        <span class="n">update_search_run_observability</span><span class="p">(</span><span class="n">current_run</span><span class="p">,</span> <span class="n">duration_ms</span><span class="o">=</span><span class="n">active_timer</span><span class="o">.</span><span class="n">elapsed_ms</span><span class="p">())</span>
+        <span class="k">return</span> <span class="n">JsonResponse</span><span class="p">(</span><span class="n">response_data</span><span class="p">)</span>
+    <span class="k">except</span> <span class="n">ExternalServiceError</span><span class="p">:</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">exception</span><span class="p">(</span><span class="s2">"Complex market search failed"</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">active_run</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">record_search_run</span><span class="p">(</span>
+                <span class="n">request</span><span class="p">,</span>
+                <span class="n">searchname</span><span class="p">,</span>
+                <span class="n">active_search_type</span><span class="p">,</span>
+                <span class="mi">0</span><span class="p">,</span>
+                <span class="n">succeeded</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+                <span class="n">record_word</span><span class="o">=</span><span class="n">active_search_type</span> <span class="o">==</span> <span class="n">SearchRun</span><span class="o">.</span><span class="n">CLOSED</span><span class="p">,</span>
+                <span class="n">criteria_snapshot</span><span class="o">=</span><span class="n">criteria</span><span class="o">.</span><span class="n">snapshot</span><span class="p">(),</span>
+                <span class="n">duration_ms</span><span class="o">=</span><span class="n">active_timer</span><span class="o">.</span><span class="n">elapsed_ms</span><span class="p">(),</span>
+                <span class="n">failure_code</span><span class="o">=</span><span class="n">FAILURE_EXTERNAL_SERVICE</span><span class="p">,</span>
+            <span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">update_search_run_observability</span><span class="p">(</span>
+                <span class="n">active_run</span><span class="p">,</span>
+                <span class="n">duration_ms</span><span class="o">=</span><span class="n">active_timer</span><span class="o">.</span><span class="n">elapsed_ms</span><span class="p">(),</span>
+                <span class="n">succeeded</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+                <span class="n">failure_code</span><span class="o">=</span><span class="n">FAILURE_EXTERNAL_SERVICE</span><span class="p">,</span>
+            <span class="p">)</span>
         <span class="k">return</span> <span class="n">JsonResponse</span><span class="p">(</span>
-            <span class="p">{</span>
-                <span class="s2">&quot;closed_prices&quot;</span><span class="p">:</span> <span class="n">closed_prices</span><span class="p">,</span>
-                <span class="s2">&quot;closed_names&quot;</span><span class="p">:</span> <span class="n">closed_names</span><span class="p">,</span>
-                <span class="s2">&quot;medianPrice&quot;</span><span class="p">:</span> <span class="n">median_price</span><span class="p">,</span>
-                <span class="s2">&quot;recommend_items&quot;</span><span class="p">:</span> <span class="n">response_items</span><span class="p">,</span>
-            <span class="p">}</span>
+            <span class="p">{</span><span class="s2">"error"</span><span class="p">:</span> <span class="n">EXTERNAL_SERVICE_MESSAGE</span><span class="p">,</span> <span class="s2">"code"</span><span class="p">:</span> <span class="s2">"external_service_unavailable"</span><span class="p">},</span>
+            <span class="n">status</span><span class="o">=</span><span class="mi">503</span><span class="p">,</span>
         <span class="p">)</span>
-    <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
-        <span class="k">return</span> <span class="n">JsonResponse</span><span class="p">({</span><span class="s2">&quot;error&quot;</span><span class="p">:</span> <span class="nb">str</span><span class="p">(</span><span class="n">e</span><span class="p">)},</span> <span class="n">status</span><span class="o">=</span><span class="mi">500</span><span class="p">)</span></div>
+    <span class="k">except</span> <span class="ne">Exception</span><span class="p">:</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">exception</span><span class="p">(</span><span class="s2">"Unexpected complex market search error"</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">active_run</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">record_search_run</span><span class="p">(</span>
+                <span class="n">request</span><span class="p">,</span>
+                <span class="n">searchname</span><span class="p">,</span>
+                <span class="n">active_search_type</span><span class="p">,</span>
+                <span class="mi">0</span><span class="p">,</span>
+                <span class="n">succeeded</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+                <span class="n">record_word</span><span class="o">=</span><span class="n">active_search_type</span> <span class="o">==</span> <span class="n">SearchRun</span><span class="o">.</span><span class="n">CLOSED</span><span class="p">,</span>
+                <span class="n">criteria_snapshot</span><span class="o">=</span><span class="n">criteria</span><span class="o">.</span><span class="n">snapshot</span><span class="p">(),</span>
+                <span class="n">duration_ms</span><span class="o">=</span><span class="n">active_timer</span><span class="o">.</span><span class="n">elapsed_ms</span><span class="p">(),</span>
+                <span class="n">failure_code</span><span class="o">=</span><span class="n">FAILURE_UNEXPECTED</span><span class="p">,</span>
+            <span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">update_search_run_observability</span><span class="p">(</span>
+                <span class="n">active_run</span><span class="p">,</span>
+                <span class="n">duration_ms</span><span class="o">=</span><span class="n">active_timer</span><span class="o">.</span><span class="n">elapsed_ms</span><span class="p">(),</span>
+                <span class="n">succeeded</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+                <span class="n">failure_code</span><span class="o">=</span><span class="n">FAILURE_UNEXPECTED</span><span class="p">,</span>
+            <span class="p">)</span>
+        <span class="k">return</span> <span class="n">JsonResponse</span><span class="p">({</span><span class="s2">"error"</span><span class="p">:</span> <span class="s2">"市場分析を実行できませんでした"</span><span class="p">},</span> <span class="n">status</span><span class="o">=</span><span class="mi">500</span><span class="p">)</span></div>
 
 
 
 <div class="viewcode-block" id="prediction_market_logic">
 <a class="viewcode-back" href="../../../utils.html#Main.views.utils.prediction_market_logic">[ドキュメント]</a>
-<span class="k">def</span><span class="w"> </span><span class="nf">prediction_market_logic</span><span class="p">(</span><span class="n">request</span><span class="p">):</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">prediction_market_logic</span><span class="p">(</span><span class="n">request</span><span class="p">,</span> <span class="n">criteria</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">"""</span>
 <span class="sd">    過去90日間の価格推移取得し、分析、クラスタリングを行う</span>
-<span class="sd">    &quot;&quot;&quot;</span>
-    <span class="k">if</span> <span class="n">request</span><span class="o">.</span><span class="n">method</span> <span class="o">!=</span> <span class="s2">&quot;GET&quot;</span><span class="p">:</span>
-        <span class="k">return</span> <span class="n">JsonResponse</span><span class="p">({</span><span class="s2">&quot;error&quot;</span><span class="p">:</span> <span class="s2">&quot;Invalid request method&quot;</span><span class="p">},</span> <span class="n">status</span><span class="o">=</span><span class="mi">400</span><span class="p">)</span>
+<span class="sd">    """</span>
+    <span class="k">if</span> <span class="n">request</span><span class="o">.</span><span class="n">method</span> <span class="o">!=</span> <span class="s2">"GET"</span> <span class="ow">and</span> <span class="n">criteria</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">JsonResponse</span><span class="p">({</span><span class="s2">"error"</span><span class="p">:</span> <span class="s2">"Invalid request method"</span><span class="p">},</span> <span class="n">status</span><span class="o">=</span><span class="mi">400</span><span class="p">)</span>
 
-    <span class="n">searchname</span> <span class="o">=</span> <span class="n">request</span><span class="o">.</span><span class="n">GET</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;keyword&quot;</span><span class="p">,</span> <span class="s2">&quot;&quot;</span><span class="p">)</span>
-    <span class="k">if</span> <span class="ow">not</span> <span class="n">searchname</span><span class="p">:</span>
-        <span class="k">return</span> <span class="n">JsonResponse</span><span class="p">({</span><span class="s2">&quot;error&quot;</span><span class="p">:</span> <span class="s2">&quot;Keyword is required&quot;</span><span class="p">},</span> <span class="n">status</span><span class="o">=</span><span class="mi">400</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">criteria</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">criteria</span> <span class="o">=</span> <span class="n">SearchCriteria</span><span class="o">.</span><span class="n">from_query</span><span class="p">(</span><span class="n">request</span><span class="o">.</span><span class="n">GET</span><span class="p">,</span> <span class="n">SearchRun</span><span class="o">.</span><span class="n">PREDICTION</span><span class="p">)</span>
+        <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">error</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">JsonResponse</span><span class="p">({</span><span class="s2">"error"</span><span class="p">:</span> <span class="nb">str</span><span class="p">(</span><span class="n">error</span><span class="p">),</span> <span class="s2">"code"</span><span class="p">:</span> <span class="s2">"invalid_keyword"</span><span class="p">},</span> <span class="n">status</span><span class="o">=</span><span class="mi">400</span><span class="p">)</span>
+    <span class="n">searchname</span> <span class="o">=</span> <span class="n">criteria</span><span class="o">.</span><span class="n">keyword</span>
+    <span class="n">timer</span> <span class="o">=</span> <span class="n">SearchTimer</span><span class="o">.</span><span class="n">start</span><span class="p">()</span>
+    <span class="n">run</span> <span class="o">=</span> <span class="kc">None</span>
 
     <span class="k">try</span><span class="p">:</span>
         <span class="c1"># 過去180日間の落札データを取得</span>
-        <span class="n">closed_data</span> <span class="o">=</span> <span class="n">scrape_data</span><span class="p">(</span><span class="n">searchname</span><span class="p">)</span>
-        <span class="k">if</span> <span class="ow">not</span> <span class="n">closed_data</span><span class="p">:</span>
-            <span class="k">return</span> <span class="n">JsonResponse</span><span class="p">({</span><span class="s2">&quot;error&quot;</span><span class="p">:</span> <span class="s2">&quot;No data available&quot;</span><span class="p">},</span> <span class="n">status</span><span class="o">=</span><span class="mi">404</span><span class="p">)</span>
-
-        <span class="c1"># 過去90日間のデータにフィルタリング</span>
-        <span class="n">current_date</span> <span class="o">=</span> <span class="n">datetime</span><span class="o">.</span><span class="n">now</span><span class="p">()</span>
-        <span class="n">past_90_days</span> <span class="o">=</span> <span class="n">current_date</span> <span class="o">-</span> <span class="n">timedelta</span><span class="p">(</span><span class="n">days</span><span class="o">=</span><span class="mi">90</span><span class="p">)</span>
-        <span class="n">filtered_data</span> <span class="o">=</span> <span class="p">[]</span>
-        <span class="k">for</span> <span class="n">item</span> <span class="ow">in</span> <span class="n">closed_data</span><span class="p">:</span>
-            <span class="k">if</span> <span class="n">item</span><span class="p">[</span><span class="s2">&quot;time&quot;</span><span class="p">]</span> <span class="o">!=</span> <span class="s2">&quot;N/A&quot;</span><span class="p">:</span>
-                <span class="k">try</span><span class="p">:</span>
-                    <span class="n">time_text</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">item</span><span class="p">[</span><span class="s2">&quot;time&quot;</span><span class="p">])</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span>
-                    <span class="k">if</span> <span class="n">re</span><span class="o">.</span><span class="n">match</span><span class="p">(</span><span class="sa">r</span><span class="s2">&quot;^\d</span><span class="si">{4}</span><span class="s2">-\d</span><span class="si">{2}</span><span class="s2">-\d</span><span class="si">{2}</span><span class="s2">[T\s]&quot;</span><span class="p">,</span> <span class="n">time_text</span><span class="p">):</span>
-                        <span class="n">item_date</span> <span class="o">=</span> <span class="n">datetime</span><span class="o">.</span><span class="n">fromisoformat</span><span class="p">(</span><span class="n">time_text</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s2">&quot;Z&quot;</span><span class="p">,</span> <span class="s2">&quot;+00:00&quot;</span><span class="p">))</span>
-                        <span class="k">if</span> <span class="n">item_date</span><span class="o">.</span><span class="n">tzinfo</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
-                            <span class="n">item_date</span> <span class="o">=</span> <span class="n">item_date</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="n">tzinfo</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span>
-                    <span class="k">else</span><span class="p">:</span>
-                        <span class="n">month_day</span><span class="p">,</span> <span class="n">time_part</span> <span class="o">=</span> <span class="n">time_text</span><span class="o">.</span><span class="n">split</span><span class="p">()</span>
-                        <span class="n">month</span><span class="p">,</span> <span class="n">day</span> <span class="o">=</span> <span class="n">month_day</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">&quot;/&quot;</span><span class="p">)</span>
-                        <span class="n">year</span> <span class="o">=</span> <span class="n">current_date</span><span class="o">.</span><span class="n">year</span>
-                        <span class="n">full_date</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">year</span><span class="si">}</span><span class="s2">-</span><span class="si">{</span><span class="n">month</span><span class="o">.</span><span class="n">zfill</span><span class="p">(</span><span class="mi">2</span><span class="p">)</span><span class="si">}</span><span class="s2">-</span><span class="si">{</span><span class="n">day</span><span class="o">.</span><span class="n">zfill</span><span class="p">(</span><span class="mi">2</span><span class="p">)</span><span class="si">}</span><span class="s2"> </span><span class="si">{</span><span class="n">time_part</span><span class="si">}</span><span class="s2">&quot;</span>
-                        <span class="n">item_date</span> <span class="o">=</span> <span class="n">datetime</span><span class="o">.</span><span class="n">strptime</span><span class="p">(</span><span class="n">full_date</span><span class="p">,</span> <span class="s2">&quot;%Y-%m-</span><span class="si">%d</span><span class="s2"> %H:%M&quot;</span><span class="p">)</span>
-                        <span class="k">if</span> <span class="n">item_date</span> <span class="o">&gt;</span> <span class="n">current_date</span><span class="p">:</span>
-                            <span class="n">item_date</span> <span class="o">=</span> <span class="n">item_date</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="n">year</span><span class="o">=</span><span class="n">year</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)</span>
-                    <span class="k">if</span> <span class="n">item_date</span> <span class="o">&gt;=</span> <span class="n">past_90_days</span><span class="p">:</span>
-                        <span class="n">filtered_data</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">item</span><span class="p">)</span>
-                <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
-                    <span class="n">logger</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Date parsing error for </span><span class="si">{</span><span class="n">item</span><span class="p">[</span><span class="s1">&#39;time&#39;</span><span class="p">]</span><span class="si">}</span><span class="s2">: </span><span class="si">{</span><span class="nb">str</span><span class="p">(</span><span class="n">e</span><span class="p">)</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
-                    <span class="k">continue</span>
-
-        <span class="n">prices</span> <span class="o">=</span> <span class="p">[</span>
-            <span class="n">item</span><span class="p">[</span><span class="s2">&quot;price&quot;</span><span class="p">]</span> <span class="k">for</span> <span class="n">item</span> <span class="ow">in</span> <span class="n">filtered_data</span> <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">item</span><span class="p">[</span><span class="s2">&quot;price&quot;</span><span class="p">],</span> <span class="p">(</span><span class="nb">int</span><span class="p">,</span> <span class="nb">float</span><span class="p">))</span>
-        <span class="p">]</span>
-        <span class="k">if</span> <span class="ow">not</span> <span class="n">prices</span><span class="p">:</span>
-            <span class="k">return</span> <span class="n">JsonResponse</span><span class="p">({</span><span class="s2">&quot;error&quot;</span><span class="p">:</span> <span class="s2">&quot;No price data in the last 90 days&quot;</span><span class="p">},</span> <span class="n">status</span><span class="o">=</span><span class="mi">404</span><span class="p">)</span>
-
-        <span class="c1"># 異常値除去 (KMeansクラスタリング)</span>
-        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">prices</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">10</span><span class="p">:</span>  <span class="c1"># 十分なデータがある場合</span>
-            <span class="n">kmeans</span> <span class="o">=</span> <span class="n">KMeans</span><span class="p">(</span><span class="n">n_clusters</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">random_state</span><span class="o">=</span><span class="mi">42</span><span class="p">)</span>  <span class="c1"># 2クラスタで異常値と通常値を分離</span>
-            <span class="n">labels</span> <span class="o">=</span> <span class="n">kmeans</span><span class="o">.</span><span class="n">fit_predict</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">prices</span><span class="p">)</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">))</span>
-            <span class="n">cluster_sizes</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">bincount</span><span class="p">(</span><span class="n">labels</span><span class="p">)</span>
-            <span class="n">outlier_cluster</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">argmin</span><span class="p">(</span><span class="n">cluster_sizes</span><span class="p">)</span>
-            <span class="n">cleaned_prices</span> <span class="o">=</span> <span class="p">[</span><span class="n">p</span> <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">p</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">prices</span><span class="p">)</span> <span class="k">if</span> <span class="n">labels</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">!=</span> <span class="n">outlier_cluster</span><span class="p">]</span>
-        <span class="k">else</span><span class="p">:</span>
-            <span class="n">cleaned_prices</span> <span class="o">=</span> <span class="n">prices</span>  <span class="c1"># データが少ない場合はそのまま</span>
-
-        <span class="c1"># 90日移動平均線</span>
-        <span class="n">window_size</span> <span class="o">=</span> <span class="mi">90</span>
-        <span class="n">moving_averages</span> <span class="o">=</span> <span class="p">[]</span>
-        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">cleaned_prices</span><span class="p">)):</span>
-            <span class="k">if</span> <span class="n">i</span> <span class="o">&gt;=</span> <span class="n">window_size</span> <span class="o">-</span> <span class="mi">1</span> <span class="ow">and</span> <span class="nb">len</span><span class="p">(</span><span class="n">cleaned_prices</span><span class="p">)</span> <span class="o">&gt;=</span> <span class="n">window_size</span><span class="p">:</span>
-                <span class="n">avg</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">cleaned_prices</span><span class="p">[</span><span class="n">i</span> <span class="o">-</span> <span class="n">window_size</span> <span class="o">+</span> <span class="mi">1</span> <span class="p">:</span> <span class="n">i</span> <span class="o">+</span> <span class="mi">1</span><span class="p">])</span>
-                <span class="n">moving_averages</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="nb">int</span><span class="p">(</span><span class="n">avg</span><span class="p">))</span>
-            <span class="k">else</span><span class="p">:</span>
-                <span class="n">moving_averages</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="kc">None</span><span class="p">)</span>
-
-        <span class="c1"># 1ヶ月予測 (最新の移動平均を基に)</span>
-        <span class="n">latest_avg</span> <span class="o">=</span> <span class="p">(</span>
-            <span class="n">moving_averages</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="k">if</span> <span class="n">moving_averages</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="k">else</span> <span class="n">np</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">cleaned_prices</span><span class="p">)</span>
+        <span class="n">closed_data</span> <span class="o">=</span> <span class="n">criteria</span><span class="o">.</span><span class="n">apply</span><span class="p">(</span><span class="n">scrape_data</span><span class="p">(</span><span class="n">searchname</span><span class="p">),</span> <span class="n">search_type</span><span class="o">=</span><span class="n">SearchRun</span><span class="o">.</span><span class="n">CLOSED</span><span class="p">)</span>
+        <span class="n">run</span> <span class="o">=</span> <span class="n">record_search_run</span><span class="p">(</span>
+            <span class="n">request</span><span class="p">,</span>
+            <span class="n">searchname</span><span class="p">,</span>
+            <span class="n">SearchRun</span><span class="o">.</span><span class="n">PREDICTION</span><span class="p">,</span>
+            <span class="nb">len</span><span class="p">(</span><span class="n">closed_data</span><span class="p">),</span>
+            <span class="nb">bool</span><span class="p">(</span><span class="n">closed_data</span><span class="p">),</span>
+            <span class="n">criteria_snapshot</span><span class="o">=</span><span class="n">criteria</span><span class="o">.</span><span class="n">snapshot</span><span class="p">(),</span>
+            <span class="n">duration_ms</span><span class="o">=</span><span class="n">timer</span><span class="o">.</span><span class="n">elapsed_ms</span><span class="p">(),</span>
+            <span class="n">failure_code</span><span class="o">=</span><span class="s2">""</span> <span class="k">if</span> <span class="n">closed_data</span> <span class="k">else</span> <span class="n">FAILURE_NO_DATA</span><span class="p">,</span>
         <span class="p">)</span>
-        <span class="n">predicted_price</span> <span class="o">=</span> <span class="n">latest_avg</span> <span class="o">*</span> <span class="mf">1.02</span>  <span class="c1"># 仮に2%増加（トレンド調整可能）</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">closed_data</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">JsonResponse</span><span class="p">({</span><span class="s2">"error"</span><span class="p">:</span> <span class="s2">"No data available"</span><span class="p">},</span> <span class="n">status</span><span class="o">=</span><span class="mi">404</span><span class="p">)</span>
 
-        <span class="c1"># 信頼区間（±10%）</span>
-        <span class="n">confidence_interval</span> <span class="o">=</span> <span class="p">[</span><span class="nb">int</span><span class="p">(</span><span class="n">predicted_price</span> <span class="o">*</span> <span class="mf">0.9</span><span class="p">),</span> <span class="nb">int</span><span class="p">(</span><span class="n">predicted_price</span> <span class="o">*</span> <span class="mf">1.1</span><span class="p">)]</span>
+        <span class="n">prediction</span> <span class="o">=</span> <span class="n">predict_market_prices</span><span class="p">(</span><span class="n">closed_data</span><span class="p">,</span> <span class="n">datetime</span><span class="o">.</span><span class="n">now</span><span class="p">())</span>
+        <span class="k">if</span> <span class="n">prediction</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">update_search_run_observability</span><span class="p">(</span>
+                <span class="n">run</span><span class="p">,</span>
+                <span class="n">duration_ms</span><span class="o">=</span><span class="n">timer</span><span class="o">.</span><span class="n">elapsed_ms</span><span class="p">(),</span>
+                <span class="n">succeeded</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+                <span class="n">failure_code</span><span class="o">=</span><span class="n">FAILURE_INSUFFICIENT_DATA</span><span class="p">,</span>
+            <span class="p">)</span>
+            <span class="k">return</span> <span class="n">JsonResponse</span><span class="p">({</span><span class="s2">"error"</span><span class="p">:</span> <span class="s2">"No price data in the last 90 days"</span><span class="p">},</span> <span class="n">status</span><span class="o">=</span><span class="mi">404</span><span class="p">)</span>
+        <span class="n">update_search_run_observability</span><span class="p">(</span><span class="n">run</span><span class="p">,</span> <span class="n">duration_ms</span><span class="o">=</span><span class="n">timer</span><span class="o">.</span><span class="n">elapsed_ms</span><span class="p">())</span>
+        <span class="k">return</span> <span class="n">JsonResponse</span><span class="p">({</span><span class="s2">"keyword"</span><span class="p">:</span> <span class="n">searchname</span><span class="p">,</span> <span class="o">**</span><span class="n">prediction</span><span class="p">})</span>
 
-        <span class="c1"># 過去90日分の価格推移と移動平均</span>
-        <span class="n">price_trends</span> <span class="o">=</span> <span class="p">[</span>
-            <span class="p">{</span>
-                <span class="s2">&quot;date&quot;</span><span class="p">:</span> <span class="n">item</span><span class="p">[</span><span class="s2">&quot;time&quot;</span><span class="p">],</span>
-                <span class="s2">&quot;price&quot;</span><span class="p">:</span> <span class="n">item</span><span class="p">[</span><span class="s2">&quot;price&quot;</span><span class="p">],</span>
-                <span class="s2">&quot;moving_avg&quot;</span><span class="p">:</span> <span class="n">moving_averages</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="k">if</span> <span class="n">i</span> <span class="o">&lt;</span> <span class="nb">len</span><span class="p">(</span><span class="n">moving_averages</span><span class="p">)</span> <span class="k">else</span> <span class="kc">None</span><span class="p">,</span>
-            <span class="p">}</span>
-            <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">item</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">filtered_data</span><span class="p">)</span>
-        <span class="p">]</span>
-
-        <span class="c1"># レスポンス準備</span>
-        <span class="n">response</span> <span class="o">=</span> <span class="p">{</span>
-            <span class="s2">&quot;keyword&quot;</span><span class="p">:</span> <span class="n">searchname</span><span class="p">,</span>
-            <span class="s2">&quot;moving_average&quot;</span><span class="p">:</span> <span class="nb">int</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">cleaned_prices</span><span class="p">)</span> <span class="k">if</span> <span class="n">cleaned_prices</span> <span class="k">else</span> <span class="mi">0</span><span class="p">),</span>
-            <span class="s2">&quot;predicted_price&quot;</span><span class="p">:</span> <span class="nb">int</span><span class="p">(</span><span class="n">predicted_price</span><span class="p">),</span>
-            <span class="s2">&quot;confidence_interval&quot;</span><span class="p">:</span> <span class="n">confidence_interval</span><span class="p">,</span>
-            <span class="s2">&quot;price_trends&quot;</span><span class="p">:</span> <span class="n">price_trends</span><span class="p">,</span>  <span class="c1"># 過去90日分の推移と移動平均</span>
-        <span class="p">}</span>
-
-        <span class="k">return</span> <span class="n">JsonResponse</span><span class="p">(</span><span class="n">response</span><span class="p">)</span>
-
-    <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
-        <span class="n">logger</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Error in prediction_market: </span><span class="si">{</span><span class="nb">str</span><span class="p">(</span><span class="n">e</span><span class="p">)</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
-        <span class="k">return</span> <span class="n">JsonResponse</span><span class="p">({</span><span class="s2">&quot;error&quot;</span><span class="p">:</span> <span class="nb">str</span><span class="p">(</span><span class="n">e</span><span class="p">)},</span> <span class="n">status</span><span class="o">=</span><span class="mi">500</span><span class="p">)</span></div>
+    <span class="k">except</span> <span class="n">ExternalServiceError</span><span class="p">:</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">exception</span><span class="p">(</span><span class="s2">"Prediction market search failed"</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">run</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">record_search_run</span><span class="p">(</span>
+                <span class="n">request</span><span class="p">,</span>
+                <span class="n">searchname</span><span class="p">,</span>
+                <span class="n">SearchRun</span><span class="o">.</span><span class="n">PREDICTION</span><span class="p">,</span>
+                <span class="mi">0</span><span class="p">,</span>
+                <span class="n">succeeded</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+                <span class="n">criteria_snapshot</span><span class="o">=</span><span class="n">criteria</span><span class="o">.</span><span class="n">snapshot</span><span class="p">(),</span>
+                <span class="n">duration_ms</span><span class="o">=</span><span class="n">timer</span><span class="o">.</span><span class="n">elapsed_ms</span><span class="p">(),</span>
+                <span class="n">failure_code</span><span class="o">=</span><span class="n">FAILURE_EXTERNAL_SERVICE</span><span class="p">,</span>
+            <span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">update_search_run_observability</span><span class="p">(</span>
+                <span class="n">run</span><span class="p">,</span>
+                <span class="n">duration_ms</span><span class="o">=</span><span class="n">timer</span><span class="o">.</span><span class="n">elapsed_ms</span><span class="p">(),</span>
+                <span class="n">succeeded</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+                <span class="n">failure_code</span><span class="o">=</span><span class="n">FAILURE_EXTERNAL_SERVICE</span><span class="p">,</span>
+            <span class="p">)</span>
+        <span class="k">return</span> <span class="n">JsonResponse</span><span class="p">(</span>
+            <span class="p">{</span><span class="s2">"error"</span><span class="p">:</span> <span class="n">EXTERNAL_SERVICE_MESSAGE</span><span class="p">,</span> <span class="s2">"code"</span><span class="p">:</span> <span class="s2">"external_service_unavailable"</span><span class="p">},</span>
+            <span class="n">status</span><span class="o">=</span><span class="mi">503</span><span class="p">,</span>
+        <span class="p">)</span>
+    <span class="k">except</span> <span class="ne">Exception</span><span class="p">:</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">exception</span><span class="p">(</span><span class="s2">"Unexpected prediction market error"</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">run</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">record_search_run</span><span class="p">(</span>
+                <span class="n">request</span><span class="p">,</span>
+                <span class="n">searchname</span><span class="p">,</span>
+                <span class="n">SearchRun</span><span class="o">.</span><span class="n">PREDICTION</span><span class="p">,</span>
+                <span class="mi">0</span><span class="p">,</span>
+                <span class="n">succeeded</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+                <span class="n">criteria_snapshot</span><span class="o">=</span><span class="n">criteria</span><span class="o">.</span><span class="n">snapshot</span><span class="p">(),</span>
+                <span class="n">duration_ms</span><span class="o">=</span><span class="n">timer</span><span class="o">.</span><span class="n">elapsed_ms</span><span class="p">(),</span>
+                <span class="n">failure_code</span><span class="o">=</span><span class="n">FAILURE_UNEXPECTED</span><span class="p">,</span>
+            <span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">update_search_run_observability</span><span class="p">(</span>
+                <span class="n">run</span><span class="p">,</span>
+                <span class="n">duration_ms</span><span class="o">=</span><span class="n">timer</span><span class="o">.</span><span class="n">elapsed_ms</span><span class="p">(),</span>
+                <span class="n">succeeded</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+                <span class="n">failure_code</span><span class="o">=</span><span class="n">FAILURE_UNEXPECTED</span><span class="p">,</span>
+            <span class="p">)</span>
+        <span class="k">return</span> <span class="n">JsonResponse</span><span class="p">({</span><span class="s2">"error"</span><span class="p">:</span> <span class="s2">"相場予想を実行できませんでした"</span><span class="p">},</span> <span class="n">status</span><span class="o">=</span><span class="mi">500</span><span class="p">)</span></div>
 
 
 
 <div class="viewcode-block" id="get_popular_words_logic">
 <a class="viewcode-back" href="../../../utils.html#Main.views.utils.get_popular_words_logic">[ドキュメント]</a>
 <span class="k">def</span><span class="w"> </span><span class="nf">get_popular_words_logic</span><span class="p">(</span><span class="n">request</span><span class="p">):</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">"""</span>
 <span class="sd">    人気のある検索ワードを取得する。</span>
-<span class="sd">    &quot;&quot;&quot;</span>
-    <span class="k">if</span> <span class="n">request</span><span class="o">.</span><span class="n">method</span> <span class="o">!=</span> <span class="s2">&quot;GET&quot;</span><span class="p">:</span>
-        <span class="k">return</span> <span class="n">JsonResponse</span><span class="p">({</span><span class="s2">&quot;error&quot;</span><span class="p">:</span> <span class="s2">&quot;Invalid request method&quot;</span><span class="p">},</span> <span class="n">status</span><span class="o">=</span><span class="mi">400</span><span class="p">)</span>
+<span class="sd">    """</span>
+    <span class="k">if</span> <span class="n">request</span><span class="o">.</span><span class="n">method</span> <span class="o">!=</span> <span class="s2">"GET"</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">JsonResponse</span><span class="p">({</span><span class="s2">"error"</span><span class="p">:</span> <span class="s2">"Invalid request method"</span><span class="p">},</span> <span class="n">status</span><span class="o">=</span><span class="mi">400</span><span class="p">)</span>
 
     <span class="k">try</span><span class="p">:</span>
-        <span class="n">top_n</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">request</span><span class="o">.</span><span class="n">GET</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;top&quot;</span><span class="p">,</span> <span class="mi">10</span><span class="p">))</span>
-        <span class="c1"># 全検索ワード履歴を取得</span>
-        <span class="n">all_words</span> <span class="o">=</span> <span class="n">searchwordlog</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">values_list</span><span class="p">(</span><span class="s2">&quot;word&quot;</span><span class="p">,</span> <span class="n">flat</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        <span class="n">top_n</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">request</span><span class="o">.</span><span class="n">GET</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"top"</span><span class="p">,</span> <span class="mi">10</span><span class="p">))</span>
+        <span class="n">owner</span> <span class="o">=</span> <span class="n">get_request_owner</span><span class="p">(</span><span class="n">request</span><span class="p">)</span>
+        <span class="n">all_words</span> <span class="o">=</span> <span class="n">searchwordlog</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">filter</span><span class="p">(</span><span class="n">owner_query</span><span class="p">(</span><span class="n">owner</span><span class="p">))</span><span class="o">.</span><span class="n">values_list</span><span class="p">(</span><span class="s2">"word"</span><span class="p">,</span> <span class="n">flat</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
         <span class="n">tokens</span> <span class="o">=</span> <span class="p">[]</span>
         <span class="k">for</span> <span class="n">phrase</span> <span class="ow">in</span> <span class="n">all_words</span><span class="p">:</span>
             <span class="k">if</span> <span class="n">phrase</span><span class="p">:</span>
-                <span class="n">tokens</span><span class="o">.</span><span class="n">extend</span><span class="p">(</span><span class="n">re</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="sa">r</span><span class="s2">&quot;[\u3000\s]+&quot;</span><span class="p">,</span> <span class="n">phrase</span><span class="o">.</span><span class="n">strip</span><span class="p">()))</span>
+                <span class="n">tokens</span><span class="o">.</span><span class="n">extend</span><span class="p">(</span><span class="n">re</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="sa">r</span><span class="s2">"[\u3000\s]+"</span><span class="p">,</span> <span class="n">phrase</span><span class="o">.</span><span class="n">strip</span><span class="p">()))</span>
         <span class="n">tokens</span> <span class="o">=</span> <span class="p">[</span><span class="n">t</span> <span class="k">for</span> <span class="n">t</span> <span class="ow">in</span> <span class="n">tokens</span> <span class="k">if</span> <span class="n">t</span><span class="p">]</span>
         <span class="n">counter</span> <span class="o">=</span> <span class="n">Counter</span><span class="p">(</span><span class="n">tokens</span><span class="p">)</span>
         <span class="n">most_common</span> <span class="o">=</span> <span class="p">[</span><span class="n">w</span> <span class="k">for</span> <span class="n">w</span><span class="p">,</span> <span class="n">_</span> <span class="ow">in</span> <span class="n">counter</span><span class="o">.</span><span class="n">most_common</span><span class="p">(</span><span class="n">top_n</span><span class="p">)]</span>
-        <span class="k">return</span> <span class="n">JsonResponse</span><span class="p">({</span><span class="s2">&quot;words&quot;</span><span class="p">:</span> <span class="n">most_common</span><span class="p">})</span>
+        <span class="k">return</span> <span class="n">JsonResponse</span><span class="p">({</span><span class="s2">"words"</span><span class="p">:</span> <span class="n">most_common</span><span class="p">})</span>
 
     <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
-        <span class="k">return</span> <span class="n">JsonResponse</span><span class="p">({</span><span class="s2">&quot;error&quot;</span><span class="p">:</span> <span class="nb">str</span><span class="p">(</span><span class="n">e</span><span class="p">)},</span> <span class="n">status</span><span class="o">=</span><span class="mi">500</span><span class="p">)</span></div>
+        <span class="k">return</span> <span class="n">JsonResponse</span><span class="p">({</span><span class="s2">"error"</span><span class="p">:</span> <span class="nb">str</span><span class="p">(</span><span class="n">e</span><span class="p">)},</span> <span class="n">status</span><span class="o">=</span><span class="mi">500</span><span class="p">)</span></div>
 
 </pre></div>
 

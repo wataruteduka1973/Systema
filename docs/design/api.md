@@ -21,7 +21,9 @@
 | GET | `get_popular_words?top=` | 検索語ランキング | 参照のみ |
 | GET | `watchlist` | 所有者の購入候補一覧 | 参照のみ |
 | POST | `watchlist` | 購入候補登録・再登録時更新 | `WatchItem` |
+| PATCH | `watchlist/{id}` | 本人のメモ・優先度・判断状態更新 | `WatchItem` |
 | DELETE | `watchlist/{id}` | 本人の購入候補解除 | `WatchItem`削除 |
+| GET | `watchlist/{id}/snapshots` | 本人の価格・入札履歴と分析要約 | 参照のみ |
 
 ### Current response characteristics
 
@@ -166,6 +168,8 @@ Responseはsummary差分、condition composition、新規・消失・継続商�
 
 ### 6.3 Buyer watchlist
 
+Legacy `/taskle/watchlist` endpoints now support Phase 2 decisions, filtering, snapshots, and analysis while the v1 envelope remains planned. Observation refreshes update observed listing fields only and never overwrite note, priority, category, or lifecycle status. History analysis is calculated from snapshots rather than persisted as duplicate derived columns.
+
 | Method | Path | Purpose |
 |---|---|---|
 | GET/POST | `/api/v1/watch-items` | 購入候補一覧・登録 |
@@ -178,10 +182,14 @@ PATCHで変更できるユーザー項目と、検索更新が変更する観測
 
 ### 6.4 Inventory and seller listings
 
+Phase 3A implements the inventory endpoints below on the existing v1 path. Seller-listing endpoints remain planned.
+
 | Method | Path | Purpose |
 |---|---|---|
 | GET/POST | `/api/v1/inventory-items` | 在庫一覧・手動登録 |
 | GET/PATCH/DELETE | `/api/v1/inventory-items/{id}` | 在庫詳細・更新・削除 |
+| POST | `/api/v1/inventory-items/{id}/profit-simulation` | 保存せず出品前の見込み利益を再計算 |
+| POST | `/api/v1/watch-items/{id}/convert-to-inventory` | 本人の購入候補を重複なく仕入済み在庫へ変換 |
 | GET/POST | `/api/v1/seller-listings` | 自分の出品一覧・URL登録 |
 | GET/PATCH/DELETE | `/api/v1/seller-listings/{id}` | 出品詳細・費用/状態更新・削除 |
 | POST | `/api/v1/seller-listings/{id}/refresh` | 公開出品ページを再取得 |
@@ -221,6 +229,7 @@ Profit simulation response:
 ```
 
 - サーバー側が利益を再計算し、クライアント計算値は信用しない。
+- Phase 3Aの利益計算では永続化済みの仕入価格を正とし、手数料は1円単位で四捨五入、損益分岐価格は赤字を避ける方向へ切り上げる。シミュレーション入力は保存しない。
 - URL host allowlistと商品識別子正規化を行う。
 - Yahooログイン情報、Cookie、アクセストークンは受け取らない。
 - refreshは検索APIと別のユーザー単位レート制限を持つ。

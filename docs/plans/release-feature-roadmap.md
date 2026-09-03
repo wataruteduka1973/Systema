@@ -118,13 +118,18 @@ Phase 0は後続機能の依存関係に沿って分割し、検索契約を先�
 
 ### Phase 2: Watchlist enhancement and price history
 
+**Status:** Core completed locally on 2026-09-02. Watch decisions, lifecycle filtering, price snapshots, owner-scoped update/history APIs, and snapshot-derived analysis are implemented and covered by the `target-analysis` verification suite. The user confirmed the feature behavior on 2026-09-02. Tag management remains deferred as a separate follow-up because tags require a login-only ownership contract while legacy watch items still support anonymous sessions.
+
 - メモ、優先度、カテゴリ、タグ、購入済み／見送り／終了を追加する。
 - 更新APIと状態・優先度・商品状態フィルターを追加する。
 - 登録時と更新時に価格履歴を保存し、登録後の変化を表示する。
+- 観測回数、価格変化率、最安・最高価格、入札増加、相場差、値上がり／値下がり傾向を履歴から算出し、材料不足を明示する。
 - 終了商品を通常一覧とアーカイブに分離する。
 - 検索更新でメモ等のユーザー入力を上書きしない。
 
 ### Phase 3: Seller listing and profitability foundation
+
+**Status:** Phase 3A completed locally on 2026-09-02. Login-only inventory CRUD, transactional/idempotent WatchItem conversion, the dedicated seller-management screen, and server-side pre-listing profit simulation are implemented and covered by the `inventory` verification suite. Local browser verification covered login, conversion, profit simulation, console errors, and mobile overflow. SellerListing, Yahoo public listing refresh, and listing snapshots remain for Phase 3B.
 
 - 購入候補から在庫へ移す操作と、在庫の手動登録を追加する。
 - 自分の出品URLを手動登録し、現在価格、入札、残り時間、状態を取得する。

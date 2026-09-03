@@ -3,20 +3,45 @@
 from __future__ import annotations
 
 from collections.abc import Mapping
+from datetime import timedelta
 from typing import Any
 from urllib.parse import urlparse
 
+from django.db import transaction
+from django.utils import timezone
+
 from Main.domain.buying_opportunity import evaluate_buying_opportunity
-from Main.models.watchitem import WatchItem
+from Main.models.watchitem import WatchItem, WatchPriceSnapshot
 from Main.services.ownership import RequestOwner, owner_query
+from Main.services.watchlist_analysis import analyze_watch_history
 
 ALLOWED_WATCH_HOSTS = {"auctions.yahoo.co.jp", "paypayfleamarket.yahoo.co.jp"}
+LIFECYCLE_STATUSES = {"active", "purchased", "skipped", "ended", "archived"}
+SNAPSHOT_MIN_INTERVAL = timedelta(minutes=15)
 
 
-def list_watch_items(owner: RequestOwner) -> list[dict[str, Any]]:
-    return [serialize_watch_item(item) for item in WatchItem.objects.filter(owner_query(owner))]
+def list_watch_items(
+    owner: RequestOwner,
+    *,
+    lifecycle_status: str | None = None,
+    priority: int | None = None,
+    condition: str | None = None,
+) -> list[dict[str, Any]]:
+    items = WatchItem.objects.filter(owner_query(owner)).prefetch_related("price_snapshots")
+    if lifecycle_status:
+        if lifecycle_status not in LIFECYCLE_STATUSES:
+            raise ValueError("ウォッチ状態が正しくありません")
+        items = items.filter(lifecycle_status=lifecycle_status)
+    if priority is not None:
+        if priority not in range(4):
+            raise ValueError("優先度は0から3で指定してください")
+        items = items.filter(priority=priority)
+    if condition:
+        items = items.filter(condition=condition[:20])
+    return [serialize_watch_item(item) for item in items]
 
 
+@transaction.atomic
 def save_watch_item(payload: Mapping[str, Any], owner: RequestOwner) -> tuple[WatchItem, bool]:
     name = str(payload.get("name") or "").strip()
     url = str(payload.get("url") or "").strip()
@@ -46,20 +71,29 @@ def save_watch_item(payload: Mapping[str, Any], owner: RequestOwner) -> tuple[Wa
         "buy_score": decision["score"],
         "buy_reason": decision["reason"],
     }
-    item, created = WatchItem.objects.get_or_create(
+    item, created = WatchItem.objects.select_for_update().get_or_create(
         **owner.model_values,
         url=url,
         defaults={**defaults, "added_price": price},
     )
     if not created:
+        price_changed = item.current_price != price
         for field, value in defaults.items():
             setattr(item, field, value)
+        if price_changed:
+            item.last_price_change_at = timezone.now()
         item.save()
+    _record_snapshot(
+        item,
+        remaining_seconds=_optional_non_negative_int(payload.get("remainingSeconds")),
+        force=created,
+    )
     return item, created
 
 
 def serialize_watch_item(item: WatchItem) -> dict[str, Any]:
     price_change = item.current_price - item.added_price
+    snapshots = list(item.price_snapshots.all())
     return {
         "id": item.pk,
         "name": item.name,
@@ -79,16 +113,27 @@ def serialize_watch_item(item: WatchItem) -> dict[str, Any]:
             "score": item.buy_score,
             "reason": item.buy_reason,
         },
+        "note": item.note,
+        "priority": item.priority,
+        "category": item.category,
+        "lifecycleStatus": item.lifecycle_status,
+        "endedAt": item.ended_at.isoformat() if item.ended_at else None,
+        "archivedAt": item.archived_at.isoformat() if item.archived_at else None,
+        "lastPriceChangeAt": (
+            item.last_price_change_at.isoformat() if item.last_price_change_at else None
+        ),
+        "historyAnalysis": analyze_watch_history(snapshots, item.market_median),
         "createdAt": item.created_at.isoformat(),
         "lastCheckedAt": item.last_checked_at.isoformat(),
     }
 
 
+@transaction.atomic
 def refresh_watched_item(payload: Mapping[str, Any], owner: RequestOwner) -> bool:
     """検索結果に含まれる登録済み商品の価格と判定を更新する。"""
     url = str(payload.get("url") or "").strip()
     try:
-        item = WatchItem.objects.get(owner_query(owner), url=url)
+        item = WatchItem.objects.select_for_update().get(owner_query(owner), url=url)
     except WatchItem.DoesNotExist:
         return False
 
@@ -100,6 +145,7 @@ def refresh_watched_item(payload: Mapping[str, Any], owner: RequestOwner) -> boo
         str(payload.get("condition") or item.condition),
         payload.get("remainingSeconds"),
     )
+    price_changed = item.current_price != price
     item.name = str(payload.get("name") or item.name)
     item.current_price = price
     item.bidding = _non_negative_int(payload.get("bidding"))
@@ -111,8 +157,86 @@ def refresh_watched_item(payload: Mapping[str, Any], owner: RequestOwner) -> boo
     item.buy_label = decision["label"]
     item.buy_score = decision["score"]
     item.buy_reason = decision["reason"]
+    if price_changed:
+        item.last_price_change_at = timezone.now()
     item.save()
+    _record_snapshot(
+        item,
+        remaining_seconds=_optional_non_negative_int(payload.get("remainingSeconds")),
+    )
     return True
+
+
+@transaction.atomic
+def update_watch_item(
+    item_id: int, payload: Mapping[str, Any], owner: RequestOwner
+) -> WatchItem | None:
+    try:
+        item = WatchItem.objects.select_for_update().get(owner_query(owner), pk=item_id)
+    except WatchItem.DoesNotExist:
+        return None
+
+    if "note" in payload:
+        item.note = str(payload["note"] or "")[:2000]
+    if "category" in payload:
+        item.category = str(payload["category"] or "").strip()[:100]
+    if "priority" in payload:
+        item.priority = _priority_value(payload["priority"])
+    if "lifecycleStatus" in payload:
+        lifecycle_status = str(payload["lifecycleStatus"])
+        if lifecycle_status not in LIFECYCLE_STATUSES:
+            raise ValueError("ウォッチ状態が正しくありません")
+        now = timezone.now()
+        item.lifecycle_status = lifecycle_status
+        if lifecycle_status == "ended" and item.ended_at is None:
+            item.ended_at = now
+        if lifecycle_status == "archived":
+            item.archived_at = item.archived_at or now
+        else:
+            item.archived_at = None
+    item.save()
+    return item
+
+
+def serialize_watch_snapshots(item: WatchItem) -> dict[str, Any]:
+    snapshots = list(item.price_snapshots.all())
+    return {
+        "itemId": item.pk,
+        "snapshots": [
+            {
+                "price": snapshot.price,
+                "bidding": snapshot.bidding,
+                "remainingSeconds": snapshot.remaining_seconds,
+                "condition": snapshot.condition,
+                "observedAt": snapshot.observed_at.isoformat(),
+            }
+            for snapshot in snapshots
+        ],
+        "analysis": analyze_watch_history(snapshots, item.market_median),
+    }
+
+
+def _record_snapshot(
+    item: WatchItem, *, remaining_seconds: int | None, force: bool = False
+) -> None:
+    latest = item.price_snapshots.order_by("-observed_at", "-pk").first()
+    significant_change = (
+        latest is None
+        or latest.price != item.current_price
+        or latest.bidding != item.bidding
+        or latest.condition != item.condition
+    )
+    interval_elapsed = (
+        latest is not None and timezone.now() - latest.observed_at >= SNAPSHOT_MIN_INTERVAL
+    )
+    if force or significant_change or interval_elapsed:
+        WatchPriceSnapshot.objects.create(
+            watch_item=item,
+            price=item.current_price,
+            bidding=item.bidding,
+            remaining_seconds=remaining_seconds,
+            condition=item.condition,
+        )
 
 
 def _is_allowed_url(value: str) -> bool:
@@ -129,3 +253,21 @@ def _non_negative_int(value: object) -> int:
         return max(0, int(float(value)))
     except (TypeError, ValueError):
         return 0
+
+
+def _optional_non_negative_int(value: object) -> int | None:
+    if value in (None, ""):
+        return None
+    return _non_negative_int(value)
+
+
+def _priority_value(value: object) -> int:
+    if isinstance(value, bool):
+        raise ValueError("優先度は0から3で指定してください")
+    try:
+        priority = int(str(value))
+    except (TypeError, ValueError) as error:
+        raise ValueError("優先度は0から3で指定してください") from error
+    if priority not in range(4):
+        raise ValueError("優先度は0から3で指定してください")
+    return priority

@@ -109,6 +109,9 @@
                     </li>
                     {% if request.user.is_authenticated %}
                     <li class="nav-item">
+                        <a class="nav-link" href="{% url 'seller_management' %}">出品・在庫管理</a>
+                    </li>
+                    <li class="nav-item">
                         <a class="nav-link" href="{% url 'profile' %}">{{ request.user.username }}</a>
                     </li>
                     <li class="nav-item">

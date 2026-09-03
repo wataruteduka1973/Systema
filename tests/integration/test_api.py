@@ -7,9 +7,10 @@ from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.test import RequestFactory
 
-from Main.views import api, utils
 from Main.models.searchrun import SearchRun
+from Main.models.watchitem import WatchItem, WatchPriceSnapshot
 from Main.services.ownership import get_request_owner
+from Main.views import api, utils
 
 # テスト開始、レポート生成
 # pytest tests/api_test.py --html=tests/report.html
@@ -261,24 +262,30 @@ class TestAPIUtils:
             "searchKeyword": "test",
         }
         create_response = api.watchlist(
-            self.authenticated(self.factory.post(
-                "/taskle/watchlist",
-                data=json.dumps(payload),
-                content_type="application/json",
-            ))
+            self.authenticated(
+                self.factory.post(
+                    "/taskle/watchlist",
+                    data=json.dumps(payload),
+                    content_type="application/json",
+                )
+            )
         )
         assert create_response.status_code == 201
         created = json.loads(create_response.content)["item"]
         assert created["addedPrice"] == 7000
         assert created["buyDecision"]["status"] == "strong_buy"
+        assert created["historyAnalysis"]["observationCount"] == 1
 
         payload["currentPrice"] = 6500
         update_response = api.watchlist(
-            self.authenticated(self.factory.post(
-                "/taskle/watchlist",
-                data=json.dumps(payload),
-                content_type="application/json",
-            ), username="watch-user-update")
+            self.authenticated(
+                self.factory.post(
+                    "/taskle/watchlist",
+                    data=json.dumps(payload),
+                    content_type="application/json",
+                ),
+                username="watch-user-update",
+            )
         )
         assert update_response.status_code == 201
 
@@ -292,6 +299,16 @@ class TestAPIUtils:
         assert update_response.status_code == 200
         assert updated["addedPrice"] == 7000
         assert updated["priceChange"] == -500
+        assert updated["historyAnalysis"]["trend"] == "down"
+        assert WatchPriceSnapshot.objects.filter(watch_item_id=created["id"]).count() == 2
+
+        payload["remainingSeconds"] = 1700
+        unchanged_request = self.factory.post(
+            "/taskle/watchlist", data=json.dumps(payload), content_type="application/json"
+        )
+        unchanged_request.user = user
+        assert api.watchlist(unchanged_request).status_code == 200
+        assert WatchPriceSnapshot.objects.filter(watch_item_id=created["id"]).count() == 2
 
         list_request = self.factory.get("/taskle/watchlist")
         list_request.user = user
@@ -300,18 +317,135 @@ class TestAPIUtils:
 
         delete_request = self.factory.delete(f"/taskle/watchlist/{created['id']}")
         delete_request.user = user
-        delete_response = api.watchlist_item(
-            delete_request, created["id"]
-        )
+        delete_response = api.watchlist_item(delete_request, created["id"])
         assert delete_response.status_code == 200
+
+    def test_watchlist_patch_preserves_user_fields_during_observation_update(self):
+        user = get_user_model().objects.create_user(username="watch-owner")
+        item = WatchItem.objects.create(
+            user=user,
+            name="商品",
+            url="https://auctions.yahoo.co.jp/jp/auction/phase2",
+            current_price=9000,
+            added_price=9000,
+            market_median=12000,
+        )
+        patch_request = self.factory.patch(
+            f"/taskle/watchlist/{item.pk}",
+            data=json.dumps(
+                {
+                    "note": "8000円以下なら購入",
+                    "priority": 3,
+                    "category": "カメラ",
+                    "lifecycleStatus": "active",
+                }
+            ),
+            content_type="application/json",
+        )
+        patch_request.user = user
+
+        patch_response = api.watchlist_item(patch_request, item.pk)
+
+        assert patch_response.status_code == 200
+        refresh_request = self.factory.post(
+            "/taskle/watchlist",
+            data=json.dumps(
+                {
+                    "name": "更新商品名",
+                    "url": item.url,
+                    "currentPrice": 8000,
+                    "bidding": 2,
+                    "marketMedian": 12000,
+                }
+            ),
+            content_type="application/json",
+        )
+        refresh_request.user = user
+        api.watchlist(refresh_request)
+        item.refresh_from_db()
+        assert item.note == "8000円以下なら購入"
+        assert item.priority == 3
+        assert item.category == "カメラ"
+        assert item.lifecycle_status == "active"
+        assert item.current_price == 8000
+
+    def test_watchlist_patch_and_snapshots_hide_foreign_owner_item(self):
+        owner = get_user_model().objects.create_user(username="watch-owner-a")
+        other = get_user_model().objects.create_user(username="watch-owner-b")
+        item = WatchItem.objects.create(
+            user=owner,
+            name="非公開商品",
+            url="https://auctions.yahoo.co.jp/jp/auction/private",
+        )
+        patch_request = self.factory.patch(
+            f"/taskle/watchlist/{item.pk}",
+            data=json.dumps({"note": "見えてはいけない"}),
+            content_type="application/json",
+        )
+        patch_request.user = other
+        snapshots_request = self.factory.get(f"/taskle/watchlist/{item.pk}/snapshots")
+        snapshots_request.user = other
+
+        assert api.watchlist_item(patch_request, item.pk).status_code == 404
+        assert api.watchlist_snapshots(snapshots_request, item.pk).status_code == 404
+        item.refresh_from_db()
+        assert item.note == ""
+
+    def test_watchlist_patch_rejects_invalid_priority(self):
+        user = get_user_model().objects.create_user(username="watch-priority")
+        item = WatchItem.objects.create(
+            user=user,
+            name="商品",
+            url="https://auctions.yahoo.co.jp/jp/auction/priority",
+        )
+        request = self.factory.patch(
+            f"/taskle/watchlist/{item.pk}",
+            data=json.dumps({"priority": "highest"}),
+            content_type="application/json",
+        )
+        request.user = user
+
+        response = api.watchlist_item(request, item.pk)
+
+        assert response.status_code == 400
+        item.refresh_from_db()
+        assert item.priority == 0
+
+    def test_watchlist_filters_status_priority_and_condition(self):
+        user = get_user_model().objects.create_user(username="watch-filter")
+        WatchItem.objects.create(
+            user=user,
+            name="対象",
+            url="https://auctions.yahoo.co.jp/jp/auction/filter-a",
+            priority=3,
+            lifecycle_status="archived",
+            condition="used",
+        )
+        WatchItem.objects.create(
+            user=user,
+            name="対象外",
+            url="https://auctions.yahoo.co.jp/jp/auction/filter-b",
+            priority=1,
+            condition="new",
+        )
+        request = self.factory.get("/taskle/watchlist?status=archived&priority=3&condition=used")
+        request.user = user
+
+        response = api.watchlist(request)
+
+        items = json.loads(response.content)["items"]
+        assert response.status_code == 200
+        assert [item["name"] for item in items] == ["対象"]
 
     def test_watchlist_rejects_non_yahoo_url(self):
         response = api.watchlist(
-            self.authenticated(self.factory.post(
-                "/taskle/watchlist",
-                data=json.dumps({"name": "商品", "url": "https://example.com/item"}),
-                content_type="application/json",
-            ))
+            self.authenticated(
+                self.factory.post(
+                    "/taskle/watchlist",
+                    data=json.dumps({"name": "商品", "url": "https://example.com/item"}),
+                    content_type="application/json",
+                )
+            )
         )
         assert response.status_code == 400
 

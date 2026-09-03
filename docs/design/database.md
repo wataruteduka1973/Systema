@@ -2,7 +2,7 @@
 
 ## 1. Purpose and Status
 
-本書は現行DBの実態と、リリースロードマップに必要な将来スキーマを定義する。将来テーブル・カラムは設計であり、未実装。SQLite開発環境とPostgreSQL本番環境の両方でDjango migrationを使用する。
+本書は現行DBの実態と、リリースロードマップに必要な将来スキーマを定義する。Phase 2の`WatchItem`拡張と`WatchPriceSnapshot`はmigration `0015_watchlist_phase2`で実装済み。その他の将来テーブル・カラムは設計であり、未実装。SQLite開発環境とPostgreSQL本番環境の両方でDjango migrationを使用する。
 
 ## 2. Current Schema Baseline
 
@@ -13,7 +13,7 @@
 | `SearchRun` | keyword, search_type, item_count, succeeded, created_at | userまたはsession_key、items | 条件、trigger、所要時間、失敗分類がない |
 | `scraping` | SearchWord, SearchDay, Bidding, EndPrice, StartPrice, Name, URL | nullable SearchRun FK | legacy命名、日時/入札がtext、状態・商品キーがない |
 | `searchwordlog` | word, searched_at | userまたはsession_key | SearchRunと役割が重複 |
-| `WatchItem` | URL、追加/現在価格、入札、状態、相場、買い時判定 | userまたはsession_key | メモ、状態管理、タグ、価格履歴がない |
+| `WatchItem` | URL、追加/現在価格、入札、状態、相場、買い時判定、メモ、優先度、カテゴリ、ライフサイクル | userまたはsession_key、価格履歴 | タグは未実装 |
 | `ErrorLog` | code, message, timestamp, file, line | なし | 生messageへ個人情報が混ざる可能性 |
 | Django User/Session | 認証・セッション | Django標準 | 維持する |
 
@@ -94,6 +94,8 @@ Indexes:
 
 ### 5.3 WatchItem
 
+Implemented by `0015_watchlist_phase2` except tags, which remain a login-only follow-up.
+
 Add:
 
 - note: TextField blank
@@ -139,6 +141,8 @@ Constraints:
 
 ### 6.3 WatchPriceSnapshot
 
+Implemented by `0015_watchlist_phase2`. Analysis is derived in `Main/services/watchlist_analysis.py`; calculated summaries are not duplicated in the database.
+
 - watch_item FK CASCADE
 - price PositiveBigInteger
 - bidding PositiveInteger default=0
@@ -151,6 +155,8 @@ Index `(watch_item, -observed_at)`。登録時、価格変化時、または設�
 ## 7. Seller and Inventory Models
 
 ### 7.1 InventoryItem
+
+Implemented by `0016_inventory_phase3a`. `source_watch_item` is a nullable one-to-one relation so retrying a conversion cannot create duplicate inventory.
 
 | Field | Type/constraint |
 |---|---|
@@ -168,6 +174,8 @@ Index `(watch_item, -observed_at)`。登録時、価格変化時、または設�
 WatchItemから変換するときはtransaction内でInventoryItemを作り、WatchItemを`purchased`にする。再試行で重複作成しない一意参照またはidempotencyを持たせる。
 
 ### 7.2 SellerListing
+
+Not implemented; planned for Phase 3B.
 
 | Field | Type/constraint |
 |---|---|

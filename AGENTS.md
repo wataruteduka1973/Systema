@@ -76,6 +76,17 @@ Common commands:
 - Django checks: `python manage.py check`
 - Static collection: `python manage.py collectstatic`
 
+## Project Skills
+
+Reusable Systema workflows live under `.agents/skills/`:
+
+- `systema-requirement-architecture-review`: use before implementation when requirements, acceptance criteria, contracts, or layer boundaries need review.
+- `systema-implementation-tests`: use for scoped implementation and risk-based unit, integration, regression, fixture, or E2E tests.
+- `systema-change-review`: use for PR/code review, security and migration checks, CI failure analysis, and documentation synchronization.
+- `systema-dependency-maintenance`: use for dependency or GitHub Actions upgrades and compatibility assessment.
+
+Use the smallest set that covers the task. These skills specialize this guide; they do not override user requirements, authorization boundaries, routed feature documents, or `docs/quality/definition-of-done.md`.
+
 ## Self Review
 
 Before completion, review the focused diff as a maintainer:

@@ -23,6 +23,16 @@ FEATURE_TESTS = {
         "tests/unit/test_time_series_analysis.py",
         "tests/integration/test_api.py",
     ),
+    "target-analysis": (
+        "tests/unit/test_buying_opportunity.py",
+        "tests/unit/test_market_statistics.py",
+        "tests/unit/test_watchlist_analysis.py",
+        "tests/integration/test_api.py",
+    ),
+    "inventory": (
+        "tests/unit/test_profitability.py",
+        "tests/integration/test_inventory.py",
+    ),
     "database": (
         "tests/unit/test_database_config.py",
         "tests/integration/test_database_command.py",
@@ -43,6 +53,16 @@ PATH_FEATURES = {
     "Main/static/JS/SavedSearches.js": "accounts",
     "Main/templates/accounts/profile.html": "accounts",
     "Main/services/time_series_analysis.py": "prediction",
+    "Main/models/watchitem.py": "target-analysis",
+    "Main/services/watchlist.py": "target-analysis",
+    "Main/services/watchlist_analysis.py": "target-analysis",
+    "Main/static/JS/Deep_Analysis_now.js": "target-analysis",
+    "Main/templates/Deep_Analysis_now.html": "target-analysis",
+    "Main/domain/profitability.py": "inventory",
+    "Main/models/inventoryitem.py": "inventory",
+    "Main/services/inventory.py": "inventory",
+    "Main/static/JS/InventoryManagement.js": "inventory",
+    "Main/templates/seller_management.html": "inventory",
 }
 
 

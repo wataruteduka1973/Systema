@@ -191,9 +191,42 @@
             <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
                 <div>
                     <h2 id="watchlistHeading" class="mb-1">Systema ウォッチリスト</h2>
-                    <p class="text-muted mb-0">追加時価格との変化と最新の買い時判定を確認できます。未ログイン時はブラウザーのセッションへ保存され、ログインするとアカウントへ引き継がれます。</p>
+                    <p class="text-muted mb-0">価格・入札の推移、相場との差、判断メモを継続して確認できます。未ログイン時はブラウザーのセッションへ保存され、ログインするとアカウントへ引き継がれます。</p>
                 </div>
                 <button type="button" class="btn btn-outline-secondary" onclick="loadWatchlist()">再読み込み</button>
+            </div>
+            <div class="row g-2 mb-3" aria-label="ウォッチリスト絞り込み">
+                <div class="col-sm-4 col-lg-3">
+                    <label class="form-label" for="watchStatusFilter">判断状態</label>
+                    <select id="watchStatusFilter" class="form-select" onchange="renderFilteredWatchlist()">
+                        <option value="active" selected>追跡中</option>
+                        <option value="purchased">購入済み</option>
+                        <option value="skipped">見送り</option>
+                        <option value="ended">終了</option>
+                        <option value="archived">アーカイブ</option>
+                        <option value="">すべて</option>
+                    </select>
+                </div>
+                <div class="col-sm-4 col-lg-3">
+                    <label class="form-label" for="watchPriorityFilter">優先度</label>
+                    <select id="watchPriorityFilter" class="form-select" onchange="renderFilteredWatchlist()">
+                        <option value="">すべて</option>
+                        <option value="3">最優先</option>
+                        <option value="2">高</option>
+                        <option value="1">通常</option>
+                        <option value="0">未設定</option>
+                    </select>
+                </div>
+                <div class="col-sm-4 col-lg-3">
+                    <label class="form-label" for="watchConditionFilter">商品状態</label>
+                    <select id="watchConditionFilter" class="form-select" onchange="renderFilteredWatchlist()">
+                        <option value="">すべて</option>
+                        <option value="new">新品</option>
+                        <option value="used">中古</option>
+                        <option value="junk">ジャンク</option>
+                        <option value="unknown">未分類</option>
+                    </select>
+                </div>
             </div>
             <div id="watchlistEmpty" class="alert alert-secondary">ウォッチ中の商品はありません。</div>
             <div class="table-responsive">
@@ -204,7 +237,9 @@
                             <th>現在価格</th>
                             <th>追加時価格</th>
                             <th>価格変化</th>
+                            <th>履歴分析</th>
                             <th>買い時判定</th>
+                            <th>判断管理</th>
                             <th>最終確認</th>
                             <th>操作</th>
                         </tr>
@@ -219,7 +254,7 @@
     <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.9.2/dist/umd/popper.min.js"></script>
     <script src="{% static 'JS/csrf.js' %}?v=20260821-security"></script>
     <script src="{% static 'JS/MarketComparison.js' %}?v=20260821-target"></script>
-    <script src="{% static 'JS/Deep_Analysis_now.js' %}?v=20260825-target-form-fix"></script>
+    <script src="{% static 'JS/Deep_Analysis_now.js' %}?v=20260902-watch-history"></script>
     <script src="{% static 'JS/SavedSearches.js' %}?v=20260825-target-integrated"></script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
 </body>

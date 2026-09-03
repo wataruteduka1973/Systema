@@ -11,6 +11,10 @@ Compare current listings with the closed-auction market and identify buying oppo
 - Adds market difference, condition, and buying-decision data to current items.
 - Allows two to four current items to be compared side by side.
 - Owns the Systema watchlist workflow.
+- Keeps owner-scoped watch decisions as notes, priorities, and lifecycle states without allowing observation refreshes to overwrite them.
+- Records price, bid, remaining-time, and condition snapshots on registration and meaningful observation changes.
+- Shows price-history analysis including observation count, trend, minimum/maximum price, bid change, and market-median discount; one observation is reported as insufficient data rather than a trend.
+- Separates active, purchased, skipped, ended, and archived buying candidates with status and priority filters.
 - Uses one integrated form for keyword and all target-analysis criteria.
 - The keyword is the saved condition's display name; the UI does not ask for a separate title.
 - The related-feature links, criteria, action, and frequent-word aid share one card.
@@ -29,7 +33,11 @@ Compare current listings with the closed-auction market and identify buying oppo
 - `Main/services/market_statistics.py`
 - `Main/domain/buying_opportunity.py`
 - `Main/services/watchlist.py`
+- `Main/services/watchlist_analysis.py`
+- `Main/models/watchitem.py`
+- `Main/migrations/0015_watchlist_phase2.py`
 - `tests/integration/test_api.py`
+- `tests/unit/test_watchlist_analysis.py`
 - `tests/unit/test_buying_opportunity.py`
 - `tests/unit/test_market_statistics.py`
 
@@ -39,4 +47,4 @@ Market comparison is centralized here. See `docs/decisions/0002-centralize-marke
 
 ## Verification
 
-Use mocked scraper results or fixtures. Verify market statistics, comparison labels, buying decisions, unknown remaining time, and watchlist ownership.
+Use mocked scraper results or fixtures. Verify market statistics, comparison labels, buying decisions, unknown remaining time, watchlist ownership, user-managed-field preservation, snapshot creation, history analysis, and insufficient-data behavior.

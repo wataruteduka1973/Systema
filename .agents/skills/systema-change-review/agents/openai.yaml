@@ -1,0 +1,3 @@
+interface:
+  display_name: "Systema 変更統合レビュー"
+  short_description: "PR・Security・DB・CI・Docsを統合確認"

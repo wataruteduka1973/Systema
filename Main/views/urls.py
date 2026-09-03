@@ -1,3 +1,4 @@
+from django.contrib.auth.decorators import login_required
 from django.shortcuts import render
 from django.urls import reverse
 from django.views.decorators.csrf import ensure_csrf_cookie
@@ -73,3 +74,9 @@ def Yahuoku_prediction(request):
 
 def introduction(request):
     return render(request, "introduction.html")
+
+
+@login_required
+@ensure_csrf_cookie
+def seller_management(request):
+    return render(request, "seller_management.html")

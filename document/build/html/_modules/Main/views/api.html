@@ -82,18 +82,47 @@
 <span class="kn">import</span><span class="w"> </span><span class="nn">logging</span>
 
 <span class="kn">from</span><span class="w"> </span><span class="nn">django.http</span><span class="w"> </span><span class="kn">import</span> <span class="n">JsonResponse</span>
-<span class="kn">from</span><span class="w"> </span><span class="nn">django.views.decorators.csrf</span><span class="w"> </span><span class="kn">import</span> <span class="n">csrf_exempt</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">django.utils</span><span class="w"> </span><span class="kn">import</span> <span class="n">timezone</span>
 
 <span class="kn">from</span><span class="w"> </span><span class="nn">Main.domain.product_condition</span><span class="w"> </span><span class="kn">import</span> <span class="n">enrich_market_items</span><span class="p">,</span> <span class="n">summarize_condition_market</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">Main.models.inventoryitem</span><span class="w"> </span><span class="kn">import</span> <span class="n">InventoryItem</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">Main.models.savedsearch</span><span class="w"> </span><span class="kn">import</span> <span class="n">SavedSearch</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">Main.models.watchitem</span><span class="w"> </span><span class="kn">import</span> <span class="n">WatchItem</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">Main.services.exceptions</span><span class="w"> </span><span class="kn">import</span> <span class="p">(</span>
+    <span class="n">ExternalServiceError</span><span class="p">,</span>
+    <span class="n">SearchInputError</span><span class="p">,</span>
+    <span class="n">SearchRateLimitError</span><span class="p">,</span>
+<span class="p">)</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">Main.services.external_search</span><span class="w"> </span><span class="kn">import</span> <span class="n">enforce_search_rate_limit</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">Main.services.inventory</span><span class="w"> </span><span class="kn">import</span> <span class="p">(</span>
+    <span class="n">convert_watch_to_inventory</span><span class="p">,</span>
+    <span class="n">list_inventory_items</span><span class="p">,</span>
+    <span class="n">save_inventory_item</span><span class="p">,</span>
+    <span class="n">serialize_inventory_item</span><span class="p">,</span>
+    <span class="n">simulate_inventory_profit</span><span class="p">,</span>
+<span class="p">)</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">Main.services.market_statistics</span><span class="w"> </span><span class="kn">import</span> <span class="p">(</span>
     <span class="n">analyze_market_prices</span><span class="p">,</span>
     <span class="n">enrich_items_with_market_comparison</span><span class="p">,</span>
+<span class="p">)</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">Main.services.ownership</span><span class="w"> </span><span class="kn">import</span> <span class="n">get_request_owner</span><span class="p">,</span> <span class="n">owner_query</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">Main.services.saved_searches</span><span class="w"> </span><span class="kn">import</span> <span class="p">(</span>
+    <span class="n">criteria_from_saved_search</span><span class="p">,</span>
+    <span class="n">save_saved_search</span><span class="p">,</span>
+    <span class="n">serialize_saved_search</span><span class="p">,</span>
+<span class="p">)</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">Main.services.search_criteria</span><span class="w"> </span><span class="kn">import</span> <span class="n">SearchCriteria</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">Main.services.search_observability</span><span class="w"> </span><span class="kn">import</span> <span class="p">(</span>
+    <span class="n">FAILURE_EXTERNAL_SERVICE</span><span class="p">,</span>
+    <span class="n">FAILURE_UNEXPECTED</span><span class="p">,</span>
+    <span class="n">SearchTimer</span><span class="p">,</span>
 <span class="p">)</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">Main.services.watchlist</span><span class="w"> </span><span class="kn">import</span> <span class="p">(</span>
     <span class="n">list_watch_items</span><span class="p">,</span>
     <span class="n">save_watch_item</span><span class="p">,</span>
     <span class="n">serialize_watch_item</span><span class="p">,</span>
+    <span class="n">serialize_watch_snapshots</span><span class="p">,</span>
+    <span class="n">update_watch_item</span><span class="p">,</span>
 <span class="p">)</span>
 
 <span class="kn">from</span><span class="w"> </span><span class="nn">.utils</span><span class="w"> </span><span class="kn">import</span> <span class="p">(</span>
@@ -103,66 +132,153 @@
     <span class="n">get_popular_words_logic</span><span class="p">,</span>
     <span class="n">get_search_words_logic</span><span class="p">,</span>
     <span class="n">prediction_market_logic</span><span class="p">,</span>
+    <span class="n">record_search_run</span><span class="p">,</span>
     <span class="n">save_to_database</span><span class="p">,</span>
     <span class="n">scrape_current_listings</span><span class="p">,</span>
     <span class="n">scrape_data</span><span class="p">,</span>
     <span class="n">update_market_data_logic</span><span class="p">,</span>
+    <span class="n">update_search_run_observability</span><span class="p">,</span>
 <span class="p">)</span>
 
-<span class="n">logger</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="s2">&quot;search_logger&quot;</span><span class="p">)</span>
+<span class="n">logger</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="s2">"search_logger"</span><span class="p">)</span>
+
+<span class="n">EXTERNAL_SERVICE_MESSAGE</span> <span class="o">=</span> <span class="s2">"外部サービスからデータを取得できませんでした"</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_external_search_guard</span><span class="p">(</span><span class="n">request</span><span class="p">,</span> <span class="n">search_type</span><span class="o">=</span><span class="s2">"closed"</span><span class="p">):</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">criteria</span> <span class="o">=</span> <span class="n">SearchCriteria</span><span class="o">.</span><span class="n">from_query</span><span class="p">(</span><span class="n">request</span><span class="o">.</span><span class="n">GET</span><span class="p">,</span> <span class="n">search_type</span><span class="p">)</span>
+        <span class="n">enforce_search_rate_limit</span><span class="p">(</span><span class="n">request</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">criteria</span><span class="p">,</span> <span class="kc">None</span>
+    <span class="k">except</span> <span class="n">SearchInputError</span> <span class="k">as</span> <span class="n">error</span><span class="p">:</span>
+        <span class="k">return</span> <span class="kc">None</span><span class="p">,</span> <span class="n">JsonResponse</span><span class="p">({</span><span class="s2">"error"</span><span class="p">:</span> <span class="nb">str</span><span class="p">(</span><span class="n">error</span><span class="p">),</span> <span class="s2">"code"</span><span class="p">:</span> <span class="s2">"invalid_keyword"</span><span class="p">},</span> <span class="n">status</span><span class="o">=</span><span class="mi">400</span><span class="p">)</span>
+    <span class="k">except</span> <span class="n">SearchRateLimitError</span> <span class="k">as</span> <span class="n">error</span><span class="p">:</span>
+        <span class="n">response</span> <span class="o">=</span> <span class="n">JsonResponse</span><span class="p">({</span><span class="s2">"error"</span><span class="p">:</span> <span class="nb">str</span><span class="p">(</span><span class="n">error</span><span class="p">),</span> <span class="s2">"code"</span><span class="p">:</span> <span class="s2">"rate_limit_exceeded"</span><span class="p">},</span> <span class="n">status</span><span class="o">=</span><span class="mi">429</span><span class="p">)</span>
+        <span class="n">response</span><span class="p">[</span><span class="s2">"Retry-After"</span><span class="p">]</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">error</span><span class="o">.</span><span class="n">retry_after</span><span class="p">)</span>
+        <span class="k">return</span> <span class="kc">None</span><span class="p">,</span> <span class="n">response</span>
 
 
 <div class="viewcode-block" id="handle_search_response">
 <a class="viewcode-back" href="../../../api.html#Main.views.api.handle_search_response">[ドキュメント]</a>
 <span class="k">def</span><span class="w"> </span><span class="nf">handle_search_response</span><span class="p">(</span>
-    <span class="n">request</span><span class="p">,</span> <span class="n">data_fetch_func</span><span class="p">,</span> <span class="n">save_func</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">include_condition_analysis</span><span class="o">=</span><span class="kc">False</span>
+    <span class="n">request</span><span class="p">,</span>
+    <span class="n">data_fetch_func</span><span class="p">,</span>
+    <span class="n">save_func</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+    <span class="n">include_condition_analysis</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+    <span class="n">search_type</span><span class="o">=</span><span class="s2">"closed"</span><span class="p">,</span>
+    <span class="n">criteria</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
 <span class="p">):</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">"""</span>
 <span class="sd">    共通の検索処理を行うヘルパー関数。</span>
-<span class="sd">    &quot;&quot;&quot;</span>
-    <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;Logger initialized&quot;</span><span class="p">)</span>
-    <span class="k">if</span> <span class="n">request</span><span class="o">.</span><span class="n">method</span> <span class="o">!=</span> <span class="s2">&quot;GET&quot;</span><span class="p">:</span>
-        <span class="n">logger</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="s2">&quot;Invalid request method received&quot;</span><span class="p">)</span>
-        <span class="k">return</span> <span class="n">JsonResponse</span><span class="p">({</span><span class="s2">&quot;error&quot;</span><span class="p">:</span> <span class="s2">&quot;Invalid request method&quot;</span><span class="p">},</span> <span class="n">status</span><span class="o">=</span><span class="mi">400</span><span class="p">)</span>
+<span class="sd">    """</span>
+    <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">"Logger initialized"</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">request</span><span class="o">.</span><span class="n">method</span> <span class="o">!=</span> <span class="s2">"GET"</span> <span class="ow">and</span> <span class="n">criteria</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="s2">"Invalid request method received"</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">JsonResponse</span><span class="p">({</span><span class="s2">"error"</span><span class="p">:</span> <span class="s2">"Invalid request method"</span><span class="p">},</span> <span class="n">status</span><span class="o">=</span><span class="mi">400</span><span class="p">)</span>
 
-    <span class="n">searchname</span> <span class="o">=</span> <span class="n">request</span><span class="o">.</span><span class="n">GET</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;keyword&quot;</span><span class="p">,</span> <span class="s2">&quot;&quot;</span><span class="p">)</span>
-    <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Search started for keyword: </span><span class="si">{</span><span class="n">searchname</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
-    <span class="k">if</span> <span class="ow">not</span> <span class="n">searchname</span><span class="p">:</span>
-        <span class="k">return</span> <span class="n">JsonResponse</span><span class="p">({</span><span class="s2">&quot;error&quot;</span><span class="p">:</span> <span class="s2">&quot;Keyword is required&quot;</span><span class="p">},</span> <span class="n">status</span><span class="o">=</span><span class="mi">400</span><span class="p">)</span>
-    <span class="k">if</span> <span class="n">request</span><span class="o">.</span><span class="n">method</span> <span class="ow">not</span> <span class="ow">in</span> <span class="p">[</span><span class="s2">&quot;GET&quot;</span><span class="p">,</span> <span class="s2">&quot;POST&quot;</span><span class="p">,</span> <span class="s2">&quot;DELETE&quot;</span><span class="p">]:</span>
-        <span class="k">return</span> <span class="n">JsonResponse</span><span class="p">({</span><span class="s2">&quot;error&quot;</span><span class="p">:</span> <span class="s2">&quot;Method not allowed&quot;</span><span class="p">},</span> <span class="n">status</span><span class="o">=</span><span class="mi">405</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">criteria</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">criteria</span><span class="p">,</span> <span class="n">guard_response</span> <span class="o">=</span> <span class="n">_external_search_guard</span><span class="p">(</span><span class="n">request</span><span class="p">,</span> <span class="n">search_type</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">guard_response</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">guard_response</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">enforce_search_rate_limit</span><span class="p">(</span><span class="n">request</span><span class="p">)</span>
+        <span class="k">except</span> <span class="n">SearchRateLimitError</span> <span class="k">as</span> <span class="n">error</span><span class="p">:</span>
+            <span class="n">response</span> <span class="o">=</span> <span class="n">JsonResponse</span><span class="p">(</span>
+                <span class="p">{</span><span class="s2">"error"</span><span class="p">:</span> <span class="nb">str</span><span class="p">(</span><span class="n">error</span><span class="p">),</span> <span class="s2">"code"</span><span class="p">:</span> <span class="s2">"rate_limit_exceeded"</span><span class="p">},</span> <span class="n">status</span><span class="o">=</span><span class="mi">429</span>
+            <span class="p">)</span>
+            <span class="n">response</span><span class="p">[</span><span class="s2">"Retry-After"</span><span class="p">]</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">error</span><span class="o">.</span><span class="n">retry_after</span><span class="p">)</span>
+            <span class="k">return</span> <span class="n">response</span>
+    <span class="n">searchname</span> <span class="o">=</span> <span class="n">criteria</span><span class="o">.</span><span class="n">keyword</span>
+    <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">"External search started keyword_length=</span><span class="si">%s</span><span class="s2">"</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">searchname</span><span class="p">))</span>
+    <span class="n">timer</span> <span class="o">=</span> <span class="n">SearchTimer</span><span class="o">.</span><span class="n">start</span><span class="p">()</span>
+    <span class="n">search_run</span> <span class="o">=</span> <span class="kc">None</span>
 
     <span class="k">try</span><span class="p">:</span>
-        <span class="n">scraped_data_list</span> <span class="o">=</span> <span class="n">data_fetch_func</span><span class="p">(</span><span class="n">searchname</span><span class="p">)</span>
-        <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Scraped </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">scraped_data_list</span><span class="p">)</span><span class="si">}</span><span class="s2"> items for keyword: </span><span class="si">{</span><span class="n">searchname</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="n">scraped_data_list</span> <span class="o">=</span> <span class="n">criteria</span><span class="o">.</span><span class="n">apply</span><span class="p">(</span><span class="n">data_fetch_func</span><span class="p">(</span><span class="n">searchname</span><span class="p">))</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Scraped </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">scraped_data_list</span><span class="p">)</span><span class="si">}</span><span class="s2"> items for keyword: </span><span class="si">{</span><span class="n">searchname</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+        <span class="n">search_run</span> <span class="o">=</span> <span class="n">record_search_run</span><span class="p">(</span>
+            <span class="n">request</span><span class="p">,</span>
+            <span class="n">searchname</span><span class="p">,</span>
+            <span class="n">search_type</span><span class="p">,</span>
+            <span class="nb">len</span><span class="p">(</span><span class="n">scraped_data_list</span><span class="p">),</span>
+            <span class="n">criteria_snapshot</span><span class="o">=</span><span class="n">criteria</span><span class="o">.</span><span class="n">snapshot</span><span class="p">(),</span>
+            <span class="n">duration_ms</span><span class="o">=</span><span class="n">timer</span><span class="o">.</span><span class="n">elapsed_ms</span><span class="p">(),</span>
+        <span class="p">)</span>
         <span class="k">if</span> <span class="n">save_func</span><span class="p">:</span>
-            <span class="n">save_func</span><span class="p">(</span><span class="n">searchname</span><span class="p">,</span> <span class="n">scraped_data_list</span><span class="p">)</span>
-            <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Data saved to database for keyword: </span><span class="si">{</span><span class="n">searchname</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
-        <span class="n">response_data</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;data&quot;</span><span class="p">:</span> <span class="n">scraped_data_list</span><span class="p">}</span>
+            <span class="n">save_func</span><span class="p">(</span><span class="n">searchname</span><span class="p">,</span> <span class="n">scraped_data_list</span><span class="p">,</span> <span class="n">search_run</span><span class="p">)</span>
+            <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Data saved to database for keyword: </span><span class="si">{</span><span class="n">searchname</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+        <span class="n">response_data</span> <span class="o">=</span> <span class="p">{</span><span class="s2">"data"</span><span class="p">:</span> <span class="n">scraped_data_list</span><span class="p">}</span>
         <span class="k">if</span> <span class="n">include_condition_analysis</span><span class="p">:</span>
             <span class="n">enriched_items</span> <span class="o">=</span> <span class="n">enrich_market_items</span><span class="p">(</span><span class="n">scraped_data_list</span><span class="p">)</span>
             <span class="n">market_statistics</span> <span class="o">=</span> <span class="n">analyze_market_prices</span><span class="p">(</span><span class="n">enriched_items</span><span class="p">)</span>
             <span class="n">enriched_items</span> <span class="o">=</span> <span class="n">enrich_items_with_market_comparison</span><span class="p">(</span>
-                <span class="n">enriched_items</span><span class="p">,</span> <span class="n">market_statistics</span><span class="p">[</span><span class="s2">&quot;median&quot;</span><span class="p">]</span>
+                <span class="n">enriched_items</span><span class="p">,</span> <span class="n">market_statistics</span><span class="p">[</span><span class="s2">"median"</span><span class="p">]</span>
             <span class="p">)</span>
             <span class="n">response_data</span> <span class="o">=</span> <span class="p">{</span>
-                <span class="s2">&quot;data&quot;</span><span class="p">:</span> <span class="n">enriched_items</span><span class="p">,</span>
-                <span class="s2">&quot;conditionSummary&quot;</span><span class="p">:</span> <span class="n">summarize_condition_market</span><span class="p">(</span><span class="n">enriched_items</span><span class="p">),</span>
-                <span class="s2">&quot;marketStatistics&quot;</span><span class="p">:</span> <span class="n">market_statistics</span><span class="p">,</span>
+                <span class="s2">"data"</span><span class="p">:</span> <span class="n">enriched_items</span><span class="p">,</span>
+                <span class="s2">"conditionSummary"</span><span class="p">:</span> <span class="n">summarize_condition_market</span><span class="p">(</span><span class="n">enriched_items</span><span class="p">),</span>
+                <span class="s2">"marketStatistics"</span><span class="p">:</span> <span class="n">market_statistics</span><span class="p">,</span>
             <span class="p">}</span>
+        <span class="n">update_search_run_observability</span><span class="p">(</span><span class="n">search_run</span><span class="p">,</span> <span class="n">duration_ms</span><span class="o">=</span><span class="n">timer</span><span class="o">.</span><span class="n">elapsed_ms</span><span class="p">())</span>
         <span class="k">return</span> <span class="n">JsonResponse</span><span class="p">(</span><span class="n">response_data</span><span class="p">)</span>
-    <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
-        <span class="n">logger</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Error during search for keyword </span><span class="si">{</span><span class="n">searchname</span><span class="si">}</span><span class="s2">: </span><span class="si">{</span><span class="nb">str</span><span class="p">(</span><span class="n">e</span><span class="p">)</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
-        <span class="k">return</span> <span class="n">JsonResponse</span><span class="p">({</span><span class="s2">&quot;error&quot;</span><span class="p">:</span> <span class="nb">str</span><span class="p">(</span><span class="n">e</span><span class="p">)},</span> <span class="n">status</span><span class="o">=</span><span class="mi">500</span><span class="p">)</span></div>
+    <span class="k">except</span> <span class="n">ExternalServiceError</span><span class="p">:</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">exception</span><span class="p">(</span><span class="s2">"External search failed"</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">search_run</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">record_search_run</span><span class="p">(</span>
+                <span class="n">request</span><span class="p">,</span>
+                <span class="n">searchname</span><span class="p">,</span>
+                <span class="n">search_type</span><span class="p">,</span>
+                <span class="mi">0</span><span class="p">,</span>
+                <span class="n">succeeded</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+                <span class="n">criteria_snapshot</span><span class="o">=</span><span class="n">criteria</span><span class="o">.</span><span class="n">snapshot</span><span class="p">(),</span>
+                <span class="n">duration_ms</span><span class="o">=</span><span class="n">timer</span><span class="o">.</span><span class="n">elapsed_ms</span><span class="p">(),</span>
+                <span class="n">failure_code</span><span class="o">=</span><span class="n">FAILURE_EXTERNAL_SERVICE</span><span class="p">,</span>
+            <span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">update_search_run_observability</span><span class="p">(</span>
+                <span class="n">search_run</span><span class="p">,</span>
+                <span class="n">duration_ms</span><span class="o">=</span><span class="n">timer</span><span class="o">.</span><span class="n">elapsed_ms</span><span class="p">(),</span>
+                <span class="n">succeeded</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+                <span class="n">failure_code</span><span class="o">=</span><span class="n">FAILURE_EXTERNAL_SERVICE</span><span class="p">,</span>
+            <span class="p">)</span>
+        <span class="k">return</span> <span class="n">JsonResponse</span><span class="p">(</span>
+            <span class="p">{</span><span class="s2">"error"</span><span class="p">:</span> <span class="n">EXTERNAL_SERVICE_MESSAGE</span><span class="p">,</span> <span class="s2">"code"</span><span class="p">:</span> <span class="s2">"external_service_unavailable"</span><span class="p">},</span>
+            <span class="n">status</span><span class="o">=</span><span class="mi">503</span><span class="p">,</span>
+        <span class="p">)</span>
+    <span class="k">except</span> <span class="ne">Exception</span><span class="p">:</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">exception</span><span class="p">(</span><span class="s2">"Unexpected external search error"</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">search_run</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">record_search_run</span><span class="p">(</span>
+                <span class="n">request</span><span class="p">,</span>
+                <span class="n">searchname</span><span class="p">,</span>
+                <span class="n">search_type</span><span class="p">,</span>
+                <span class="mi">0</span><span class="p">,</span>
+                <span class="n">succeeded</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+                <span class="n">criteria_snapshot</span><span class="o">=</span><span class="n">criteria</span><span class="o">.</span><span class="n">snapshot</span><span class="p">(),</span>
+                <span class="n">duration_ms</span><span class="o">=</span><span class="n">timer</span><span class="o">.</span><span class="n">elapsed_ms</span><span class="p">(),</span>
+                <span class="n">failure_code</span><span class="o">=</span><span class="n">FAILURE_UNEXPECTED</span><span class="p">,</span>
+            <span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">update_search_run_observability</span><span class="p">(</span>
+                <span class="n">search_run</span><span class="p">,</span>
+                <span class="n">duration_ms</span><span class="o">=</span><span class="n">timer</span><span class="o">.</span><span class="n">elapsed_ms</span><span class="p">(),</span>
+                <span class="n">succeeded</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+                <span class="n">failure_code</span><span class="o">=</span><span class="n">FAILURE_UNEXPECTED</span><span class="p">,</span>
+            <span class="p">)</span>
+        <span class="k">return</span> <span class="n">JsonResponse</span><span class="p">(</span>
+            <span class="p">{</span><span class="s2">"error"</span><span class="p">:</span> <span class="s2">"検索処理中にエラーが発生しました"</span><span class="p">,</span> <span class="s2">"code"</span><span class="p">:</span> <span class="s2">"search_failed"</span><span class="p">},</span>
+            <span class="n">status</span><span class="o">=</span><span class="mi">500</span><span class="p">,</span>
+        <span class="p">)</span></div>
 
 
 
 <div class="viewcode-block" id="perform_search">
 <a class="viewcode-back" href="../../../api.html#Main.views.api.perform_search">[ドキュメント]</a>
 <span class="k">def</span><span class="w"> </span><span class="nf">perform_search</span><span class="p">(</span><span class="n">request</span><span class="p">):</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">"""</span>
 <span class="sd">    相場のデータを取得して処理する。</span>
-<span class="sd">    &quot;&quot;&quot;</span>
+<span class="sd">    """</span>
     <span class="k">return</span> <span class="n">handle_search_response</span><span class="p">(</span>
         <span class="n">request</span><span class="p">,</span> <span class="n">scrape_data</span><span class="p">,</span> <span class="n">save_to_database</span><span class="p">,</span> <span class="n">include_condition_analysis</span><span class="o">=</span><span class="kc">True</span>
     <span class="p">)</span></div>
@@ -172,19 +288,25 @@
 <div class="viewcode-block" id="RealtimeSearch">
 <a class="viewcode-back" href="../../../api.html#Main.views.api.RealtimeSearch">[ドキュメント]</a>
 <span class="k">def</span><span class="w"> </span><span class="nf">RealtimeSearch</span><span class="p">(</span><span class="n">request</span><span class="p">):</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">"""</span>
 <span class="sd">    現在出品されている商品のデータを取得して処理する。</span>
-<span class="sd">    &quot;&quot;&quot;</span>
-    <span class="k">return</span> <span class="n">handle_search_response</span><span class="p">(</span><span class="n">request</span><span class="p">,</span> <span class="n">scrape_current_listings</span><span class="p">,</span> <span class="n">include_condition_analysis</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span></div>
+<span class="sd">    """</span>
+    <span class="k">return</span> <span class="n">handle_search_response</span><span class="p">(</span>
+        <span class="n">request</span><span class="p">,</span>
+        <span class="n">scrape_current_listings</span><span class="p">,</span>
+        <span class="n">save_to_database</span><span class="p">,</span>
+        <span class="n">include_condition_analysis</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+        <span class="n">search_type</span><span class="o">=</span><span class="s2">"current"</span><span class="p">,</span>
+    <span class="p">)</span></div>
 
 
 
 <div class="viewcode-block" id="get_search_words">
 <a class="viewcode-back" href="../../../api.html#Main.views.api.get_search_words">[ドキュメント]</a>
 <span class="k">def</span><span class="w"> </span><span class="nf">get_search_words</span><span class="p">(</span><span class="n">request</span><span class="p">):</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">"""</span>
 <span class="sd">    データベースにアクセスして過去の検索履歴を取得する</span>
-<span class="sd">    &quot;&quot;&quot;</span>
+<span class="sd">    """</span>
     <span class="k">return</span> <span class="n">get_search_words_logic</span><span class="p">(</span><span class="n">request</span><span class="p">)</span></div>
 
 
@@ -192,31 +314,34 @@
 <div class="viewcode-block" id="get_market_data">
 <a class="viewcode-back" href="../../../api.html#Main.views.api.get_market_data">[ドキュメント]</a>
 <span class="k">def</span><span class="w"> </span><span class="nf">get_market_data</span><span class="p">(</span><span class="n">request</span><span class="p">):</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">"""</span>
 <span class="sd">    データベースにアクセスして過去の検索履歴を取得する。</span>
-<span class="sd">    &quot;&quot;&quot;</span>
+<span class="sd">    """</span>
     <span class="k">return</span> <span class="n">get_market_data_logic</span><span class="p">(</span><span class="n">request</span><span class="p">)</span></div>
 
 
 
 <div class="viewcode-block" id="update_market_data">
 <a class="viewcode-back" href="../../../api.html#Main.views.api.update_market_data">[ドキュメント]</a>
-<span class="nd">@csrf_exempt</span>
 <span class="k">def</span><span class="w"> </span><span class="nf">update_market_data</span><span class="p">(</span><span class="n">request</span><span class="p">):</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">"""</span>
 <span class="sd">    フロントエンドから取得した対象を更新する</span>
-<span class="sd">    &quot;&quot;&quot;</span>
+<span class="sd">    """</span>
+    <span class="k">if</span> <span class="n">request</span><span class="o">.</span><span class="n">method</span> <span class="o">==</span> <span class="s2">"POST"</span><span class="p">:</span>
+        <span class="n">criteria</span><span class="p">,</span> <span class="n">guard_response</span> <span class="o">=</span> <span class="n">_external_search_guard</span><span class="p">(</span><span class="n">request</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">guard_response</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">guard_response</span>
+        <span class="k">return</span> <span class="n">update_market_data_logic</span><span class="p">(</span><span class="n">request</span><span class="p">,</span> <span class="n">criteria</span><span class="p">)</span>
     <span class="k">return</span> <span class="n">update_market_data_logic</span><span class="p">(</span><span class="n">request</span><span class="p">)</span></div>
 
 
 
 <div class="viewcode-block" id="delete_market_data">
 <a class="viewcode-back" href="../../../api.html#Main.views.api.delete_market_data">[ドキュメント]</a>
-<span class="nd">@csrf_exempt</span>
 <span class="k">def</span><span class="w"> </span><span class="nf">delete_market_data</span><span class="p">(</span><span class="n">request</span><span class="p">):</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">"""</span>
 <span class="sd">    フロントエンドから取得した対象を削除する</span>
-<span class="sd">    &quot;&quot;&quot;</span>
+<span class="sd">    """</span>
     <span class="k">return</span> <span class="n">delete_market_data_logic</span><span class="p">(</span><span class="n">request</span><span class="p">)</span></div>
 
 
@@ -224,9 +349,14 @@
 <div class="viewcode-block" id="complex_market_data">
 <a class="viewcode-back" href="../../../api.html#Main.views.api.complex_market_data">[ドキュメント]</a>
 <span class="k">def</span><span class="w"> </span><span class="nf">complex_market_data</span><span class="p">(</span><span class="n">request</span><span class="p">):</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">"""</span>
 <span class="sd">    指定キーワードの落札履歴と現在出品中データを取得し、分析結果を返す</span>
-<span class="sd">    &quot;&quot;&quot;</span>
+<span class="sd">    """</span>
+    <span class="k">if</span> <span class="n">request</span><span class="o">.</span><span class="n">method</span> <span class="o">==</span> <span class="s2">"GET"</span><span class="p">:</span>
+        <span class="n">criteria</span><span class="p">,</span> <span class="n">guard_response</span> <span class="o">=</span> <span class="n">_external_search_guard</span><span class="p">(</span><span class="n">request</span><span class="p">,</span> <span class="s2">"target"</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">guard_response</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">guard_response</span>
+        <span class="k">return</span> <span class="n">complex_market_data_logic</span><span class="p">(</span><span class="n">request</span><span class="p">,</span> <span class="n">criteria</span><span class="p">)</span>
     <span class="k">return</span> <span class="n">complex_market_data_logic</span><span class="p">(</span><span class="n">request</span><span class="p">)</span></div>
 
 
@@ -234,9 +364,14 @@
 <div class="viewcode-block" id="prediction_market">
 <a class="viewcode-back" href="../../../api.html#Main.views.api.prediction_market">[ドキュメント]</a>
 <span class="k">def</span><span class="w"> </span><span class="nf">prediction_market</span><span class="p">(</span><span class="n">request</span><span class="p">):</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">"""</span>
 <span class="sd">    過去90日間の価格推移を分析し、異常値を排除した90日移動平均と1ヶ月予測を返す。</span>
-<span class="sd">    &quot;&quot;&quot;</span>
+<span class="sd">    """</span>
+    <span class="k">if</span> <span class="n">request</span><span class="o">.</span><span class="n">method</span> <span class="o">==</span> <span class="s2">"GET"</span><span class="p">:</span>
+        <span class="n">criteria</span><span class="p">,</span> <span class="n">guard_response</span> <span class="o">=</span> <span class="n">_external_search_guard</span><span class="p">(</span><span class="n">request</span><span class="p">,</span> <span class="s2">"prediction"</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">guard_response</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">guard_response</span>
+        <span class="k">return</span> <span class="n">prediction_market_logic</span><span class="p">(</span><span class="n">request</span><span class="p">,</span> <span class="n">criteria</span><span class="p">)</span>
     <span class="k">return</span> <span class="n">prediction_market_logic</span><span class="p">(</span><span class="n">request</span><span class="p">)</span></div>
 
 
@@ -244,47 +379,281 @@
 <div class="viewcode-block" id="get_popular_words">
 <a class="viewcode-back" href="../../../api.html#Main.views.api.get_popular_words">[ドキュメント]</a>
 <span class="k">def</span><span class="w"> </span><span class="nf">get_popular_words</span><span class="p">(</span><span class="n">request</span><span class="p">):</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">"""</span>
 <span class="sd">    使用頻度の高い検索ワードを返す</span>
-<span class="sd">    &quot;&quot;&quot;</span>
+<span class="sd">    """</span>
     <span class="k">return</span> <span class="n">get_popular_words_logic</span><span class="p">(</span><span class="n">request</span><span class="p">)</span></div>
 
 
 
 <div class="viewcode-block" id="watchlist">
 <a class="viewcode-back" href="../../../api.html#Main.views.api.watchlist">[ドキュメント]</a>
-<span class="nd">@csrf_exempt</span>
 <span class="k">def</span><span class="w"> </span><span class="nf">watchlist</span><span class="p">(</span><span class="n">request</span><span class="p">):</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Systema内のウォッチリストを取得、または商品を登録する。&quot;&quot;&quot;</span>
-    <span class="k">if</span> <span class="n">request</span><span class="o">.</span><span class="n">method</span> <span class="o">==</span> <span class="s2">&quot;GET&quot;</span><span class="p">:</span>
-        <span class="k">return</span> <span class="n">JsonResponse</span><span class="p">({</span><span class="s2">&quot;items&quot;</span><span class="p">:</span> <span class="n">list_watch_items</span><span class="p">()})</span>
-    <span class="k">if</span> <span class="n">request</span><span class="o">.</span><span class="n">method</span> <span class="o">!=</span> <span class="s2">&quot;POST&quot;</span><span class="p">:</span>
-        <span class="k">return</span> <span class="n">JsonResponse</span><span class="p">({</span><span class="s2">&quot;error&quot;</span><span class="p">:</span> <span class="s2">&quot;Invalid request method&quot;</span><span class="p">},</span> <span class="n">status</span><span class="o">=</span><span class="mi">400</span><span class="p">)</span>
+<span class="w">    </span><span class="sd">"""Systema内のウォッチリストを取得、または商品を登録する。"""</span>
+    <span class="n">owner</span> <span class="o">=</span> <span class="n">get_request_owner</span><span class="p">(</span><span class="n">request</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">request</span><span class="o">.</span><span class="n">method</span> <span class="o">==</span> <span class="s2">"GET"</span><span class="p">:</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">priority_value</span> <span class="o">=</span> <span class="n">request</span><span class="o">.</span><span class="n">GET</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"priority"</span><span class="p">)</span>
+            <span class="n">priority</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">priority_value</span><span class="p">)</span> <span class="k">if</span> <span class="n">priority_value</span> <span class="ow">not</span> <span class="ow">in</span> <span class="p">(</span><span class="kc">None</span><span class="p">,</span> <span class="s2">""</span><span class="p">)</span> <span class="k">else</span> <span class="kc">None</span>
+            <span class="n">items</span> <span class="o">=</span> <span class="n">list_watch_items</span><span class="p">(</span>
+                <span class="n">owner</span><span class="p">,</span>
+                <span class="n">lifecycle_status</span><span class="o">=</span><span class="n">request</span><span class="o">.</span><span class="n">GET</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"status"</span><span class="p">)</span> <span class="ow">or</span> <span class="kc">None</span><span class="p">,</span>
+                <span class="n">priority</span><span class="o">=</span><span class="n">priority</span><span class="p">,</span>
+                <span class="n">condition</span><span class="o">=</span><span class="n">request</span><span class="o">.</span><span class="n">GET</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"condition"</span><span class="p">)</span> <span class="ow">or</span> <span class="kc">None</span><span class="p">,</span>
+            <span class="p">)</span>
+            <span class="k">return</span> <span class="n">JsonResponse</span><span class="p">({</span><span class="s2">"items"</span><span class="p">:</span> <span class="n">items</span><span class="p">})</span>
+        <span class="k">except</span> <span class="p">(</span><span class="ne">TypeError</span><span class="p">,</span> <span class="ne">ValueError</span><span class="p">)</span> <span class="k">as</span> <span class="n">error</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">JsonResponse</span><span class="p">({</span><span class="s2">"error"</span><span class="p">:</span> <span class="nb">str</span><span class="p">(</span><span class="n">error</span><span class="p">)},</span> <span class="n">status</span><span class="o">=</span><span class="mi">400</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">request</span><span class="o">.</span><span class="n">method</span> <span class="o">!=</span> <span class="s2">"POST"</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">JsonResponse</span><span class="p">({</span><span class="s2">"error"</span><span class="p">:</span> <span class="s2">"Invalid request method"</span><span class="p">},</span> <span class="n">status</span><span class="o">=</span><span class="mi">400</span><span class="p">)</span>
     <span class="k">try</span><span class="p">:</span>
-        <span class="n">payload</span> <span class="o">=</span> <span class="n">json</span><span class="o">.</span><span class="n">loads</span><span class="p">(</span><span class="n">request</span><span class="o">.</span><span class="n">body</span> <span class="ow">or</span> <span class="sa">b</span><span class="s2">&quot;</span><span class="si">{}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="n">payload</span> <span class="o">=</span> <span class="n">json</span><span class="o">.</span><span class="n">loads</span><span class="p">(</span><span class="n">request</span><span class="o">.</span><span class="n">body</span> <span class="ow">or</span> <span class="sa">b</span><span class="s2">"</span><span class="si">{}</span><span class="s2">"</span><span class="p">)</span>
         <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">payload</span><span class="p">,</span> <span class="nb">dict</span><span class="p">):</span>
-            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;リクエスト形式が正しくありません&quot;</span><span class="p">)</span>
-        <span class="n">item</span><span class="p">,</span> <span class="n">created</span> <span class="o">=</span> <span class="n">save_watch_item</span><span class="p">(</span><span class="n">payload</span><span class="p">)</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">"リクエスト形式が正しくありません"</span><span class="p">)</span>
+        <span class="n">item</span><span class="p">,</span> <span class="n">created</span> <span class="o">=</span> <span class="n">save_watch_item</span><span class="p">(</span><span class="n">payload</span><span class="p">,</span> <span class="n">owner</span><span class="p">)</span>
         <span class="k">return</span> <span class="n">JsonResponse</span><span class="p">(</span>
-            <span class="p">{</span><span class="s2">&quot;item&quot;</span><span class="p">:</span> <span class="n">serialize_watch_item</span><span class="p">(</span><span class="n">item</span><span class="p">),</span> <span class="s2">&quot;created&quot;</span><span class="p">:</span> <span class="n">created</span><span class="p">},</span>
+            <span class="p">{</span><span class="s2">"item"</span><span class="p">:</span> <span class="n">serialize_watch_item</span><span class="p">(</span><span class="n">item</span><span class="p">),</span> <span class="s2">"created"</span><span class="p">:</span> <span class="n">created</span><span class="p">},</span>
             <span class="n">status</span><span class="o">=</span><span class="mi">201</span> <span class="k">if</span> <span class="n">created</span> <span class="k">else</span> <span class="mi">200</span><span class="p">,</span>
         <span class="p">)</span>
     <span class="k">except</span> <span class="p">(</span><span class="n">json</span><span class="o">.</span><span class="n">JSONDecodeError</span><span class="p">,</span> <span class="ne">ValueError</span><span class="p">)</span> <span class="k">as</span> <span class="n">error</span><span class="p">:</span>
-        <span class="k">return</span> <span class="n">JsonResponse</span><span class="p">({</span><span class="s2">&quot;error&quot;</span><span class="p">:</span> <span class="nb">str</span><span class="p">(</span><span class="n">error</span><span class="p">)},</span> <span class="n">status</span><span class="o">=</span><span class="mi">400</span><span class="p">)</span></div>
+        <span class="k">return</span> <span class="n">JsonResponse</span><span class="p">({</span><span class="s2">"error"</span><span class="p">:</span> <span class="nb">str</span><span class="p">(</span><span class="n">error</span><span class="p">)},</span> <span class="n">status</span><span class="o">=</span><span class="mi">400</span><span class="p">)</span></div>
 
 
 
 <div class="viewcode-block" id="watchlist_item">
 <a class="viewcode-back" href="../../../api.html#Main.views.api.watchlist_item">[ドキュメント]</a>
-<span class="nd">@csrf_exempt</span>
 <span class="k">def</span><span class="w"> </span><span class="nf">watchlist_item</span><span class="p">(</span><span class="n">request</span><span class="p">,</span> <span class="n">item_id</span><span class="p">):</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;ウォッチ商品を解除する。&quot;&quot;&quot;</span>
-    <span class="k">if</span> <span class="n">request</span><span class="o">.</span><span class="n">method</span> <span class="o">!=</span> <span class="s2">&quot;DELETE&quot;</span><span class="p">:</span>
-        <span class="k">return</span> <span class="n">JsonResponse</span><span class="p">({</span><span class="s2">&quot;error&quot;</span><span class="p">:</span> <span class="s2">&quot;Invalid request method&quot;</span><span class="p">},</span> <span class="n">status</span><span class="o">=</span><span class="mi">400</span><span class="p">)</span>
-    <span class="n">deleted</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="n">WatchItem</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">filter</span><span class="p">(</span><span class="n">pk</span><span class="o">=</span><span class="n">item_id</span><span class="p">)</span><span class="o">.</span><span class="n">delete</span><span class="p">()</span>
+<span class="w">    </span><span class="sd">"""ウォッチ商品のユーザー管理情報を更新、または解除する。"""</span>
+    <span class="n">owner</span> <span class="o">=</span> <span class="n">get_request_owner</span><span class="p">(</span><span class="n">request</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">request</span><span class="o">.</span><span class="n">method</span> <span class="o">==</span> <span class="s2">"PATCH"</span><span class="p">:</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">payload</span> <span class="o">=</span> <span class="n">json</span><span class="o">.</span><span class="n">loads</span><span class="p">(</span><span class="n">request</span><span class="o">.</span><span class="n">body</span> <span class="ow">or</span> <span class="sa">b</span><span class="s2">"</span><span class="si">{}</span><span class="s2">"</span><span class="p">)</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">payload</span><span class="p">,</span> <span class="nb">dict</span><span class="p">):</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">"リクエスト形式が正しくありません"</span><span class="p">)</span>
+            <span class="n">item</span> <span class="o">=</span> <span class="n">update_watch_item</span><span class="p">(</span><span class="n">item_id</span><span class="p">,</span> <span class="n">payload</span><span class="p">,</span> <span class="n">owner</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">item</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="k">return</span> <span class="n">JsonResponse</span><span class="p">({</span><span class="s2">"error"</span><span class="p">:</span> <span class="s2">"Watch item not found"</span><span class="p">},</span> <span class="n">status</span><span class="o">=</span><span class="mi">404</span><span class="p">)</span>
+            <span class="k">return</span> <span class="n">JsonResponse</span><span class="p">({</span><span class="s2">"item"</span><span class="p">:</span> <span class="n">serialize_watch_item</span><span class="p">(</span><span class="n">item</span><span class="p">)})</span>
+        <span class="k">except</span> <span class="p">(</span><span class="n">json</span><span class="o">.</span><span class="n">JSONDecodeError</span><span class="p">,</span> <span class="ne">ValueError</span><span class="p">)</span> <span class="k">as</span> <span class="n">error</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">JsonResponse</span><span class="p">({</span><span class="s2">"error"</span><span class="p">:</span> <span class="nb">str</span><span class="p">(</span><span class="n">error</span><span class="p">)},</span> <span class="n">status</span><span class="o">=</span><span class="mi">400</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">request</span><span class="o">.</span><span class="n">method</span> <span class="o">!=</span> <span class="s2">"DELETE"</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">JsonResponse</span><span class="p">({</span><span class="s2">"error"</span><span class="p">:</span> <span class="s2">"Invalid request method"</span><span class="p">},</span> <span class="n">status</span><span class="o">=</span><span class="mi">400</span><span class="p">)</span>
+    <span class="n">deleted</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="n">WatchItem</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">filter</span><span class="p">(</span><span class="n">owner_query</span><span class="p">(</span><span class="n">owner</span><span class="p">),</span> <span class="n">pk</span><span class="o">=</span><span class="n">item_id</span><span class="p">)</span><span class="o">.</span><span class="n">delete</span><span class="p">()</span>
     <span class="k">if</span> <span class="ow">not</span> <span class="n">deleted</span><span class="p">:</span>
-        <span class="k">return</span> <span class="n">JsonResponse</span><span class="p">({</span><span class="s2">&quot;error&quot;</span><span class="p">:</span> <span class="s2">&quot;Watch item not found&quot;</span><span class="p">},</span> <span class="n">status</span><span class="o">=</span><span class="mi">404</span><span class="p">)</span>
-    <span class="k">return</span> <span class="n">JsonResponse</span><span class="p">({</span><span class="s2">&quot;message&quot;</span><span class="p">:</span> <span class="s2">&quot;ウォッチを解除しました&quot;</span><span class="p">})</span></div>
+        <span class="k">return</span> <span class="n">JsonResponse</span><span class="p">({</span><span class="s2">"error"</span><span class="p">:</span> <span class="s2">"Watch item not found"</span><span class="p">},</span> <span class="n">status</span><span class="o">=</span><span class="mi">404</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">JsonResponse</span><span class="p">({</span><span class="s2">"message"</span><span class="p">:</span> <span class="s2">"ウォッチを解除しました"</span><span class="p">})</span></div>
+
+
+
+<div class="viewcode-block" id="watchlist_snapshots">
+<a class="viewcode-back" href="../../../api.html#Main.views.api.watchlist_snapshots">[ドキュメント]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">watchlist_snapshots</span><span class="p">(</span><span class="n">request</span><span class="p">,</span> <span class="n">item_id</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">"""本人所有のウォッチ商品の価格履歴と分析結果を返す。"""</span>
+    <span class="n">owner</span> <span class="o">=</span> <span class="n">get_request_owner</span><span class="p">(</span><span class="n">request</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">request</span><span class="o">.</span><span class="n">method</span> <span class="o">!=</span> <span class="s2">"GET"</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">JsonResponse</span><span class="p">({</span><span class="s2">"error"</span><span class="p">:</span> <span class="s2">"Invalid request method"</span><span class="p">},</span> <span class="n">status</span><span class="o">=</span><span class="mi">400</span><span class="p">)</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">item</span> <span class="o">=</span> <span class="n">WatchItem</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">prefetch_related</span><span class="p">(</span><span class="s2">"price_snapshots"</span><span class="p">)</span><span class="o">.</span><span class="n">get</span><span class="p">(</span>
+            <span class="n">owner_query</span><span class="p">(</span><span class="n">owner</span><span class="p">),</span> <span class="n">pk</span><span class="o">=</span><span class="n">item_id</span>
+        <span class="p">)</span>
+    <span class="k">except</span> <span class="n">WatchItem</span><span class="o">.</span><span class="n">DoesNotExist</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">JsonResponse</span><span class="p">({</span><span class="s2">"error"</span><span class="p">:</span> <span class="s2">"Watch item not found"</span><span class="p">},</span> <span class="n">status</span><span class="o">=</span><span class="mi">404</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">JsonResponse</span><span class="p">(</span><span class="n">serialize_watch_snapshots</span><span class="p">(</span><span class="n">item</span><span class="p">))</span></div>
+
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_authenticated_json</span><span class="p">(</span><span class="n">request</span><span class="p">):</span>
+    <span class="k">if</span> <span class="n">request</span><span class="o">.</span><span class="n">user</span><span class="o">.</span><span class="n">is_authenticated</span><span class="p">:</span>
+        <span class="k">return</span> <span class="kc">None</span>
+    <span class="k">return</span> <span class="n">JsonResponse</span><span class="p">(</span>
+        <span class="p">{</span><span class="s2">"error"</span><span class="p">:</span> <span class="s2">"ログインが必要です"</span><span class="p">,</span> <span class="s2">"code"</span><span class="p">:</span> <span class="s2">"authentication_required"</span><span class="p">},</span> <span class="n">status</span><span class="o">=</span><span class="mi">401</span>
+    <span class="p">)</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_json_payload</span><span class="p">(</span><span class="n">request</span><span class="p">):</span>
+    <span class="n">payload</span> <span class="o">=</span> <span class="n">json</span><span class="o">.</span><span class="n">loads</span><span class="p">(</span><span class="n">request</span><span class="o">.</span><span class="n">body</span> <span class="ow">or</span> <span class="sa">b</span><span class="s2">"</span><span class="si">{}</span><span class="s2">"</span><span class="p">)</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">payload</span><span class="p">,</span> <span class="nb">dict</span><span class="p">):</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">"リクエスト形式が正しくありません"</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">payload</span>
+
+
+<div class="viewcode-block" id="inventory_items">
+<a class="viewcode-back" href="../../../api.html#Main.views.api.inventory_items">[ドキュメント]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">inventory_items</span><span class="p">(</span><span class="n">request</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">"""本人の在庫を一覧、または手動登録する。"""</span>
+    <span class="n">denied</span> <span class="o">=</span> <span class="n">_authenticated_json</span><span class="p">(</span><span class="n">request</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">denied</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">denied</span>
+    <span class="k">if</span> <span class="n">request</span><span class="o">.</span><span class="n">method</span> <span class="o">==</span> <span class="s2">"GET"</span><span class="p">:</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">JsonResponse</span><span class="p">(</span>
+                <span class="p">{</span><span class="s2">"items"</span><span class="p">:</span> <span class="n">list_inventory_items</span><span class="p">(</span><span class="n">request</span><span class="o">.</span><span class="n">user</span><span class="p">,</span> <span class="n">request</span><span class="o">.</span><span class="n">GET</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"status"</span><span class="p">)</span> <span class="ow">or</span> <span class="kc">None</span><span class="p">)}</span>
+            <span class="p">)</span>
+        <span class="k">except</span> <span class="ne">ValueError</span> <span class="k">as</span> <span class="n">error</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">JsonResponse</span><span class="p">({</span><span class="s2">"error"</span><span class="p">:</span> <span class="nb">str</span><span class="p">(</span><span class="n">error</span><span class="p">),</span> <span class="s2">"code"</span><span class="p">:</span> <span class="s2">"invalid_inventory"</span><span class="p">},</span> <span class="n">status</span><span class="o">=</span><span class="mi">400</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">request</span><span class="o">.</span><span class="n">method</span> <span class="o">!=</span> <span class="s2">"POST"</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">JsonResponse</span><span class="p">({</span><span class="s2">"error"</span><span class="p">:</span> <span class="s2">"Invalid request method"</span><span class="p">},</span> <span class="n">status</span><span class="o">=</span><span class="mi">400</span><span class="p">)</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">item</span> <span class="o">=</span> <span class="n">save_inventory_item</span><span class="p">(</span><span class="n">request</span><span class="o">.</span><span class="n">user</span><span class="p">,</span> <span class="n">_json_payload</span><span class="p">(</span><span class="n">request</span><span class="p">))</span>
+        <span class="k">return</span> <span class="n">JsonResponse</span><span class="p">({</span><span class="s2">"item"</span><span class="p">:</span> <span class="n">serialize_inventory_item</span><span class="p">(</span><span class="n">item</span><span class="p">)},</span> <span class="n">status</span><span class="o">=</span><span class="mi">201</span><span class="p">)</span>
+    <span class="k">except</span> <span class="p">(</span><span class="n">json</span><span class="o">.</span><span class="n">JSONDecodeError</span><span class="p">,</span> <span class="ne">ValueError</span><span class="p">)</span> <span class="k">as</span> <span class="n">error</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">JsonResponse</span><span class="p">({</span><span class="s2">"error"</span><span class="p">:</span> <span class="nb">str</span><span class="p">(</span><span class="n">error</span><span class="p">),</span> <span class="s2">"code"</span><span class="p">:</span> <span class="s2">"invalid_inventory"</span><span class="p">},</span> <span class="n">status</span><span class="o">=</span><span class="mi">400</span><span class="p">)</span></div>
+
+
+
+<div class="viewcode-block" id="inventory_item">
+<a class="viewcode-back" href="../../../api.html#Main.views.api.inventory_item">[ドキュメント]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">inventory_item</span><span class="p">(</span><span class="n">request</span><span class="p">,</span> <span class="n">item_id</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">"""本人の在庫だけを参照、更新、削除する。"""</span>
+    <span class="n">denied</span> <span class="o">=</span> <span class="n">_authenticated_json</span><span class="p">(</span><span class="n">request</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">denied</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">denied</span>
+    <span class="n">item</span> <span class="o">=</span> <span class="n">InventoryItem</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">filter</span><span class="p">(</span><span class="n">user</span><span class="o">=</span><span class="n">request</span><span class="o">.</span><span class="n">user</span><span class="p">,</span> <span class="n">pk</span><span class="o">=</span><span class="n">item_id</span><span class="p">)</span><span class="o">.</span><span class="n">first</span><span class="p">()</span>
+    <span class="k">if</span> <span class="n">item</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">JsonResponse</span><span class="p">({</span><span class="s2">"error"</span><span class="p">:</span> <span class="s2">"在庫が見つかりません"</span><span class="p">},</span> <span class="n">status</span><span class="o">=</span><span class="mi">404</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">request</span><span class="o">.</span><span class="n">method</span> <span class="o">==</span> <span class="s2">"GET"</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">JsonResponse</span><span class="p">({</span><span class="s2">"item"</span><span class="p">:</span> <span class="n">serialize_inventory_item</span><span class="p">(</span><span class="n">item</span><span class="p">)})</span>
+    <span class="k">if</span> <span class="n">request</span><span class="o">.</span><span class="n">method</span> <span class="o">==</span> <span class="s2">"DELETE"</span><span class="p">:</span>
+        <span class="n">item</span><span class="o">.</span><span class="n">delete</span><span class="p">()</span>
+        <span class="k">return</span> <span class="n">JsonResponse</span><span class="p">({</span><span class="s2">"message"</span><span class="p">:</span> <span class="s2">"在庫を削除しました"</span><span class="p">})</span>
+    <span class="k">if</span> <span class="n">request</span><span class="o">.</span><span class="n">method</span> <span class="o">!=</span> <span class="s2">"PATCH"</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">JsonResponse</span><span class="p">({</span><span class="s2">"error"</span><span class="p">:</span> <span class="s2">"Invalid request method"</span><span class="p">},</span> <span class="n">status</span><span class="o">=</span><span class="mi">400</span><span class="p">)</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">item</span> <span class="o">=</span> <span class="n">save_inventory_item</span><span class="p">(</span><span class="n">request</span><span class="o">.</span><span class="n">user</span><span class="p">,</span> <span class="n">_json_payload</span><span class="p">(</span><span class="n">request</span><span class="p">),</span> <span class="n">instance</span><span class="o">=</span><span class="n">item</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">JsonResponse</span><span class="p">({</span><span class="s2">"item"</span><span class="p">:</span> <span class="n">serialize_inventory_item</span><span class="p">(</span><span class="n">item</span><span class="p">)})</span>
+    <span class="k">except</span> <span class="p">(</span><span class="n">json</span><span class="o">.</span><span class="n">JSONDecodeError</span><span class="p">,</span> <span class="ne">ValueError</span><span class="p">)</span> <span class="k">as</span> <span class="n">error</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">JsonResponse</span><span class="p">({</span><span class="s2">"error"</span><span class="p">:</span> <span class="nb">str</span><span class="p">(</span><span class="n">error</span><span class="p">),</span> <span class="s2">"code"</span><span class="p">:</span> <span class="s2">"invalid_inventory"</span><span class="p">},</span> <span class="n">status</span><span class="o">=</span><span class="mi">400</span><span class="p">)</span></div>
+
+
+
+<div class="viewcode-block" id="convert_watch_item_to_inventory">
+<a class="viewcode-back" href="../../../api.html#Main.views.api.convert_watch_item_to_inventory">[ドキュメント]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">convert_watch_item_to_inventory</span><span class="p">(</span><span class="n">request</span><span class="p">,</span> <span class="n">watch_item_id</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">"""本人の購入候補を重複なく仕入済み在庫へ変換する。"""</span>
+    <span class="n">denied</span> <span class="o">=</span> <span class="n">_authenticated_json</span><span class="p">(</span><span class="n">request</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">denied</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">denied</span>
+    <span class="k">if</span> <span class="n">request</span><span class="o">.</span><span class="n">method</span> <span class="o">!=</span> <span class="s2">"POST"</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">JsonResponse</span><span class="p">({</span><span class="s2">"error"</span><span class="p">:</span> <span class="s2">"Invalid request method"</span><span class="p">},</span> <span class="n">status</span><span class="o">=</span><span class="mi">400</span><span class="p">)</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">item</span><span class="p">,</span> <span class="n">created</span> <span class="o">=</span> <span class="n">convert_watch_to_inventory</span><span class="p">(</span>
+            <span class="n">request</span><span class="o">.</span><span class="n">user</span><span class="p">,</span> <span class="n">watch_item_id</span><span class="p">,</span> <span class="n">_json_payload</span><span class="p">(</span><span class="n">request</span><span class="p">)</span>
+        <span class="p">)</span>
+        <span class="k">if</span> <span class="n">item</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">JsonResponse</span><span class="p">({</span><span class="s2">"error"</span><span class="p">:</span> <span class="s2">"購入候補が見つかりません"</span><span class="p">},</span> <span class="n">status</span><span class="o">=</span><span class="mi">404</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">JsonResponse</span><span class="p">(</span>
+            <span class="p">{</span><span class="s2">"item"</span><span class="p">:</span> <span class="n">serialize_inventory_item</span><span class="p">(</span><span class="n">item</span><span class="p">),</span> <span class="s2">"created"</span><span class="p">:</span> <span class="n">created</span><span class="p">},</span>
+            <span class="n">status</span><span class="o">=</span><span class="mi">201</span> <span class="k">if</span> <span class="n">created</span> <span class="k">else</span> <span class="mi">200</span><span class="p">,</span>
+        <span class="p">)</span>
+    <span class="k">except</span> <span class="p">(</span><span class="n">json</span><span class="o">.</span><span class="n">JSONDecodeError</span><span class="p">,</span> <span class="ne">ValueError</span><span class="p">)</span> <span class="k">as</span> <span class="n">error</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">JsonResponse</span><span class="p">({</span><span class="s2">"error"</span><span class="p">:</span> <span class="nb">str</span><span class="p">(</span><span class="n">error</span><span class="p">),</span> <span class="s2">"code"</span><span class="p">:</span> <span class="s2">"invalid_inventory"</span><span class="p">},</span> <span class="n">status</span><span class="o">=</span><span class="mi">400</span><span class="p">)</span></div>
+
+
+
+<div class="viewcode-block" id="inventory_profit_simulation">
+<a class="viewcode-back" href="../../../api.html#Main.views.api.inventory_profit_simulation">[ドキュメント]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">inventory_profit_simulation</span><span class="p">(</span><span class="n">request</span><span class="p">,</span> <span class="n">item_id</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">"""本人の在庫について、入力値を保存せず見込み利益を計算する。"""</span>
+    <span class="n">denied</span> <span class="o">=</span> <span class="n">_authenticated_json</span><span class="p">(</span><span class="n">request</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">denied</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">denied</span>
+    <span class="k">if</span> <span class="n">request</span><span class="o">.</span><span class="n">method</span> <span class="o">!=</span> <span class="s2">"POST"</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">JsonResponse</span><span class="p">({</span><span class="s2">"error"</span><span class="p">:</span> <span class="s2">"Invalid request method"</span><span class="p">},</span> <span class="n">status</span><span class="o">=</span><span class="mi">400</span><span class="p">)</span>
+    <span class="n">item</span> <span class="o">=</span> <span class="n">InventoryItem</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">filter</span><span class="p">(</span><span class="n">user</span><span class="o">=</span><span class="n">request</span><span class="o">.</span><span class="n">user</span><span class="p">,</span> <span class="n">pk</span><span class="o">=</span><span class="n">item_id</span><span class="p">)</span><span class="o">.</span><span class="n">first</span><span class="p">()</span>
+    <span class="k">if</span> <span class="n">item</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">JsonResponse</span><span class="p">({</span><span class="s2">"error"</span><span class="p">:</span> <span class="s2">"在庫が見つかりません"</span><span class="p">},</span> <span class="n">status</span><span class="o">=</span><span class="mi">404</span><span class="p">)</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">JsonResponse</span><span class="p">({</span><span class="s2">"data"</span><span class="p">:</span> <span class="n">simulate_inventory_profit</span><span class="p">(</span><span class="n">item</span><span class="p">,</span> <span class="n">_json_payload</span><span class="p">(</span><span class="n">request</span><span class="p">))})</span>
+    <span class="k">except</span> <span class="p">(</span><span class="n">json</span><span class="o">.</span><span class="n">JSONDecodeError</span><span class="p">,</span> <span class="ne">ValueError</span><span class="p">)</span> <span class="k">as</span> <span class="n">error</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">JsonResponse</span><span class="p">({</span><span class="s2">"error"</span><span class="p">:</span> <span class="nb">str</span><span class="p">(</span><span class="n">error</span><span class="p">),</span> <span class="s2">"code"</span><span class="p">:</span> <span class="s2">"invalid_profit_input"</span><span class="p">},</span> <span class="n">status</span><span class="o">=</span><span class="mi">400</span><span class="p">)</span></div>
+
+
+
+<div class="viewcode-block" id="saved_searches">
+<a class="viewcode-back" href="../../../api.html#Main.views.api.saved_searches">[ドキュメント]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">saved_searches</span><span class="p">(</span><span class="n">request</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">"""本人の保存条件を一覧、または作成する。"""</span>
+    <span class="n">denied</span> <span class="o">=</span> <span class="n">_authenticated_json</span><span class="p">(</span><span class="n">request</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">denied</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">denied</span>
+    <span class="k">if</span> <span class="n">request</span><span class="o">.</span><span class="n">method</span> <span class="o">==</span> <span class="s2">"GET"</span><span class="p">:</span>
+        <span class="n">items</span> <span class="o">=</span> <span class="n">SavedSearch</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">filter</span><span class="p">(</span><span class="n">user</span><span class="o">=</span><span class="n">request</span><span class="o">.</span><span class="n">user</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">JsonResponse</span><span class="p">({</span><span class="s2">"items"</span><span class="p">:</span> <span class="p">[</span><span class="n">serialize_saved_search</span><span class="p">(</span><span class="n">item</span><span class="p">)</span> <span class="k">for</span> <span class="n">item</span> <span class="ow">in</span> <span class="n">items</span><span class="p">]})</span>
+    <span class="k">if</span> <span class="n">request</span><span class="o">.</span><span class="n">method</span> <span class="o">!=</span> <span class="s2">"POST"</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">JsonResponse</span><span class="p">({</span><span class="s2">"error"</span><span class="p">:</span> <span class="s2">"Invalid request method"</span><span class="p">},</span> <span class="n">status</span><span class="o">=</span><span class="mi">400</span><span class="p">)</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">payload</span> <span class="o">=</span> <span class="n">_json_payload</span><span class="p">(</span><span class="n">request</span><span class="p">)</span>
+        <span class="n">existing</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="k">if</span> <span class="n">payload</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s2">"replaceExisting"</span><span class="p">,</span> <span class="kc">False</span><span class="p">)</span> <span class="ow">is</span> <span class="kc">True</span><span class="p">:</span>
+            <span class="n">name</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">payload</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"name"</span><span class="p">,</span> <span class="s2">""</span><span class="p">))</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span>
+            <span class="k">if</span> <span class="n">name</span><span class="p">:</span>
+                <span class="n">existing</span> <span class="o">=</span> <span class="n">SavedSearch</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">filter</span><span class="p">(</span><span class="n">user</span><span class="o">=</span><span class="n">request</span><span class="o">.</span><span class="n">user</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="n">name</span><span class="p">)</span><span class="o">.</span><span class="n">first</span><span class="p">()</span>
+        <span class="n">item</span> <span class="o">=</span> <span class="n">save_saved_search</span><span class="p">(</span><span class="n">request</span><span class="o">.</span><span class="n">user</span><span class="p">,</span> <span class="n">payload</span><span class="p">,</span> <span class="n">instance</span><span class="o">=</span><span class="n">existing</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">JsonResponse</span><span class="p">({</span><span class="s2">"item"</span><span class="p">:</span> <span class="n">serialize_saved_search</span><span class="p">(</span><span class="n">item</span><span class="p">)},</span> <span class="n">status</span><span class="o">=</span><span class="mi">200</span> <span class="k">if</span> <span class="n">existing</span> <span class="k">else</span> <span class="mi">201</span><span class="p">)</span>
+    <span class="k">except</span> <span class="p">(</span><span class="n">json</span><span class="o">.</span><span class="n">JSONDecodeError</span><span class="p">,</span> <span class="ne">ValueError</span><span class="p">,</span> <span class="n">SearchInputError</span><span class="p">)</span> <span class="k">as</span> <span class="n">error</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">JsonResponse</span><span class="p">({</span><span class="s2">"error"</span><span class="p">:</span> <span class="nb">str</span><span class="p">(</span><span class="n">error</span><span class="p">),</span> <span class="s2">"code"</span><span class="p">:</span> <span class="s2">"invalid_saved_search"</span><span class="p">},</span> <span class="n">status</span><span class="o">=</span><span class="mi">400</span><span class="p">)</span></div>
+
+
+
+<div class="viewcode-block" id="saved_search_item">
+<a class="viewcode-back" href="../../../api.html#Main.views.api.saved_search_item">[ドキュメント]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">saved_search_item</span><span class="p">(</span><span class="n">request</span><span class="p">,</span> <span class="n">saved_search_id</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">"""本人の保存条件だけを参照、更新、削除する。"""</span>
+    <span class="n">denied</span> <span class="o">=</span> <span class="n">_authenticated_json</span><span class="p">(</span><span class="n">request</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">denied</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">denied</span>
+    <span class="n">item</span> <span class="o">=</span> <span class="n">SavedSearch</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">filter</span><span class="p">(</span><span class="n">user</span><span class="o">=</span><span class="n">request</span><span class="o">.</span><span class="n">user</span><span class="p">,</span> <span class="n">pk</span><span class="o">=</span><span class="n">saved_search_id</span><span class="p">)</span><span class="o">.</span><span class="n">first</span><span class="p">()</span>
+    <span class="k">if</span> <span class="n">item</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">JsonResponse</span><span class="p">({</span><span class="s2">"error"</span><span class="p">:</span> <span class="s2">"保存条件が見つかりません"</span><span class="p">},</span> <span class="n">status</span><span class="o">=</span><span class="mi">404</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">request</span><span class="o">.</span><span class="n">method</span> <span class="o">==</span> <span class="s2">"GET"</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">JsonResponse</span><span class="p">({</span><span class="s2">"item"</span><span class="p">:</span> <span class="n">serialize_saved_search</span><span class="p">(</span><span class="n">item</span><span class="p">)})</span>
+    <span class="k">if</span> <span class="n">request</span><span class="o">.</span><span class="n">method</span> <span class="o">==</span> <span class="s2">"DELETE"</span><span class="p">:</span>
+        <span class="n">item</span><span class="o">.</span><span class="n">delete</span><span class="p">()</span>
+        <span class="k">return</span> <span class="n">JsonResponse</span><span class="p">({</span><span class="s2">"message"</span><span class="p">:</span> <span class="s2">"保存条件を削除しました"</span><span class="p">})</span>
+    <span class="k">if</span> <span class="n">request</span><span class="o">.</span><span class="n">method</span> <span class="o">!=</span> <span class="s2">"PATCH"</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">JsonResponse</span><span class="p">({</span><span class="s2">"error"</span><span class="p">:</span> <span class="s2">"Invalid request method"</span><span class="p">},</span> <span class="n">status</span><span class="o">=</span><span class="mi">400</span><span class="p">)</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">item</span> <span class="o">=</span> <span class="n">save_saved_search</span><span class="p">(</span><span class="n">request</span><span class="o">.</span><span class="n">user</span><span class="p">,</span> <span class="n">_json_payload</span><span class="p">(</span><span class="n">request</span><span class="p">),</span> <span class="n">instance</span><span class="o">=</span><span class="n">item</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">JsonResponse</span><span class="p">({</span><span class="s2">"item"</span><span class="p">:</span> <span class="n">serialize_saved_search</span><span class="p">(</span><span class="n">item</span><span class="p">)})</span>
+    <span class="k">except</span> <span class="p">(</span><span class="n">json</span><span class="o">.</span><span class="n">JSONDecodeError</span><span class="p">,</span> <span class="ne">ValueError</span><span class="p">,</span> <span class="n">SearchInputError</span><span class="p">)</span> <span class="k">as</span> <span class="n">error</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">JsonResponse</span><span class="p">({</span><span class="s2">"error"</span><span class="p">:</span> <span class="nb">str</span><span class="p">(</span><span class="n">error</span><span class="p">),</span> <span class="s2">"code"</span><span class="p">:</span> <span class="s2">"invalid_saved_search"</span><span class="p">},</span> <span class="n">status</span><span class="o">=</span><span class="mi">400</span><span class="p">)</span></div>
+
+
+
+<div class="viewcode-block" id="run_saved_search">
+<a class="viewcode-back" href="../../../api.html#Main.views.api.run_saved_search">[ドキュメント]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">run_saved_search</span><span class="p">(</span><span class="n">request</span><span class="p">,</span> <span class="n">saved_search_id</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">"""本人の有効な保存条件を共通検索処理で即時実行する。"""</span>
+    <span class="n">denied</span> <span class="o">=</span> <span class="n">_authenticated_json</span><span class="p">(</span><span class="n">request</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">denied</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">denied</span>
+    <span class="k">if</span> <span class="n">request</span><span class="o">.</span><span class="n">method</span> <span class="o">!=</span> <span class="s2">"POST"</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">JsonResponse</span><span class="p">({</span><span class="s2">"error"</span><span class="p">:</span> <span class="s2">"Invalid request method"</span><span class="p">},</span> <span class="n">status</span><span class="o">=</span><span class="mi">400</span><span class="p">)</span>
+    <span class="n">saved_search</span> <span class="o">=</span> <span class="n">SavedSearch</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">filter</span><span class="p">(</span><span class="n">user</span><span class="o">=</span><span class="n">request</span><span class="o">.</span><span class="n">user</span><span class="p">,</span> <span class="n">pk</span><span class="o">=</span><span class="n">saved_search_id</span><span class="p">)</span><span class="o">.</span><span class="n">first</span><span class="p">()</span>
+    <span class="k">if</span> <span class="n">saved_search</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">JsonResponse</span><span class="p">({</span><span class="s2">"error"</span><span class="p">:</span> <span class="s2">"保存条件が見つかりません"</span><span class="p">},</span> <span class="n">status</span><span class="o">=</span><span class="mi">404</span><span class="p">)</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">saved_search</span><span class="o">.</span><span class="n">is_active</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">JsonResponse</span><span class="p">({</span><span class="s2">"error"</span><span class="p">:</span> <span class="s2">"無効な保存条件です"</span><span class="p">},</span> <span class="n">status</span><span class="o">=</span><span class="mi">409</span><span class="p">)</span>
+
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">criteria</span> <span class="o">=</span> <span class="n">criteria_from_saved_search</span><span class="p">(</span><span class="n">saved_search</span><span class="p">)</span>
+    <span class="k">except</span> <span class="n">SearchInputError</span> <span class="k">as</span> <span class="n">error</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">JsonResponse</span><span class="p">({</span><span class="s2">"error"</span><span class="p">:</span> <span class="nb">str</span><span class="p">(</span><span class="n">error</span><span class="p">),</span> <span class="s2">"code"</span><span class="p">:</span> <span class="s2">"invalid_saved_search"</span><span class="p">},</span> <span class="n">status</span><span class="o">=</span><span class="mi">400</span><span class="p">)</span>
+
+    <span class="n">request</span><span class="o">.</span><span class="n">saved_search</span> <span class="o">=</span> <span class="n">saved_search</span>
+    <span class="n">request</span><span class="o">.</span><span class="n">search_trigger</span> <span class="o">=</span> <span class="s2">"saved"</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">enforce_search_rate_limit</span><span class="p">(</span><span class="n">request</span><span class="p">)</span>
+    <span class="k">except</span> <span class="n">SearchRateLimitError</span> <span class="k">as</span> <span class="n">error</span><span class="p">:</span>
+        <span class="n">response</span> <span class="o">=</span> <span class="n">JsonResponse</span><span class="p">({</span><span class="s2">"error"</span><span class="p">:</span> <span class="nb">str</span><span class="p">(</span><span class="n">error</span><span class="p">),</span> <span class="s2">"code"</span><span class="p">:</span> <span class="s2">"rate_limit_exceeded"</span><span class="p">},</span> <span class="n">status</span><span class="o">=</span><span class="mi">429</span><span class="p">)</span>
+        <span class="n">response</span><span class="p">[</span><span class="s2">"Retry-After"</span><span class="p">]</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">error</span><span class="o">.</span><span class="n">retry_after</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">response</span>
+    <span class="n">response</span> <span class="o">=</span> <span class="n">complex_market_data_logic</span><span class="p">(</span><span class="n">request</span><span class="p">,</span> <span class="n">criteria</span><span class="p">)</span>
+
+    <span class="n">SavedSearch</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">filter</span><span class="p">(</span><span class="n">pk</span><span class="o">=</span><span class="n">saved_search</span><span class="o">.</span><span class="n">pk</span><span class="p">,</span> <span class="n">user</span><span class="o">=</span><span class="n">request</span><span class="o">.</span><span class="n">user</span><span class="p">)</span><span class="o">.</span><span class="n">update</span><span class="p">(</span>
+        <span class="n">last_run_at</span><span class="o">=</span><span class="n">timezone</span><span class="o">.</span><span class="n">now</span><span class="p">()</span>
+    <span class="p">)</span>
+    <span class="k">return</span> <span class="n">response</span></div>
 
 </pre></div>
 
