@@ -228,6 +228,16 @@
                     </select>
                 </div>
             </div>
+            {% if user.is_authenticated %}
+            <details class="card card-body mb-3">
+                <summary class="fw-bold">購入上限・共通の費用設定</summary>
+                <p>空欄は不明です。費用なしの場合は0を入力してください。商品別の「購入上限・利益」から試算・保存できます。</p>
+                <div id="purchaseCostSettings"></div>
+            </details>
+            <div id="purchaseBudgetEditor" class="mb-3" aria-live="polite"></div>
+            {% else %}
+            <p class="text-muted">購入上限・費用設定はログイン後に利用できます。</p>
+            {% endif %}
             <div id="watchlistEmpty" class="alert alert-secondary">ウォッチ中の商品はありません。</div>
             <div class="table-responsive">
                 <table id="watchlistTable" class="table table-bordered table-hover" style="display:none;">
@@ -254,6 +264,7 @@
     <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.9.2/dist/umd/popper.min.js"></script>
     <script src="{% static 'JS/csrf.js' %}?v=20260821-security"></script>
     <script src="{% static 'JS/MarketComparison.js' %}?v=20260821-target"></script>
+    <script src="{% static 'JS/PurchaseBudget.js' %}?v=20260905-budget"></script>
     <script src="{% static 'JS/Deep_Analysis_now.js' %}?v=20260902-watch-history"></script>
     <script src="{% static 'JS/SavedSearches.js' %}?v=20260825-target-integrated"></script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>

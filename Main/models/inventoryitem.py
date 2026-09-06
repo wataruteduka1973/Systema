@@ -28,6 +28,7 @@ class InventoryItem(models.Model):
     condition = models.CharField(max_length=20, default="unknown", db_index=True)
     category = models.CharField(max_length=100, blank=True, db_index=True)
     acquisition_cost = models.PositiveBigIntegerField(default=0)
+    purchase_decision = models.JSONField(default=dict, blank=True)
     acquired_at = models.DateTimeField(blank=True, null=True)
     status = models.CharField(
         max_length=20,

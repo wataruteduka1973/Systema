@@ -20,6 +20,7 @@ from Main.services.exceptions import SearchRateLimitError
 
 MONEY_FIELDS = {
     "acquisitionCost": "acquisition_cost",
+    "purchaseShippingCost": "purchase_shipping_cost",
     "shippingCostEstimate": "shipping_cost_estimate",
     "packagingCostEstimate": "packaging_cost_estimate",
     "otherCostEstimate": "other_cost_estimate",
@@ -71,6 +72,7 @@ def _apply_inputs(item: SellerListing, payload: Mapping[str, Any], *, creating: 
         if rate != rate.quantize(Decimal("0.00001")):
             raise ValueError("手数料率は小数点以下5桁以内で指定してください")
         item.fee_rate = rate
+    item.missing_cost_fields = [key for key in item.missing_cost_fields if key not in payload]
     for key, limit in (("name", 1000), ("note", 2000), ("condition", 20)):
         if key in payload:
             value = payload[key]
@@ -111,6 +113,29 @@ def create_listing(user: Any, payload: Mapping[str, Any]) -> SellerListing:
                 item.name = inventory.name
                 item.condition = inventory.condition
                 item.acquisition_cost = inventory.acquisition_cost
+                item.purchase_decision = inventory.purchase_decision
+                if inventory.purchase_decision:
+                    assumptions = inventory.purchase_decision["assumptions"]
+                    mapping = {
+                        "purchaseShipping": "purchaseShippingCost",
+                        "shippingCost": "shippingCostEstimate",
+                        "packagingCost": "packagingCostEstimate",
+                        "otherCost": "otherCostEstimate",
+                        "targetProfit": "targetProfit",
+                        "feeRate": "feeRate",
+                    }
+                    inherited = {
+                        target: assumptions[key]
+                        for key, target in mapping.items()
+                        if assumptions[key] is not None
+                    }
+                    item.missing_cost_fields = [
+                        target
+                        for key, target in mapping.items()
+                        if assumptions[key] is None and key != "targetProfit"
+                    ]
+                    inherited["predictedSalePrice"] = assumptions["salePrice"]
+                    _apply_inputs(item, inherited, creating=False)
             _apply_inputs(item, payload, creating=True)
             item.save()
     except IntegrityError as error:
@@ -144,7 +169,7 @@ def enforce_refresh_limit(user: Any) -> None:
 def profit_inputs(item: SellerListing) -> dict[str, Any]:
     return {
         "acquisition_cost": item.acquisition_cost,
-        "shipping_cost": item.shipping_cost_estimate,
+        "shipping_cost": item.shipping_cost_estimate + item.purchase_shipping_cost,
         "packaging_cost": item.packaging_cost_estimate,
         "other_cost": item.other_cost_estimate,
         "fee_rate": item.fee_rate,
@@ -189,12 +214,18 @@ def refresh_listing(user: Any, listing_id: int) -> SellerListing:
         price, source = predicted_price(item)
         inputs = profit_inputs(item)
         inputs["sale_price"] = price
-        result = calculate_profitability(**inputs)
+        result = (
+            calculate_profitability(**inputs)
+            if not item.missing_cost_fields
+            else {"feeEstimate": None, "estimatedProfit": None}
+        )
         snapshot_inputs = {
             **inputs,
             "fee_rate": str(item.fee_rate),
             "price_source": source,
             "target_profit": item.target_profit,
+            "purchase_shipping_cost": item.purchase_shipping_cost,
+            "missing_cost_fields": item.missing_cost_fields,
         }
         SellerListingSnapshot.objects.create(
             seller_listing=item,
@@ -216,12 +247,14 @@ def serialize_listing(item: SellerListing) -> dict[str, Any]:
     price, source = predicted_price(item)
     profit = (
         calculate_profitability(sale_price=price, **profit_inputs(item))
-        if price is not None
+        if price is not None and not item.missing_cost_fields
         else None
     )
     return {
         "id": item.pk,
         "inventoryItemId": item.inventory_item_id,
+        "purchaseDecision": item.purchase_decision,
+        "missingCostFields": item.missing_cost_fields,
         "url": item.url,
         "externalListingId": item.external_listing_id,
         "name": item.name,

@@ -111,6 +111,7 @@ function createInventoryCard(item) {
     form.querySelector('.inventory-delete').addEventListener('click', () => deleteInventory(item.id));
     const simulator = createProfitSimulator(item);
     body.append(heading, form, simulator);
+    if (item.purchaseDecision?.version) body.append(window.renderPurchaseDecision(item.purchaseDecision));
     card.appendChild(body);
     column.appendChild(card);
     return column;
@@ -125,6 +126,20 @@ function createProfitSimulator(item) {
     const form = document.createElement('form');
     form.className = 'row g-2 mt-1';
     form.innerHTML = `<div class="col-sm-2"><label class="form-label" for="profit-${item.id}-sale">想定販売価格</label><input id="profit-${item.id}-sale" name="salePrice" type="number" min="0" class="form-control" required></div><div class="col-sm-2"><label class="form-label" for="profit-${item.id}-shipping">送料</label><input id="profit-${item.id}-shipping" name="shippingCost" type="number" min="0" value="0" class="form-control"></div><div class="col-sm-2"><label class="form-label" for="profit-${item.id}-packaging">梱包費</label><input id="profit-${item.id}-packaging" name="packagingCost" type="number" min="0" value="0" class="form-control"></div><div class="col-sm-2"><label class="form-label" for="profit-${item.id}-other">その他費用</label><input id="profit-${item.id}-other" name="otherCost" type="number" min="0" value="0" class="form-control"></div><div class="col-sm-2"><label class="form-label" for="profit-${item.id}-fee">手数料率</label><input id="profit-${item.id}-fee" name="feeRate" type="number" min="0" max="1" step="0.00001" value="0.10" class="form-control"></div><div class="col-sm-2 d-flex align-items-end"><button class="btn btn-success" type="submit">計算</button></div><div class="col-12 money-result" role="status"></div>`;
+    if (item.purchaseDecision?.version) {
+        const assumptions = item.purchaseDecision.assumptions;
+        for (const key of ['salePrice', 'shippingCost', 'packagingCost', 'otherCost', 'feeRate']) {
+            form.elements.namedItem(key).value = assumptions[key] ?? '';
+        }
+        const wrap = document.createElement('div'); wrap.className = 'col-sm-2';
+        const label = document.createElement('label'); label.className = 'form-label'; label.htmlFor = `profit-${item.id}-purchaseShipping`; label.textContent = '仕入時の送料';
+        const input = document.createElement('input'); input.id = label.htmlFor; input.name = 'purchaseShipping'; input.type = 'number'; input.min = '0'; input.className = 'form-control'; input.value = assumptions.purchaseShipping ?? '';
+        wrap.append(label, input); form.prepend(wrap);
+        const targetWrap = document.createElement('div'); targetWrap.className = 'col-sm-2';
+        const targetLabel = document.createElement('label'); targetLabel.className = 'form-label'; targetLabel.htmlFor = `profit-${item.id}-targetProfit`; targetLabel.textContent = '目標利益';
+        const targetInput = document.createElement('input'); targetInput.id = targetLabel.htmlFor; targetInput.name = 'targetProfit'; targetInput.type = 'number'; targetInput.min = '0'; targetInput.className = 'form-control'; targetInput.value = assumptions.targetProfit ?? '';
+        targetWrap.append(targetLabel, targetInput); form.prepend(targetWrap);
+    }
     form.addEventListener('submit', event => simulateProfit(event, item.id));
     details.append(summary, form);
     return details;
@@ -161,6 +176,10 @@ async function simulateProfit(event, itemId) {
             method: 'POST', headers: window.systemaCsrfHeaders({ 'Content-Type': 'application/json' }), body: JSON.stringify(payload),
         });
         const data = result.data;
+        if (data.status === 'insufficient') {
+            form.querySelector('[role="status"]').textContent = '判定材料不足：購入判断の費用・売価・目標利益に不明項目があります。';
+            return;
+        }
         form.querySelector('[role="status"]').textContent = `手数料 ${formatYen(data.feeEstimate)}／総費用 ${formatYen(data.totalCost)}／見込み利益 ${formatYen(data.estimatedProfit)}／利益率 ${data.profitMarginPercent ?? 'N/A'}%／損益分岐 ${data.breakEvenPrice == null ? '算出不能' : formatYen(data.breakEvenPrice)}`;
     } catch (error) { showMessage(error.message, true); }
 }

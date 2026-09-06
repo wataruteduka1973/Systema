@@ -343,3 +343,11 @@ profit_margin = estimated_profit / sale_price * 100  (sale_price > 0)
 - Notification dedupeの同時作成
 - SQLite→PostgreSQL移行対象件数と除外件数
 - cascade/SET_NULL動作と退会時削除範囲
+
+## Phase 3C storage and migration
+
+`0018_purchase_budget_phase3c` adds `CostSettings` (unique user and JSON nullable defaults), append-only `PurchaseDecision` (watch FK, snapshot JSON version 1, creation time), and immutable `purchase_decision` JSON copies on InventoryItem and SellerListing. Watch ownership is the access boundary; inventory/listing copies remain owner-scoped after source deletion. Defaults are not joined when rendering old decisions.
+
+SellerListing adds separate `purchase_shipping_cost` and `missing_cost_fields`. Legacy rows receive 0 acquisition shipping and empty decision/missing metadata, preserving existing behavior. New decision-derived rows keep unknown costs in metadata, rather than treating legacy zero defaults as known. SellerListingSnapshot fee/profit become nullable to represent unknown costs without inventing zero profit. No existing amount is converted or backfilled from guesses.
+
+Forward migration adds tables/columns and relaxes two null constraints. Verification uses isolated SQLite; production migration and PostgreSQL locking must be rehearsed separately. Back up before application. A reverse migration drops new decision data and cannot restore NOT NULL if unknown-cost observations exist: roll back using a pre-migration backup, not by replacing unknowns with zero. Never reverse against user data without a data-preserving plan and explicit authorization.

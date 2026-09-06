@@ -48,3 +48,13 @@ Market comparison is centralized here. See `docs/decisions/0002-centralize-marke
 ## Verification
 
 Use mocked scraper results or fixtures. Verify market statistics, comparison labels, buying decisions, unknown remaining time, watchlist ownership, user-managed-field preservation, snapshot creation, history analysis, and insufficient-data behavior.
+
+## Phase 3C purchase decisions
+
+Authenticated watch rows provide a purchase-budget editor and reusable private cost settings. Empty costs mean unknown; zero must be entered explicitly. The editor supports manual sale price with evidence note or an owned retained closed-search median, and shows references, evidence count, observation time and unknown sale period. Existing buying labels remain price-comparison labels.
+
+Saving calculates target-profit purchase limit and expected profit on the server, retaining the exact observation and assumptions. A later template change has no effect on saved decisions. Purchase conversion copies the last decision and locks further edits; changed actual acquisition price is used by the inventory simulator without rewriting the original judgment. Read-only rendering of original decisions is shared with inventory and seller pages. No automatic purchase, alert, or live evidence retrieval is added.
+
+Related files: `Main/domain/purchase_budget.py`, `Main/services/purchase_budget.py`, `Main/models/purchasebudget.py`, `Main/static/JS/PurchaseBudget.js`, `Main/migrations/0018_purchase_budget_phase3c.py`, `tests/unit/test_purchase_budget.py`, `tests/integration/test_purchase_budget.py`.
+
+Verification: `python manage.py verify --feature purchase-budget`. Include unknown/zero, rounding, negative profit, limits, ownership/CSRF, evidence-copy retention, default changes, idempotent conversion, and seller unknown-cost propagation.

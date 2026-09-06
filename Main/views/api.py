@@ -7,6 +7,7 @@ from django.utils import timezone
 from Main.domain.product_condition import enrich_market_items, summarize_condition_market
 from Main.models.inventoryitem import InventoryItem
 from Main.models.savedsearch import SavedSearch
+from Main.models.searchrun import SearchRun
 from Main.models.sellerlisting import SellerListing
 from Main.models.watchitem import WatchItem
 from Main.scraping.seller_listing import ListingParseError
@@ -28,6 +29,13 @@ from Main.services.market_statistics import (
     enrich_items_with_market_comparison,
 )
 from Main.services.ownership import get_request_owner, owner_query
+from Main.services.purchase_budget import (
+    cost_settings,
+    evidence_runs,
+    latest_decision,
+    save_cost_settings,
+    save_decision,
+)
 from Main.services.saved_searches import (
     criteria_from_saved_search,
     save_saved_search,
@@ -372,6 +380,49 @@ def _json_payload(request):
 
 def _seller_error(message, code, status):
     return JsonResponse({"error": {"code": code, "message": message}}, status=status)
+
+
+def purchase_cost_settings(request):
+    denied = _authenticated_json(request)
+    if denied:
+        return denied
+    try:
+        if request.method == "GET":
+            return JsonResponse(
+                {"data": cost_settings(request.user), "evidenceRuns": evidence_runs(request.user)}
+            )
+        if request.method == "PUT":
+            return JsonResponse({"data": save_cost_settings(request.user, _json_payload(request))})
+        return _seller_error("許可されていないメソッドです", "method_not_allowed", 405)
+    except (ValueError, UnicodeDecodeError) as error:
+        return _seller_error(str(error), "validation_error", 400)
+
+
+def purchase_budget(request, item_id):
+    denied = _authenticated_json(request)
+    if denied:
+        return denied
+    try:
+        watch = WatchItem.objects.get(user=request.user, pk=item_id)
+        if request.method == "GET":
+            return JsonResponse(
+                {
+                    "data": latest_decision(watch),
+                    "defaults": cost_settings(request.user),
+                    "currentPrice": watch.current_price,
+                    "locked": hasattr(watch, "inventory_item")
+                    or watch.lifecycle_status == "purchased",
+                }
+            )
+        if request.method == "POST":
+            return JsonResponse(
+                {"data": save_decision(request.user, item_id, _json_payload(request))}
+            )
+        return _seller_error("許可されていないメソッドです", "method_not_allowed", 405)
+    except (WatchItem.DoesNotExist, SearchRun.DoesNotExist):
+        return _seller_error("商品または根拠が見つかりません", "not_found", 404)
+    except (ValueError, UnicodeDecodeError) as error:
+        return _seller_error(str(error), "validation_error", 400)
 
 
 def _seller_page(request, items, serializer):

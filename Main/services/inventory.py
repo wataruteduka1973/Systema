@@ -9,8 +9,10 @@ from django.db import IntegrityError, transaction
 from django.utils import timezone
 
 from Main.domain.profitability import calculate_profitability, decimal_rate
+from Main.domain.purchase_budget import calculate_budget, normalize_assumptions
 from Main.models.inventoryitem import InventoryItem
 from Main.models.watchitem import WatchItem
+from Main.services.purchase_budget import latest_decision
 
 INVENTORY_STATUSES = {value for value, _ in InventoryItem.STATUS_CHOICES}
 
@@ -74,6 +76,7 @@ def convert_watch_to_inventory(
                 acquisition_cost=_non_negative_int(
                     payload.get("acquisitionCost", watch_item.current_price), "仕入価格"
                 ),
+                purchase_decision=latest_decision(watch_item),
                 acquired_at=timezone.now(),
                 status="acquired",
                 note=str(payload.get("note") or watch_item.note)[:2000],
@@ -87,6 +90,9 @@ def convert_watch_to_inventory(
 
 
 def simulate_inventory_profit(item: InventoryItem, payload: Mapping[str, Any]) -> dict[str, Any]:
+    if item.purchase_decision:
+        assumptions = {**item.purchase_decision["assumptions"], **normalize_assumptions(payload)}
+        return calculate_budget(assumptions, item.acquisition_cost)
     return calculate_profitability(
         sale_price=_non_negative_int(payload.get("salePrice"), "想定販売価格"),
         acquisition_cost=item.acquisition_cost,
@@ -105,6 +111,7 @@ def serialize_inventory_item(item: InventoryItem) -> dict[str, Any]:
         "condition": item.condition,
         "category": item.category,
         "acquisitionCost": item.acquisition_cost,
+        "purchaseDecision": item.purchase_decision,
         "acquiredAt": item.acquired_at.isoformat() if item.acquired_at else None,
         "status": item.status,
         "note": item.note,

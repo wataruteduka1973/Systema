@@ -84,6 +84,8 @@
         node.append(link, el('p', `${statuses[item.status]} ／ 現在価格 ${yen(item.currentPrice)} ／ 入札 ${item.bidding ?? '未取得'}件 ／ 終了 ${date(item.endsAt)} ／ 残り ${item.remainingSeconds == null ? '未取得' : Math.ceil(item.remainingSeconds / 60) + '分'}`));
         node.append(el('p', `最終取得 ${date(item.lastCheckedAt)}。現在価格・入札数は取得時点の情報です。`, 'small text-muted'));
         const profit = item.profit;
+        if (item.purchaseDecision?.version) node.append(window.renderPurchaseDecision(item.purchaseDecision));
+        if (item.missingCostFields?.length) node.append(el('p', '引継ぎ費用に不明項目があります。費用編集で空欄を確認するまで利益は算出しません。', 'alert alert-warning'));
         const source = {manual: '手入力価格', currentPrice: '取得した現在価格', manualMarketMedian: '手入力相場中央値', unknown: '未設定'};
         node.append(el('p', profit ? `想定販売価格 ${yen(profit.salePrice)} ／ 見込み利益 ${yen(profit.estimatedProfit)} ／ 利益率 ${profit.profitMarginPercent == null ? '算出不能' : profit.profitMarginPercent + '%'} ／ 損益分岐 ${profit.breakEvenPrice == null ? '算出不能' : yen(profit.breakEvenPrice)} ／ 目標との差 ${yen(profit.estimatedProfit - item.targetProfit)}` : '見込み利益：価格未取得・未設定のため算出できません。', profit?.estimatedProfit < 0 ? 'text-danger fw-bold' : 'fw-bold'));
         node.append(el('p', `計算価格の根拠：${source[item.priceSource]}。相場中央値（手入力）：${item.marketMedian ? yen(item.marketMedian) : '未設定'}。確定利益ではありません。`, 'small text-muted'));
@@ -108,9 +110,9 @@
         status.value = item.status;
         const statusLabel = el('label', '管理状態（落札済みは手動指定）', 'form-label'); statusLabel.htmlFor = status.id;
         statusWrap.append(statusLabel, status); form.append(statusWrap);
-        const fields = {acquisitionCost:'仕入価格', shippingCostEstimate:'送料見積', packagingCostEstimate:'梱包費見積', otherCostEstimate:'その他費用', targetProfit:'目標利益', marketMedian:'相場中央値（手入力・0は未設定）', predictedSalePrice:'想定販売価格（空欄は現在価格等）', feeRate:'手数料率（0〜1、例：0.10）'};
+        const fields = {acquisitionCost:'仕入価格', purchaseShippingCost:'仕入時の送料', shippingCostEstimate:'販売時の発送送料見積', packagingCostEstimate:'梱包費見積', otherCostEstimate:'その他費用', targetProfit:'目標利益', marketMedian:'相場中央値（手入力・0は未設定）', predictedSalePrice:'想定販売価格（空欄は現在価格等）', feeRate:'手数料率（0〜1、例：0.10）'};
         Object.entries(fields).forEach(([key, label]) => {
-            const input = field(form, `seller-${item.id}`, key, label, item[key]);
+            const input = field(form, `seller-${item.id}`, key, label, item.missingCostFields?.includes(key) ? null : item[key]);
             input.required = key !== 'predictedSalePrice';
             if (key === 'feeRate') { input.max = '1'; input.step = '0.00001'; }
         });
@@ -137,7 +139,7 @@
         node.replaceChildren();
         if (!result.data.length) { node.append(el('p', '履歴はありません。「公開情報を更新」で観測を保存します。')); return; }
         const newest = result.data[0], oldest = result.data[result.data.length - 1];
-        node.append(el('p', result.data.length < 2 ? '比較には2回以上の観測が必要です。' : `このページ内の推移：価格 ${yen(newest.currentPrice - oldest.currentPrice)} ／ 入札 ${newest.bidding - oldest.bidding}件 ／ 見込み利益 ${yen(newest.estimatedProfit - oldest.estimatedProfit)}`));
+        node.append(el('p', result.data.length < 2 ? '比較には2回以上の観測が必要です。' : `このページ内の推移：価格 ${yen(newest.currentPrice - oldest.currentPrice)} ／ 入札 ${newest.bidding - oldest.bidding}件 ／ 見込み利益 ${yen(newest.estimatedProfit == null || oldest.estimatedProfit == null ? null : newest.estimatedProfit - oldest.estimatedProfit)}`));
         node.append(el('p', '新しい順。利益変化には価格だけでなく、費用・手数料・想定価格の設定変更も含まれます。', 'small text-muted'));
         const wrap = el('div', '', 'table-responsive');
         const table = el('table', '', 'table table-sm');

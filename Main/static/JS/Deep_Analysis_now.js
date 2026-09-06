@@ -305,6 +305,14 @@ function renderWatchlist(items) {
         row.insertCell(6).appendChild(createWatchEditor(item));
         row.insertCell(7).textContent = formatCheckedAt(item.lastCheckedAt);
         const actionCell = row.insertCell(8);
+        if (document.getElementById('purchaseBudgetEditor')) {
+            const budgetButton = document.createElement('button');
+            budgetButton.type = 'button';
+            budgetButton.className = 'btn btn-sm btn-outline-success me-2 mb-1';
+            budgetButton.textContent = '購入上限・利益';
+            budgetButton.addEventListener('click', () => window.openPurchaseBudget(item));
+            actionCell.appendChild(budgetButton);
+        }
         const historyButton = document.createElement('button');
         historyButton.type = 'button';
         historyButton.className = 'btn btn-sm btn-outline-primary me-2 mb-1';

@@ -8,6 +8,13 @@ from pathlib import Path
 from django.core.management.base import BaseCommand, CommandError
 
 FEATURE_TESTS = {
+    "purchase-budget": (
+        "tests/unit/test_purchase_budget.py",
+        "tests/integration/test_purchase_budget.py",
+        "tests/integration/test_inventory.py",
+        "tests/integration/test_seller_listings.py",
+        "tests/integration/test_api.py",
+    ),
     "seller-management": (
         "tests/unit/test_seller_listing.py",
         "tests/unit/test_profitability.py",
@@ -47,6 +54,10 @@ FEATURE_TESTS = {
 }
 
 PATH_FEATURES = {
+    "Main/domain/purchase_budget.py": "purchase-budget",
+    "Main/services/purchase_budget.py": "purchase-budget",
+    "Main/models/purchasebudget.py": "purchase-budget",
+    "Main/static/JS/PurchaseBudget.js": "purchase-budget",
     "Main/domain/seller_listing.py": "seller-management",
     "Main/models/sellerlisting.py": "seller-management",
     "Main/scraping/seller_listing.py": "seller-management",

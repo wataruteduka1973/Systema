@@ -13,6 +13,8 @@ from Main.views.api import (
     inventory_profit_simulation,
     perform_search,
     prediction_market,
+    purchase_budget,
+    purchase_cost_settings,
     run_saved_search,
     saved_search_item,
     saved_searches,
@@ -40,6 +42,10 @@ from Main.views.urls import (
 )
 
 urlpatterns = [
+    path("api/v1/cost-settings", purchase_cost_settings, name="purchase_cost_settings"),
+    path(
+        "api/v1/watch-items/<int:item_id>/purchase-budget", purchase_budget, name="purchase_budget"
+    ),
     path("", index, name="index"),
     path("yahuoku", Yahuoku, name="yahuoku"),
     path("yahuoku_now", Yahuoku_now, name="yahuoku_now"),
