@@ -8,6 +8,11 @@ from pathlib import Path
 from django.core.management.base import BaseCommand, CommandError
 
 FEATURE_TESTS = {
+    "notifications": (
+        "tests/integration/test_notifications.py",
+        "tests/integration/test_saved_searches.py",
+        "tests/unit/test_database_config.py",
+    ),
     "seller-priority": (
         "tests/unit/test_seller_status.py",
         "tests/integration/test_seller_priority.py",
@@ -70,6 +75,10 @@ FEATURE_TESTS = {
 }
 
 PATH_FEATURES = {
+    "Main/models/notification.py": "notifications",
+    "Main/services/notifications.py": "notifications",
+    "Main/static/JS/Notifications.js": "notifications",
+    "Main/templates/notifications.html": "notifications",
     "Main/domain/purchase_budget.py": "purchase-budget",
     "Main/services/purchase_budget.py": "purchase-budget",
     "Main/models/purchasebudget.py": "purchase-budget",

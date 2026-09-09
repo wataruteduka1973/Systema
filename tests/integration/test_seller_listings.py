@@ -294,3 +294,9 @@ def test_seller_page_has_registration_and_script(client, owner):
     content = response.content.decode()
     assert 'id="sellerCreateForm"' in content
     assert "JS/SellerListings.js" in content
+
+
+def test_seller_script_is_discoverable_by_django_staticfiles():
+    from django.contrib.staticfiles import finders
+
+    assert finders.find("JS/SellerListings.js") is not None

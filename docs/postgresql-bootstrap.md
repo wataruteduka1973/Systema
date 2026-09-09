@@ -30,7 +30,7 @@ $env:DB_PORT = "5432"
 $env:DB_SSLMODE = "prefer"
 ```
 
-ローカルSQLiteへ戻す場合は、新しいPowerShellを開くか、`DB_ENGINE=sqlite`を設定します。本番では`DB_SSLMODE=require`以上を使用し、サーバー証明書を検証できる環境では`verify-full`を推奨します。
+ローカルSQLiteへ切り替える場合は`DB_ENGINE=sqlite`を明示します。本番では`DB_SSLMODE=require`以上を使用し、サーバー証明書を検証できる環境では`verify-full`を推奨します。
 
 ## 2. ドライバーと接続確認
 
@@ -83,8 +83,8 @@ DDLの日本語既定値は、Windows版`psql`のSJIS/UTF-8差異に影響され
 
 | 変数 | PostgreSQL時 | 既定値 |
 |---|---:|---|
-| `DB_ENGINE` | 必須 | `sqlite` |
-| `DB_NAME` | 必須 | SQLite時は`db.sqlite3` |
+| `DB_ENGINE` | 任意 | `postgresql` |
+| `DB_NAME` | 必須 | SQLiteを明示した場合は`db.sqlite3` |
 | `DB_USER` | 必須 | なし |
 | `DB_PASSWORD` | 必須 | なし |
 | `DB_HOST` | 任意 | `localhost` |

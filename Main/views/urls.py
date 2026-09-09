@@ -80,3 +80,9 @@ def introduction(request):
 @ensure_csrf_cookie
 def seller_management(request):
     return render(request, "seller_management.html")
+
+
+@login_required
+@ensure_csrf_cookie
+def notifications_page(request):
+    return render(request, "notifications.html")

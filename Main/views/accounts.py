@@ -11,6 +11,7 @@ from django.urls import reverse_lazy
 from django.views.decorators.http import require_http_methods, require_POST
 
 from Main.forms import AccountCreationForm, InitialAdminCreationForm
+from Main.models.notification import Notification
 from Main.models.savedsearch import SavedSearch
 from Main.models.searchrun import SearchRun
 from Main.models.watchitem import WatchItem
@@ -70,6 +71,9 @@ class SystemaPasswordChangeView(PasswordChangeView):
 def profile(request):
     """ログインユーザー本人の利用状況と保存データを表示する。"""
     all_search_runs = SearchRun.objects.filter(user=request.user)
+    unread_notification_count = Notification.objects.filter(
+        user=request.user, read_at__isnull=True
+    ).count()
     search_runs = (
         all_search_runs.filter(trigger="manual")
         .annotate(saved_item_count=Count("items"))
@@ -118,6 +122,7 @@ def profile(request):
         "selected_items": selected_items,
         "watch_items": watch_items,
         "search_count": all_search_runs.count(),
+        "unread_notification_count": unread_notification_count,
         "scraped_item_count": all_search_runs.aggregate(total=Count("items"))["total"],
         "watch_count": WatchItem.objects.filter(user=request.user).count(),
         "keyword_summary": keyword_summary,

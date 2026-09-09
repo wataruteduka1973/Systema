@@ -253,6 +253,11 @@ def record_search_run(
         duration_ms=duration_ms,
         failure_code=failure_code,
     )
+    recorded_runs = getattr(request, "recorded_search_runs", None)
+    if recorded_runs is None:
+        recorded_runs = []
+        request.recorded_search_runs = recorded_runs
+    recorded_runs.append(run)
     if record_word:
         searchwordlog.objects.create(**owner.model_values, word=searchname)
     return run

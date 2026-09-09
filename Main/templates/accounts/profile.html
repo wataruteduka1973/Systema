@@ -22,7 +22,10 @@
                 <h1 class="h2 mb-1">{{ request.user.username }}さんのユーザーページ</h1>
                 <p class="text-muted mb-0">検索履歴、取得商品、ウォッチ商品をまとめて確認できます。</p>
             </div>
-            <a class="btn btn-outline-primary" href="{% url 'password_change' %}">パスワードを変更</a>
+            <div class="d-flex flex-wrap gap-2">
+                <a class="btn btn-primary" href="{% url 'notifications_page' %}">通知 <span class="badge bg-light text-primary">{{ unread_notification_count }}</span></a>
+                <a class="btn btn-outline-primary" href="{% url 'password_change' %}">パスワードを変更</a>
+            </div>
         </div>
 
         <section class="card mb-4">

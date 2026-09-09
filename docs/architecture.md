@@ -47,7 +47,7 @@ Django標準のユーザー、セッション、パスワード検証を認証�
 - Yahoo! Auction pages are scraped over HTTP.
 - HTML parsing is done with BeautifulSoup.
 - Data analysis uses pandas and NumPy. scikit-learn remains available for other analysis features.
-- SQLite is the default database backend.
+- PostgreSQL is the standard development and test backend. SQLite remains an explicit compatibility fallback.
 
 ## AI-agent-friendly boundaries
 

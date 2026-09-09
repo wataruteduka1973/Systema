@@ -11,6 +11,9 @@ from Main.views.api import (
     inventory_item,
     inventory_items,
     inventory_profit_simulation,
+    notification_item,
+    notifications,
+    notifications_read_all,
     perform_search,
     prediction_market,
     purchase_budget,
@@ -39,6 +42,7 @@ from Main.views.urls import (
     index,
     introduction,
     market_search,
+    notifications_page,
     seller_management,
 )
 
@@ -58,6 +62,7 @@ urlpatterns = [
     path("introduction", introduction, name="introduction"),
     path("developer/", developer_dashboard, name="developer_dashboard"),
     path("seller-management", seller_management, name="seller_management"),
+    path("notifications", notifications_page, name="notifications_page"),
     path("perform_search", perform_search, name="perform_search"),
     path("RealtimeSearch", RealtimeSearch, name="RealtimeSearch"),
     path("get_search_words", get_search_words, name="get_search_words"),
@@ -75,6 +80,17 @@ urlpatterns = [
         name="watchlist_snapshots",
     ),
     path("api/v1/saved-searches", saved_searches, name="saved_searches"),
+    path("api/v1/notifications", notifications, name="notifications"),
+    path(
+        "api/v1/notifications/read-all",
+        notifications_read_all,
+        name="notifications_read_all",
+    ),
+    path(
+        "api/v1/notifications/<int:notification_id>",
+        notification_item,
+        name="notification_item",
+    ),
     path("api/v1/inventory-items", inventory_items, name="inventory_items"),
     path("api/v1/seller-listings", seller_listings, name="seller_listings"),
     path(

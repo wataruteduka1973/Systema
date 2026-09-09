@@ -6,8 +6,13 @@ from django.core.exceptions import ImproperlyConfigured
 from System_Config.database import build_database_config
 
 
-def test_sqlite_is_the_safe_default():
-    config = build_database_config(Path("C:/systema"), {})["default"]
+def test_postgresql_is_the_default_and_requires_credentials():
+    with pytest.raises(ImproperlyConfigured):
+        build_database_config(Path("C:/systema"), {})
+
+
+def test_sqlite_requires_an_explicit_engine_selection():
+    config = build_database_config(Path("C:/systema"), {"DB_ENGINE": "sqlite"})["default"]
 
     assert config["ENGINE"] == "django.db.backends.sqlite3"
     assert config["NAME"] == Path("C:/systema/db.sqlite3")

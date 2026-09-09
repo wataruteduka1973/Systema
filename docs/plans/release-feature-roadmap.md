@@ -142,7 +142,7 @@ Phase 0は後続機能の依存関係に沿って分割し、検索契約を先�
 
 ### Phase 4: Seller workflow support
 
-**Status:** 出品・在庫管理画面に集約する。Phase 4Aの状態判定、4Bの優先順位・絞り込み、4Cの操作導線、4Dの対応状況集計、4Eの販売結果・確定利益入力を実装済み。2026-09-09に `verify --feature seller-outcomes`、`verify --feature purchase-budget`、JavaScript構文確認、差分確認、検証用SQLiteでの操作確認を通過し、ユーザーによる主要10項目の画面確認も完了。本番DB・PostgreSQL・GitHub CIは **NOT VERIFIED**。
+**Status:** 出品・在庫管理画面に集約する。Phase 4Aの状態判定、4Bの優先順位・絞り込み、4Cの操作導線、4Dの対応状況集計、4Eの販売結果・確定利益入力を実装済み。2026-09-09に `verify --feature seller-outcomes`、`verify --feature purchase-budget`、JavaScript構文確認、差分確認、検証用SQLiteでの操作確認を通過し、ユーザーによる主要10項目の画面確認も完了。2026-09-09に開発用PostgreSQLで全マイグレーション適用、販売結果テスト3件、`verify --feature seller-outcomes`も通過。本番DB・PostgreSQL・GitHub CIは **NOT VERIFIED**。
 
 - 出品一覧で、公開情報・出品状態・次の作業を一画面で確認できるようにする。
 - 価格・入札・残り時間・見込み利益の変化から、更新が必要な出品を識別する。
@@ -157,8 +157,10 @@ Phase 0は後続機能の依存関係に沿って分割し、検索契約を先�
 
 ### Phase 5: Notification center
 
+**Status:** Implemented in the working tree on 2026-09-09. Isolated SQLite checks and PostgreSQL `verify --feature notifications` passed; the PostgreSQL run includes concurrent notification dedupe. Applying `0020_notification_phase5` to the application database, browser confirmation, production migration, and GitHub CI remain **NOT VERIFIED**.
+
 - 所有者限定の通知一覧、既読、一括既読APIを追加する。
-- ユーザーページに未読件数と通知欄を追加する。
+- ユーザーページには未読件数と専用通知画面への導線を追加し、通知一覧は`/taskle/notifications`へ分離する。
 - ウォッチ値下げ、終了間近、保存検索更新完了、検索失敗を接続する。
 - `dedupe_key`で同一事象の連続通知を防ぐ。
 

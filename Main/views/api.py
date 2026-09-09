@@ -28,6 +28,13 @@ from Main.services.market_statistics import (
     analyze_market_prices,
     enrich_items_with_market_comparison,
 )
+from Main.services.notifications import (
+    mark_all_read,
+    notification_page,
+    notify_saved_search_run,
+    serialize_notification,
+    set_read_state,
+)
 from Main.services.ownership import get_request_owner, owner_query
 from Main.services.purchase_budget import (
     cost_settings,
@@ -707,7 +714,67 @@ def run_saved_search(request, saved_search_id):
         return response
     response = complex_market_data_logic(request, criteria)
 
+    recorded_runs = getattr(request, "recorded_search_runs", [])
+    if recorded_runs:
+        notify_saved_search_run(recorded_runs[-1])
+
     SavedSearch.objects.filter(pk=saved_search.pk, user=request.user).update(
         last_run_at=timezone.now()
     )
     return response
+
+
+def notifications(request):
+    """本人の通知一覧と未読件数を返す。"""
+    denied = _authenticated_json(request)
+    if denied:
+        return denied
+    if request.method != "GET":
+        return JsonResponse({"error": "Invalid request method"}, status=400)
+    try:
+        unread_value = request.GET.get("unreadOnly", "false").lower()
+        if unread_value not in {"true", "false"}:
+            raise ValueError("unreadOnlyはtrueまたはfalseで指定してください")
+        page = int(request.GET.get("page", "1"))
+        page_size = int(request.GET.get("pageSize", "20"))
+        if page < 1 or not 1 <= page_size <= 100:
+            raise ValueError("pageは1以上、pageSizeは1から100で指定してください")
+        return JsonResponse(
+            notification_page(
+                request.user,
+                unread_only=unread_value == "true",
+                page=page,
+                page_size=page_size,
+            )
+        )
+    except ValueError as error:
+        return JsonResponse({"error": str(error)}, status=400)
+
+
+def notification_item(request, notification_id):
+    """本人の通知だけを既読または未読へ更新する。"""
+    denied = _authenticated_json(request)
+    if denied:
+        return denied
+    if request.method != "PATCH":
+        return JsonResponse({"error": "Invalid request method"}, status=400)
+    try:
+        payload = _json_payload(request)
+        if set(payload) != {"read"} or not isinstance(payload["read"], bool):
+            raise ValueError("readにはtrueまたはfalseを指定してください")
+        item = set_read_state(request.user, notification_id, read=payload["read"])
+        if item is None:
+            return JsonResponse({"error": "通知が見つかりません"}, status=404)
+        return JsonResponse({"item": serialize_notification(item)})
+    except (json.JSONDecodeError, ValueError) as error:
+        return JsonResponse({"error": str(error)}, status=400)
+
+
+def notifications_read_all(request):
+    """本人の未読通知を一括で既読にする。"""
+    denied = _authenticated_json(request)
+    if denied:
+        return denied
+    if request.method != "POST":
+        return JsonResponse({"error": "Invalid request method"}, status=400)
+    return JsonResponse({"updatedCount": mark_all_read(request.user)})

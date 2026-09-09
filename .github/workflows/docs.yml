@@ -44,6 +44,7 @@ jobs:
       - name: Build Sphinx documentation
         env:
           DJANGO_SETTINGS_MODULE: System_Config.settings
+          DB_ENGINE: sqlite
         run: sphinx-build -W --keep-going -b html document document/build/html
 
       - name: Configure GitHub Pages

@@ -12,6 +12,7 @@ from django.utils import timezone
 
 from Main.domain.buying_opportunity import evaluate_buying_opportunity
 from Main.models.watchitem import WatchItem, WatchPriceSnapshot
+from Main.services.notifications import notify_watch_observation
 from Main.services.ownership import RequestOwner, owner_query
 from Main.services.watchlist_analysis import analyze_watch_history
 
@@ -76,6 +77,7 @@ def save_watch_item(payload: Mapping[str, Any], owner: RequestOwner) -> tuple[Wa
         url=url,
         defaults={**defaults, "added_price": price},
     )
+    previous_price = item.current_price
     if not created:
         price_changed = item.current_price != price
         for field, value in defaults.items():
@@ -83,11 +85,18 @@ def save_watch_item(payload: Mapping[str, Any], owner: RequestOwner) -> tuple[Wa
         if price_changed:
             item.last_price_change_at = timezone.now()
         item.save()
-    _record_snapshot(
+    snapshot = _record_snapshot(
         item,
         remaining_seconds=_optional_non_negative_int(payload.get("remainingSeconds")),
         force=created,
     )
+    if not created:
+        notify_watch_observation(
+            item,
+            previous_price=previous_price,
+            remaining_seconds=_optional_non_negative_int(payload.get("remainingSeconds")),
+            snapshot=snapshot,
+        )
     return item, created
 
 
@@ -145,7 +154,8 @@ def refresh_watched_item(payload: Mapping[str, Any], owner: RequestOwner) -> boo
         str(payload.get("condition") or item.condition),
         payload.get("remainingSeconds"),
     )
-    price_changed = item.current_price != price
+    previous_price = item.current_price
+    price_changed = previous_price != price
     item.name = str(payload.get("name") or item.name)
     item.current_price = price
     item.bidding = _non_negative_int(payload.get("bidding"))
@@ -160,9 +170,15 @@ def refresh_watched_item(payload: Mapping[str, Any], owner: RequestOwner) -> boo
     if price_changed:
         item.last_price_change_at = timezone.now()
     item.save()
-    _record_snapshot(
+    snapshot = _record_snapshot(
         item,
         remaining_seconds=_optional_non_negative_int(payload.get("remainingSeconds")),
+    )
+    notify_watch_observation(
+        item,
+        previous_price=previous_price,
+        remaining_seconds=_optional_non_negative_int(payload.get("remainingSeconds")),
+        snapshot=snapshot,
     )
     return True
 
@@ -218,7 +234,7 @@ def serialize_watch_snapshots(item: WatchItem) -> dict[str, Any]:
 
 def _record_snapshot(
     item: WatchItem, *, remaining_seconds: int | None, force: bool = False
-) -> None:
+) -> WatchPriceSnapshot | None:
     latest = item.price_snapshots.order_by("-observed_at", "-pk").first()
     significant_change = (
         latest is None
@@ -230,13 +246,14 @@ def _record_snapshot(
         latest is not None and timezone.now() - latest.observed_at >= SNAPSHOT_MIN_INTERVAL
     )
     if force or significant_change or interval_elapsed:
-        WatchPriceSnapshot.objects.create(
+        return WatchPriceSnapshot.objects.create(
             watch_item=item,
             price=item.current_price,
             bidding=item.bidding,
             remaining_seconds=remaining_seconds,
             condition=item.condition,
         )
+    return None
 
 
 def _is_allowed_url(value: str) -> bool:

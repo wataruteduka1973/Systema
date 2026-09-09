@@ -159,10 +159,13 @@ def save_sale_record(user: Any, listing_id: int, payload: Mapping[str, Any]) -> 
     allowed = set(SALE_FIELDS) | {"soldAt"}
     if set(payload) != allowed:
         raise ValueError("販売結果の入力項目が不足しているか、未対応の項目があります")
-    listing = (
-        SellerListing.objects.select_for_update()
-        .select_related("inventory_item")
-        .get(user=user, pk=listing_id)
+    listing = SellerListing.objects.select_for_update().get(user=user, pk=listing_id)
+    inventory = (
+        InventoryItem.objects.select_for_update()
+        .filter(user=user, pk=listing.inventory_item_id)
+        .first()
+        if listing.inventory_item_id
+        else None
     )
     values = {field: money(payload[key]) for key, field in SALE_FIELDS.items()}
     if not isinstance(payload["soldAt"], str):
@@ -182,9 +185,9 @@ def save_sale_record(user: Any, listing_id: int, payload: Mapping[str, Any]) -> 
     if listing.status != "sold":
         listing.status = "sold"
         listing.save(update_fields=("status", "updated_at"))
-    if listing.inventory_item_id and listing.inventory_item.status != "sold":
-        listing.inventory_item.status = "sold"
-        listing.inventory_item.save(update_fields=("status", "updated_at"))
+    if inventory and inventory.status != "sold":
+        inventory.status = "sold"
+        inventory.save(update_fields=("status", "updated_at"))
     return record
 
 

@@ -10,7 +10,7 @@ from django.core.exceptions import ImproperlyConfigured
 
 
 def build_database_config(base_dir: Path, environ: Mapping[str, str]) -> dict[str, dict[str, Any]]:
-    engine = environ.get("DB_ENGINE", "sqlite").strip().lower()
+    engine = environ.get("DB_ENGINE", "postgresql").strip().lower()
     if engine == "sqlite":
         name = environ.get("DB_NAME", "").strip()
         return {
