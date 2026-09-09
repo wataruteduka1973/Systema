@@ -67,6 +67,12 @@ pytest -m e2e -v
 - 許可外ホストへのリクエストはテスト失敗（URL/ホスト名をエラー出力）
 - 各テスト方法で独立したユーザー・通知フィクスチャ
 
+GitHub Actionsはヘッドレス実行のみのため、通常のChromiumではなくheadless shellを取得します。
+
+```bash
+python -m playwright install --with-deps --only-shell
+```
+
 ## CIとマージ保護
 
 pushとPull Requestごとに、`.github/workflows/ci.yml`がlint・型検査・テスト・Sphinxビルドを実行します。GitHubの **Settings → Branches → Branch protection rules** で`main`を対象にし、次のRequired status checksを指定してください。

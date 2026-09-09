@@ -70,6 +70,10 @@ pytest tests/e2e/test_notifications_browser.py -v
 pytest -m e2e -v
 ```
 
+GitHub Actionsではヘッドレス実行だけを行うため、E2Eジョブは
+`python -m playwright install --with-deps --only-shell` でPlaywrightの
+chromium headless shellとOS依存パッケージを取得する。
+
 ### 設定ファイル
 
 - `tests/e2e/conftest.py`: Windowsの非同期イベントループ設定、`db_for_e2e`フィクスチャ
