@@ -59,6 +59,43 @@ coverage report
 ```
 
 pytest・Ruff・Black・mypy・SphinxはpushとPull RequestごとにGitHub Actionsでも検証されます。
+
+### ブラウザーE2Eテスト
+
+Playwrightを使った通知画面のE2Eテストは、本番DBに接続せず、SQLiteのテストDBで実行します。Windowsでは次の手順でChromiumを準備します。
+
+```powershell
+python -m pip install -r requirements-dev.txt
+python -m playwright install chromium
+$env:DB_ENGINE = "sqlite"
+pytest tests/e2e/test_notifications_browser.py -v
+```
+
+すべてのE2Eテストを実行する場合:
+
+```powershell
+$env:DB_ENGINE = "sqlite"
+pytest -m e2e -v
+```
+
+E2Eテスト対象:
+- ログイン・初期表示・所有者分離
+- 未読フィルター切り替え
+- 個別通知の既読・未読トグル
+- すべて既読アクション
+- 390px幅でのレスポンシブレイアウト（横スクロールなし）
+- JavaScriptコンソールエラー検出
+- 通知なし時の空状態表示
+- Yahoo! Auctionsへの外部通信がないこと
+
+テスト実行環境:
+- SQLiteテストDB（本番DB接続なし）
+- Chromiumブラウザー
+- 仮想テストサーバー (localhost)
+- 許可ホスト: localhost, 127.0.0.1, cdn.jsdelivr.net, fonts.googleapis.com, fonts.gstatic.com
+
+本番環境のブラウザー確認はPhase 9のリリースゲートで行います。
+
 本アプリケーションのドキュメントは以下より閲覧できます
 https://wataruteduka1973.github.io/Systema/
 

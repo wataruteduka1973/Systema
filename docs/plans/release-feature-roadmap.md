@@ -157,7 +157,7 @@ Phase 0は後続機能の依存関係に沿って分割し、検索契約を先�
 
 ### Phase 5: Notification center
 
-**Status:** Implemented in the working tree on 2026-09-09. Isolated SQLite checks and PostgreSQL `verify --feature notifications` passed; the PostgreSQL run includes concurrent notification dedupe. Applying `0020_notification_phase5` to the application database, browser confirmation, production migration, and GitHub CI remain **NOT VERIFIED**.
+**Status:** Implemented and locally verified on 2026-09-09. The development application database was confirmed as PostgreSQL 18.6, all migrations through `0020_notification_phase5` were applied, and `verify --feature notifications` passed, including PostgreSQL concurrent notification dedupe. GitHub CI for the pushed revision was confirmed successful by the user on 2026-09-09, covering documentation, lint/type checks, tests, and documentation build/deploy. Browser confirmation and production migration remain **NOT VERIFIED** and are intentionally deferred to the Phase 9 release gate after the remaining feature implementation is complete.
 
 - 所有者限定の通知一覧、既読、一括既読APIを追加する。
 - ユーザーページには未読件数と専用通知画面への導線を追加し、通知一覧は`/taskle/notifications`へ分離する。

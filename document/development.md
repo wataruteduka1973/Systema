@@ -34,12 +34,46 @@ python manage.py check
 
 設定は`pyproject.toml`へ集約しています。テストは`tests/unit/`、`tests/integration/`、`tests/e2e/`に分類します。
 
+### Playwright E2Eテスト
+
+通知画面のE2Eテストは`pytest-playwright`とChromiumを使い、SQLiteのテストDBで実行します。本番DBの認証情報やYahoo! Auctionsへの通信は使用しません。
+
+**テスト対象**:
+- ログイン・初期表示・所有者分離
+- 未読フィルター・既読操作
+- 390px幅レスポンシブレイアウト（横スクロールなし）
+- JavaScriptコンソールエラー
+- 通知なし時の空状態表示
+- 外部通信（Yahoo! Auctions）なし
+
+**Windowsでの実行**:
+
+```powershell
+python -m pip install -r requirements-dev.txt
+python -m playwright install chromium
+$env:DB_ENGINE = "sqlite"
+pytest tests/e2e/test_notifications_browser.py -v
+```
+
+すべてのE2Eテスト:
+
+```powershell
+pytest -m e2e -v
+```
+
+**前提条件**:
+- SQLiteテストDB（`DB_ENGINE=sqlite`で隔離）
+- 外部通信allowlist: localhost, 127.0.0.1, cdn.jsdelivr.net, fonts.googleapis.com, fonts.gstatic.com のみ許可
+- 許可外ホストへのリクエストはテスト失敗（URL/ホスト名をエラー出力）
+- 各テスト方法で独立したユーザー・通知フィクスチャ
+
 ## CIとマージ保護
 
 pushとPull Requestごとに、`.github/workflows/ci.yml`がlint・型検査・テスト・Sphinxビルドを実行します。GitHubの **Settings → Branches → Branch protection rules** で`main`を対象にし、次のRequired status checksを指定してください。
 
 - `Lint and type check`
 - `Tests`
+- `E2E Tests`
 - `Documentation`
 
 このリポジトリ設定を有効にすると、いずれかが失敗したPull Requestはマージできません。
