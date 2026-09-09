@@ -20,6 +20,7 @@ from Main.views.api import (
     saved_searches,
     seller_listing_item,
     seller_listing_refresh,
+    seller_listing_sale,
     seller_listing_snapshots,
     seller_listings,
     update_market_data,
@@ -83,6 +84,11 @@ urlpatterns = [
         "api/v1/seller-listings/<int:listing_id>/refresh",
         seller_listing_refresh,
         name="seller_listing_refresh",
+    ),
+    path(
+        "api/v1/seller-listings/<int:listing_id>/sale",
+        seller_listing_sale,
+        name="seller_listing_sale",
     ),
     path(
         "api/v1/seller-listings/<int:listing_id>/snapshots",

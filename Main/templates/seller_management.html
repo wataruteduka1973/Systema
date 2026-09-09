@@ -38,8 +38,11 @@
                 </details>
                 <div class="d-flex flex-wrap align-items-end gap-2 mb-3">
                     <div><label for="sellerStatus" class="form-label">出品状態</label><select id="sellerStatus" class="form-select"><option value="">すべて</option><option value="draft">登録済み</option><option value="active">出品中</option><option value="ended">終了</option><option value="sold">落札済み</option><option value="cancelled">見送り</option><option value="relist">再出品待ち</option></select></div>
+                    <div><label for="sellerAction" class="form-label">対応内容</label><select id="sellerAction" class="form-select"><option value="">すべて</option><option value="sale_result_missing">販売結果未入力</option><option value="ending_without_bids">終了間近・入札なし</option><option value="ending_soon">終了間近</option><option value="status_check">終了状態の確認</option><option value="loss_risk">赤字見込み</option><option value="cost_incomplete">費用不足</option><option value="price_missing">想定価格不足</option><option value="needs_refresh">公開情報未取得</option><option value="stale">公開情報が古い</option><option value="target_unmet">目標利益未達</option><option value="bid_stalled">入札停滞</option><option value="sold">販売結果入力済み</option><option value="cancelled">見送り</option><option value="relist">再出品待ち</option><option value="ok">通常</option></select></div>
+                    <div><label for="sellerSort" class="form-label">並び順</label><select id="sellerSort" class="form-select"><option value="priority">対応優先順</option><option value="updated">更新日時順</option></select></div>
                     <button id="sellerReload" type="button" class="btn btn-outline-secondary">一覧を再読込</button>
                 </div>
+                <div id="sellerSummary" class="row g-2 mb-3" aria-label="出品対応状況"></div>
                 <div id="sellerList" aria-live="polite"></div>
                 <div id="sellerPages" class="d-flex flex-wrap gap-2 align-items-center mt-3"></div>
             </section>
@@ -87,7 +90,7 @@
     <script src="{% static 'JS/csrf.js' %}?v=20260821-security"></script>
     <script src="{% static 'JS/PurchaseBudget.js' %}?v=20260905-budget"></script>
     <script src="{% static 'JS/InventoryManagement.js' %}?v=20260902-phase3a-2"></script>
-    <script src="{% static 'JS/SellerListings.js' %}?v=20260903-phase3b"></script>
+    <script src="{% static 'JS/SellerListings.js' %}?v=20260909-phase4-complete"></script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>

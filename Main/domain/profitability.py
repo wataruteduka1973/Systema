@@ -43,6 +43,31 @@ def calculate_profitability(
     }
 
 
+def calculate_confirmed_profit(
+    *,
+    sale_price: int,
+    acquisition_cost: int,
+    purchase_shipping_cost: int,
+    actual_fee: int,
+    actual_shipping_cost: int,
+    actual_packaging_cost: int,
+    actual_other_cost: int,
+) -> int:
+    """Calculate realized profit from validated, non-negative yen amounts."""
+    values = (
+        sale_price,
+        acquisition_cost,
+        purchase_shipping_cost,
+        actual_fee,
+        actual_shipping_cost,
+        actual_packaging_cost,
+        actual_other_cost,
+    )
+    if any(isinstance(value, bool) or not isinstance(value, int) or value < 0 for value in values):
+        raise ValueError("amounts must be non-negative integers")
+    return sale_price - sum(values[1:])
+
+
 def decimal_rate(value: Any) -> Decimal:
     try:
         rate = Decimal(str(value))

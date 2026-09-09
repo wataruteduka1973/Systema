@@ -2,7 +2,11 @@ from decimal import Decimal
 
 import pytest
 
-from Main.domain.profitability import calculate_profitability, decimal_rate
+from Main.domain.profitability import (
+    calculate_confirmed_profit,
+    calculate_profitability,
+    decimal_rate,
+)
 
 pytestmark = pytest.mark.unit
 
@@ -53,3 +57,18 @@ def test_profitability_handles_full_fee_rate_without_division_by_zero():
 
     assert result["estimatedProfit"] == -100
     assert result["breakEvenPrice"] is None
+
+
+def test_confirmed_profit_uses_actual_costs_and_allows_loss():
+    assert (
+        calculate_confirmed_profit(
+            sale_price=10000,
+            acquisition_cost=8000,
+            purchase_shipping_cost=500,
+            actual_fee=1000,
+            actual_shipping_cost=700,
+            actual_packaging_cost=100,
+            actual_other_cost=200,
+        )
+        == -500
+    )

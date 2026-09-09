@@ -8,12 +8,28 @@ from pathlib import Path
 from django.core.management.base import BaseCommand, CommandError
 
 FEATURE_TESTS = {
+    "seller-priority": (
+        "tests/unit/test_seller_status.py",
+        "tests/integration/test_seller_priority.py",
+        "tests/integration/test_seller_listings.py",
+    ),
+    "seller-outcomes": (
+        "tests/unit/test_profitability.py",
+        "tests/unit/test_seller_status.py",
+        "tests/integration/test_seller_priority.py",
+        "tests/integration/test_seller_outcomes.py",
+        "tests/integration/test_seller_listings.py",
+    ),
     "purchase-budget": (
         "tests/unit/test_purchase_budget.py",
         "tests/integration/test_purchase_budget.py",
         "tests/integration/test_inventory.py",
         "tests/integration/test_seller_listings.py",
         "tests/integration/test_api.py",
+    ),
+    "seller-status": (
+        "tests/unit/test_seller_status.py",
+        "tests/integration/test_seller_listings.py",
     ),
     "seller-management": (
         "tests/unit/test_seller_listing.py",
@@ -57,6 +73,7 @@ PATH_FEATURES = {
     "Main/domain/purchase_budget.py": "purchase-budget",
     "Main/services/purchase_budget.py": "purchase-budget",
     "Main/models/purchasebudget.py": "purchase-budget",
+    "Main/domain/seller_status.py": "seller-status",
     "Main/static/JS/PurchaseBudget.js": "purchase-budget",
     "Main/domain/seller_listing.py": "seller-management",
     "Main/models/sellerlisting.py": "seller-management",

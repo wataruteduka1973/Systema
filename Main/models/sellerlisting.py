@@ -91,3 +91,21 @@ class SellerListingSnapshot(models.Model):
         indexes = [
             models.Index(fields=("seller_listing", "-observed_at"), name="seller_snapshot_time_idx")
         ]
+
+
+class SaleRecord(models.Model):
+    seller_listing = models.OneToOneField(
+        SellerListing, on_delete=models.CASCADE, related_name="sale_record"
+    )
+    sale_price = models.PositiveBigIntegerField()
+    actual_fee = models.PositiveBigIntegerField(default=0)
+    actual_shipping_cost = models.PositiveBigIntegerField(default=0)
+    actual_packaging_cost = models.PositiveBigIntegerField(default=0)
+    actual_other_cost = models.PositiveBigIntegerField(default=0)
+    sold_at = models.DateTimeField()
+    confirmed_profit = models.BigIntegerField()
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ("-sold_at", "-pk")

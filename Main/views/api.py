@@ -50,10 +50,12 @@ from Main.services.search_observability import (
 from Main.services.seller_listings import (
     ListingConflictError,
     create_listing,
-    listing_queryset,
+    listing_page,
     owned_listing,
     refresh_listing,
+    save_sale_record,
     serialize_listing,
+    serialize_sale_record,
     serialize_snapshot,
     update_listing,
 )
@@ -446,10 +448,19 @@ def seller_listings(request):
         return _seller_error("ログインが必要です", "authentication_required", 401)
     try:
         if request.method == "GET":
-            return _seller_page(
-                request,
-                listing_queryset(request.user, request.GET.get("status", "")),
-                serialize_listing,
+            page = int(request.GET.get("page", "1"))
+            size = int(request.GET.get("pageSize", "20"))
+            if not 1 <= page <= 1_000_000 or not 1 <= size <= 100:
+                raise ValueError("ページ指定が正しくありません")
+            return JsonResponse(
+                listing_page(
+                    request.user,
+                    status=request.GET.get("status", ""),
+                    action=request.GET.get("action", ""),
+                    sort=request.GET.get("sort", "updated"),
+                    page=page,
+                    size=size,
+                )
             )
         if request.method == "POST":
             item = create_listing(request.user, _json_payload(request))
@@ -527,6 +538,20 @@ def seller_listing_snapshots(request, listing_id):
         return _seller_page(request, item.snapshots.all(), serialize_snapshot)
     except SellerListing.DoesNotExist:
         return _seller_error("出品が見つかりません", "not_found", 404)
+
+
+def seller_listing_sale(request, listing_id):
+    if not request.user.is_authenticated:
+        return _seller_error("ログインが必要です", "authentication_required", 401)
+    if request.method != "PUT":
+        return _seller_error("許可されていないメソッドです", "method_not_allowed", 405)
+    try:
+        record = save_sale_record(request.user, listing_id, _json_payload(request))
+        return JsonResponse({"data": serialize_sale_record(record)})
+    except SellerListing.DoesNotExist:
+        return _seller_error("出品が見つかりません", "not_found", 404)
+    except ValueError as error:
+        return _seller_error(str(error), "validation_error", 400)
 
 
 def inventory_items(request):

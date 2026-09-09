@@ -2,19 +2,26 @@
 
 import re
 from collections.abc import Mapping
+from datetime import datetime, timedelta
 from decimal import Decimal
 from typing import Any
 
 from django.conf import settings
 from django.core.cache import cache
 from django.db import IntegrityError, transaction
-from django.db.models import QuerySet
+from django.db.models import OuterRef, QuerySet, Subquery
 from django.utils import timezone
+from django.utils.dateparse import parse_datetime
 
-from Main.domain.profitability import calculate_profitability, decimal_rate
+from Main.domain.profitability import (
+    calculate_confirmed_profit,
+    calculate_profitability,
+    decimal_rate,
+)
 from Main.domain.seller_listing import money, normalize_listing_url
+from Main.domain.seller_status import ACTION_LABELS, assess_listing, listing_price
 from Main.models.inventoryitem import InventoryItem
-from Main.models.sellerlisting import SellerListing, SellerListingSnapshot
+from Main.models.sellerlisting import SaleRecord, SellerListing, SellerListingSnapshot
 from Main.scraping.seller_listing import fetch_listing
 from Main.services.exceptions import SearchRateLimitError
 
@@ -35,16 +42,163 @@ class ListingConflictError(ValueError):
 
 
 def owned_listing(user: Any, listing_id: int) -> SellerListing:
-    return SellerListing.objects.get(user=user, pk=listing_id)
+    return SellerListing.objects.select_related("sale_record", "inventory_item").get(
+        user=user, pk=listing_id
+    )
 
 
 def listing_queryset(user: Any, status: str = "") -> QuerySet:
-    items = SellerListing.objects.filter(user=user)
+    items = SellerListing.objects.filter(user=user).select_related("sale_record")
     if status:
         if status not in STATUS_VALUES:
             raise ValueError("出品状態が正しくありません")
         items = items.filter(status=status)
     return items
+
+
+def listing_action(item: SellerListing, now: datetime) -> dict[str, str | int]:
+    if hasattr(item, "baseline_bids"):
+        baseline = item.baseline_bids
+    elif item.status == "active" and item.last_checked_at is not None:
+        baseline = (
+            item.snapshots.filter(
+                observed_at__lte=item.last_checked_at - timedelta(hours=24),
+                observed_at__gte=item.last_checked_at - timedelta(hours=48),
+                observed_status="active",
+            )
+            .values_list("bidding", flat=True)
+            .first()
+        )
+    else:
+        baseline = None
+    return assess_listing(
+        item,
+        now=now,
+        baseline_bids=baseline,
+        sale_record_exists=hasattr(item, "sale_record"),
+    )
+
+
+def listing_page(
+    user: Any, *, status: str, action: str, sort: str, page: int, size: int
+) -> dict[str, Any]:
+    if action and action not in ACTION_LABELS:
+        raise ValueError("対応内容が正しくありません")
+    if sort not in {"updated", "priority"}:
+        raise ValueError("並び順が正しくありません")
+    now = timezone.now()
+    baseline = SellerListingSnapshot.objects.filter(
+        seller_listing_id=OuterRef("pk"),
+        observed_status="active",
+        observed_at__lte=OuterRef("last_checked_at") - timedelta(hours=24),
+        observed_at__gte=OuterRef("last_checked_at") - timedelta(hours=48),
+    ).order_by("-observed_at", "-pk")
+    if status and status not in STATUS_VALUES:
+        raise ValueError("出品状態が正しくありません")
+    items = listing_queryset(user).annotate(baseline_bids=Subquery(baseline.values("bidding")[:1]))
+    ranked = []
+    action_counts = {key: 0 for key in ACTION_LABELS}
+    total = 0
+    requires_action = 0
+    urgent = 0
+    for item in items.defer("purchase_decision", "note").iterator(chunk_size=200):
+        assessment = listing_action(item, now)
+        total += 1
+        action_counts[str(assessment["status"])] += 1
+        if assessment["status"] not in {"ok", "sold", "cancelled"}:
+            requires_action += 1
+        if assessment["priority"] == 1:
+            urgent += 1
+        if status and item.status != status:
+            continue
+        if action and assessment["status"] != action:
+            continue
+        end = item.ends_at.timestamp() if item.ends_at else float("inf")
+        key = (
+            (int(assessment["priority"]), end, -item.updated_at.timestamp(), -item.pk)
+            if sort == "priority"
+            else (0, 0, -item.updated_at.timestamp(), -item.pk)
+        )
+        ranked.append((key, item.pk, assessment))
+    ranked.sort(key=lambda row: row[0])
+    selected = ranked[(page - 1) * size : page * size]
+    records = {
+        item.pk: item
+        for item in SellerListing.objects.filter(
+            user=user, pk__in=[row[1] for row in selected]
+        ).select_related("sale_record")
+    }
+    return {
+        "data": [
+            serialize_listing(records[pk], action_status=assessment)
+            for _, pk, assessment in selected
+            if pk in records
+        ],
+        "meta": {"page": page, "pageSize": size, "total": len(ranked)},
+        "summary": {
+            "total": total,
+            "requiresAction": requires_action,
+            "urgent": urgent,
+            "saleResultMissing": action_counts["sale_result_missing"],
+            "actionCounts": action_counts,
+        },
+    }
+
+
+SALE_FIELDS = {
+    "salePrice": "sale_price",
+    "actualFee": "actual_fee",
+    "actualShippingCost": "actual_shipping_cost",
+    "actualPackagingCost": "actual_packaging_cost",
+    "actualOtherCost": "actual_other_cost",
+}
+
+
+@transaction.atomic
+def save_sale_record(user: Any, listing_id: int, payload: Mapping[str, Any]) -> SaleRecord:
+    allowed = set(SALE_FIELDS) | {"soldAt"}
+    if set(payload) != allowed:
+        raise ValueError("販売結果の入力項目が不足しているか、未対応の項目があります")
+    listing = (
+        SellerListing.objects.select_for_update()
+        .select_related("inventory_item")
+        .get(user=user, pk=listing_id)
+    )
+    values = {field: money(payload[key]) for key, field in SALE_FIELDS.items()}
+    if not isinstance(payload["soldAt"], str):
+        raise ValueError("販売日時が正しくありません")
+    sold_at = parse_datetime(payload["soldAt"])
+    if sold_at is None or timezone.is_naive(sold_at):
+        raise ValueError("販売日時はタイムゾーン付きの日時で指定してください")
+    confirmed_profit = calculate_confirmed_profit(
+        **values,
+        acquisition_cost=listing.acquisition_cost,
+        purchase_shipping_cost=listing.purchase_shipping_cost,
+    )
+    record, _ = SaleRecord.objects.update_or_create(
+        seller_listing=listing,
+        defaults={**values, "sold_at": sold_at, "confirmed_profit": confirmed_profit},
+    )
+    if listing.status != "sold":
+        listing.status = "sold"
+        listing.save(update_fields=("status", "updated_at"))
+    if listing.inventory_item_id and listing.inventory_item.status != "sold":
+        listing.inventory_item.status = "sold"
+        listing.inventory_item.save(update_fields=("status", "updated_at"))
+    return record
+
+
+def serialize_sale_record(record: SaleRecord) -> dict[str, Any]:
+    return {
+        "salePrice": record.sale_price,
+        "actualFee": record.actual_fee,
+        "actualShippingCost": record.actual_shipping_cost,
+        "actualPackagingCost": record.actual_packaging_cost,
+        "actualOtherCost": record.actual_other_cost,
+        "soldAt": record.sold_at.isoformat(),
+        "confirmedProfit": record.confirmed_profit,
+        "updatedAt": record.updated_at.isoformat(),
+    }
 
 
 def _apply_inputs(item: SellerListing, payload: Mapping[str, Any], *, creating: bool) -> None:
@@ -177,13 +331,7 @@ def profit_inputs(item: SellerListing) -> dict[str, Any]:
 
 
 def predicted_price(item: SellerListing) -> tuple[int | None, str]:
-    if item.predicted_sale_price is not None:
-        return item.predicted_sale_price, "manual"
-    if item.last_checked_at is not None:
-        return item.current_price, "currentPrice"
-    if item.market_median:
-        return item.market_median, "manualMarketMedian"
-    return None, "unknown"
+    return listing_price(item)
 
 
 def remaining_seconds(item: SellerListing) -> int | None:
@@ -243,13 +391,16 @@ def refresh_listing(user: Any, listing_id: int) -> SellerListing:
     return item
 
 
-def serialize_listing(item: SellerListing) -> dict[str, Any]:
+def serialize_listing(
+    item: SellerListing, *, action_status: dict[str, str | int] | None = None
+) -> dict[str, Any]:
     price, source = predicted_price(item)
     profit = (
         calculate_profitability(sale_price=price, **profit_inputs(item))
         if price is not None and not item.missing_cost_fields
         else None
     )
+    sale = serialize_sale_record(item.sale_record) if hasattr(item, "sale_record") else None
     return {
         "id": item.pk,
         "inventoryItemId": item.inventory_item_id,
@@ -276,6 +427,10 @@ def serialize_listing(item: SellerListing) -> dict[str, Any]:
         "priceSource": source,
         **{key: getattr(item, field) for key, field in MONEY_FIELDS.items()},
         "profit": profit,
+        "saleRecord": sale,
+        "actionStatus": (
+            action_status if action_status is not None else listing_action(item, timezone.now())
+        ),
     }
 
 
