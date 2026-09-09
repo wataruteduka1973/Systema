@@ -24,7 +24,7 @@ def event_loop():
 def db_for_e2e(transactional_db):
     """
     Fixture for E2E tests that need transactional database access.
-    
+
     This ensures that:
     1. Database access is available in E2E tests
     2. Transactions are handled properly

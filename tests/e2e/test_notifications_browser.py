@@ -41,7 +41,7 @@ def test_user_other(db_for_e2e):
 def notifications_for_owner(db_for_e2e, test_user_owner):
     """Create test notifications for the owner user."""
     notifications = []
-    
+
     # Unread notifications
     unread_1 = create_notification(
         user=test_user_owner,
@@ -53,7 +53,7 @@ def notifications_for_owner(db_for_e2e, test_user_owner):
         source_id=1,
     )[0]
     notifications.append(unread_1)
-    
+
     unread_2 = create_notification(
         user=test_user_owner,
         event_type="ending_soon",
@@ -64,7 +64,7 @@ def notifications_for_owner(db_for_e2e, test_user_owner):
         source_id=2,
     )[0]
     notifications.append(unread_2)
-    
+
     # Read notification
     read_1 = create_notification(
         user=test_user_owner,
@@ -78,7 +78,7 @@ def notifications_for_owner(db_for_e2e, test_user_owner):
     read_1.read_at = read_1.created_at  # Mark as read
     read_1.save()
     notifications.append(read_1)
-    
+
     return notifications
 
 
@@ -111,7 +111,7 @@ class TestNotificationsBrowser:
     ):
         """
         Test login and initial notification display.
-        
+
         Steps:
         1. Navigate to login page
         2. Log in with test user credentials
@@ -124,45 +124,45 @@ class TestNotificationsBrowser:
             browser = p.chromium.launch(headless=True)
             context = browser.new_context(viewport={"width": 1280, "height": 720})
             page = context.new_page()
-            
+
             console_errors = []
-            page.on("console", lambda msg: (
-                console_errors.append(msg.text)
-                if msg.type == "error" else None
-            ))
+            page.on(
+                "console",
+                lambda msg: (console_errors.append(msg.text) if msg.type == "error" else None),
+            )
 
             try:
                 # Navigate to login page
                 page.goto(f"{live_server.url}/accounts/login/")
                 assert "Login" in page.content() or "ログイン" in page.content()
-                
+
                 # Fill and submit login form
                 page.fill('input[name="username"]', "test_owner_user")
                 page.fill('input[name="password"]', "test_password_owner")
                 page.click('button[type="submit"]')
-                
+
                 # Wait for redirect, then navigate to notifications page
                 time.sleep(1)
                 page.goto(f"{live_server.url}/taskle/notifications")
                 time.sleep(1)
-                
+
                 # Verify page title
                 assert "通知" in page.content()
-                
+
                 # Verify owner's unread notifications are displayed
                 assert "値下げ検出: 商品A" in page.content()
                 assert "終了間近: 商品B" in page.content()
-                
+
                 # Verify owner's read notification is displayed
                 assert "保存済み検索: テスト検索が完了" in page.content()
-                
+
                 # Verify other user's notification is NOT displayed
                 assert "他ユーザーの商品" not in page.content()
-                
+
                 # Verify unread count
                 content = page.content()
                 assert "未読" in content or "unread" in content.lower()
-                
+
                 # Check for JavaScript console errors
                 assert not console_errors, f"Console errors detected: {console_errors}"
             finally:
@@ -177,7 +177,7 @@ class TestNotificationsBrowser:
     ):
         """
         Test the 'unread only' filter toggle.
-        
+
         Steps:
         1. Log in
         2. Verify all notifications are displayed initially
@@ -190,12 +190,12 @@ class TestNotificationsBrowser:
             browser = p.chromium.launch(headless=True)
             context = browser.new_context(viewport={"width": 1280, "height": 720})
             page = context.new_page()
-            
+
             console_errors = []
-            page.on("console", lambda msg: (
-                console_errors.append(msg.text)
-                if msg.type == "error" else None
-            ))
+            page.on(
+                "console",
+                lambda msg: (console_errors.append(msg.text) if msg.type == "error" else None),
+            )
 
             try:
                 # Login
@@ -207,30 +207,30 @@ class TestNotificationsBrowser:
                 time.sleep(1)
                 page.goto(f"{live_server.url}/taskle/notifications")
                 time.sleep(1)
-                
+
                 # Initial state: all notifications visible
                 assert "値下げ検出: 商品A" in page.content()
                 assert "保存済み検索: テスト検索が完了" in page.content()
-                
+
                 # Enable unread-only filter
-                page.check('input#unreadOnly')
+                page.check("input#unreadOnly")
                 time.sleep(0.5)  # Wait for API call
-                
+
                 # Unread notifications should remain
                 assert "値下げ検出: 商品A" in page.content()
                 assert "終了間近: 商品B" in page.content()
-                
+
                 # Read notification should be hidden
                 assert "保存済み検索: テスト検索が完了" not in page.content()
-                
+
                 # Disable filter
-                page.uncheck('input#unreadOnly')
+                page.uncheck("input#unreadOnly")
                 time.sleep(0.5)
-                
+
                 # All notifications should return
                 assert "値下げ検出: 商品A" in page.content()
                 assert "保存済み検索: テスト検索が完了" in page.content()
-                
+
                 assert not console_errors, f"Console errors detected: {console_errors}"
             finally:
                 context.close()
@@ -244,7 +244,7 @@ class TestNotificationsBrowser:
     ):
         """
         Test toggling individual notification read status.
-        
+
         Steps:
         1. Log in
         2. Find an unread notification
@@ -257,12 +257,12 @@ class TestNotificationsBrowser:
             browser = p.chromium.launch(headless=True)
             context = browser.new_context(viewport={"width": 1280, "height": 720})
             page = context.new_page()
-            
+
             console_errors = []
-            page.on("console", lambda msg: (
-                console_errors.append(msg.text)
-                if msg.type == "error" else None
-            ))
+            page.on(
+                "console",
+                lambda msg: (console_errors.append(msg.text) if msg.type == "error" else None),
+            )
 
             try:
                 # Login
@@ -274,24 +274,24 @@ class TestNotificationsBrowser:
                 time.sleep(1)
                 page.goto(f"{live_server.url}/taskle/notifications")
                 time.sleep(1)
-                
+
                 # Find first unread notification
-                unread_cards = page.locator('article.notification-card.is-unread')
+                unread_cards = page.locator("article.notification-card.is-unread")
                 assert unread_cards.count() > 0, "No unread notifications found"
-                
+
                 # Click "既読にする" button on first unread notification
                 first_card = unread_cards.first
-                toggle_button = first_card.locator('button.toggle-read')
+                toggle_button = first_card.locator("button.toggle-read")
                 assert toggle_button.count() > 0
                 toggle_button.click()
                 time.sleep(0.5)
-                
+
                 # Click "未読に戻す" button (find and click the updated button)
-                toggle_buttons = page.locator('button.toggle-read')
+                toggle_buttons = page.locator("button.toggle-read")
                 if toggle_buttons.count() > 0:
                     toggle_buttons.first.click()
                     time.sleep(0.5)
-                
+
                 assert not console_errors, f"Console errors detected: {console_errors}"
             finally:
                 context.close()
@@ -305,7 +305,7 @@ class TestNotificationsBrowser:
     ):
         """
         Test marking all notifications as read.
-        
+
         Steps:
         1. Log in
         2. Verify unread count > 0
@@ -317,12 +317,12 @@ class TestNotificationsBrowser:
             browser = p.chromium.launch(headless=True)
             context = browser.new_context(viewport={"width": 1280, "height": 720})
             page = context.new_page()
-            
+
             console_errors = []
-            page.on("console", lambda msg: (
-                console_errors.append(msg.text)
-                if msg.type == "error" else None
-            ))
+            page.on(
+                "console",
+                lambda msg: (console_errors.append(msg.text) if msg.type == "error" else None),
+            )
 
             try:
                 # Login
@@ -334,33 +334,33 @@ class TestNotificationsBrowser:
                 time.sleep(1)
                 page.goto(f"{live_server.url}/taskle/notifications")
                 time.sleep(1)
-                
+
                 # Verify there are unread notifications
-                unread_cards = page.locator('article.notification-card.is-unread')
+                unread_cards = page.locator("article.notification-card.is-unread")
                 initial_unread_count = unread_cards.count()
                 assert initial_unread_count > 0, "No unread notifications to mark as read"
-                
+
                 # Click "すべて既読にする" button
-                mark_all_button = page.locator('button#markAllRead')
+                mark_all_button = page.locator("button#markAllRead")
                 assert mark_all_button.count() > 0
                 mark_all_button.click()
                 time.sleep(0.5)
-                
+
                 # Verify success message appears
-                alert = page.locator('.alert-info')
+                alert = page.locator(".alert-info")
                 if alert.count() > 0:
                     assert "既読" in alert.text_content()
-                
+
                 # Verify no unread notifications remain
-                unread_cards_after = page.locator('article.notification-card.is-unread')
-                assert unread_cards_after.count() == 0, "Unread notifications still visible after mark all as read"
-                
+                unread_cards_after = page.locator("article.notification-card.is-unread")
+                assert (
+                    unread_cards_after.count() == 0
+                ), "Unread notifications still visible after mark all as read"
+
                 # Verify all unread notifications are gone
                 # (empty state can now be shown)
-                
-                assert not console_errors, (
-                    f"Console errors detected: {console_errors}"
-                )
+
+                assert not console_errors, f"Console errors detected: {console_errors}"
             finally:
                 context.close()
                 browser.close()
@@ -373,7 +373,7 @@ class TestNotificationsBrowser:
     ):
         """
         Test responsive layout at 390px width (mobile).
-        
+
         Verify:
         1. Page renders without horizontal overflow
         2. All interactive elements are accessible
@@ -383,12 +383,12 @@ class TestNotificationsBrowser:
             browser = p.chromium.launch(headless=True)
             context = browser.new_context(viewport={"width": 390, "height": 844})
             page = context.new_page()
-            
+
             console_errors = []
-            page.on("console", lambda msg: (
-                console_errors.append(msg.text)
-                if msg.type == "error" else None
-            ))
+            page.on(
+                "console",
+                lambda msg: (console_errors.append(msg.text) if msg.type == "error" else None),
+            )
 
             try:
                 # Login
@@ -400,27 +400,27 @@ class TestNotificationsBrowser:
                 time.sleep(1)
                 page.goto(f"{live_server.url}/taskle/notifications")
                 time.sleep(1)
-                
+
                 # Verify content is visible
                 assert "通知" in page.content()
-                
+
                 # Check for horizontal overflow by comparing element widths
                 # Get viewport width
                 viewport_width = page.evaluate("window.innerWidth")
                 assert viewport_width == 390
-                
+
                 # Get document width (should not exceed viewport significantly)
                 doc_width = page.evaluate("document.documentElement.scrollWidth")
                 assert doc_width <= viewport_width + 1, (
                     f"Horizontal overflow detected: "
                     f"document width {doc_width}px exceeds viewport {viewport_width}px"
                 )
-                
+
                 # Verify key buttons are clickable in mobile view
                 # Check that control elements exist (may be disabled/hidden when empty)
-                assert page.locator('input#unreadOnly').count() >= 0
-                assert page.locator('button#markAllRead').count() >= 0
-                
+                assert page.locator("input#unreadOnly").count() >= 0
+                assert page.locator("button#markAllRead").count() >= 0
+
                 # No console errors in responsive view
                 assert not console_errors, f"Console errors detected: {console_errors}"
             finally:
@@ -437,7 +437,7 @@ class TestNotificationsBrowser:
     ):
         """
         Test that users can only see their own notifications.
-        
+
         Steps:
         1. Log in as owner user
         2. Verify owner's notifications are visible
@@ -451,12 +451,12 @@ class TestNotificationsBrowser:
             browser = p.chromium.launch(headless=True)
             context = browser.new_context(viewport={"width": 1280, "height": 720})
             page = context.new_page()
-            
+
             console_errors = []
-            page.on("console", lambda msg: (
-                console_errors.append(msg.text)
-                if msg.type == "error" else None
-            ))
+            page.on(
+                "console",
+                lambda msg: (console_errors.append(msg.text) if msg.type == "error" else None),
+            )
 
             try:
                 # Login as owner
@@ -468,27 +468,27 @@ class TestNotificationsBrowser:
                 time.sleep(1)
                 page.goto(f"{live_server.url}/taskle/notifications")
                 time.sleep(1)
-                
+
                 # Verify owner's notification is visible
                 assert "値下げ検出: 商品A" in page.content()
-                
+
                 # Verify other user's notification is NOT visible
                 assert "他ユーザーの商品" not in page.content()
-                
+
                 # Close context to reset session, then log in as other user
                 context.close()
                 browser.close()
-                
+
                 # Create new browser instance for other user (simulates new session)
                 browser = p.chromium.launch(headless=True)
                 context = browser.new_context(viewport={"width": 1280, "height": 720})
                 page = context.new_page()
-                
-                page.on("console", lambda msg: (
-                    console_errors.append(msg.text)
-                    if msg.type == "error" else None
-                ))
-                
+
+                page.on(
+                    "console",
+                    lambda msg: (console_errors.append(msg.text) if msg.type == "error" else None),
+                )
+
                 # Login as other user
                 page.goto(f"{live_server.url}/accounts/login/")
                 page.fill('input[name="username"]', "test_other_user")
@@ -498,13 +498,13 @@ class TestNotificationsBrowser:
                 time.sleep(1)
                 page.goto(f"{live_server.url}/taskle/notifications")
                 time.sleep(1)
-                
+
                 # Verify other user's notification is visible
                 assert "他ユーザーの商品" in page.content()
-                
+
                 # Verify owner's notifications are NOT visible
                 assert "値下げ検出: 商品A" not in page.content()
-                
+
                 assert not console_errors, f"Console errors detected: {console_errors}"
             finally:
                 context.close()
@@ -518,17 +518,17 @@ class TestNotificationsBrowser:
     ):
         """
         Verify that the notification page does not make external requests.
-        
+
         This test captures network requests and verifies that all requests
         stay within the test server (localhost/127.0.0.1) or allowed CDNs.
         Requests to Yahoo! Auctions or other external services will fail the test.
-        
+
         Allowlist:
         - localhost, 127.0.0.1 (test server)
         - cdn.jsdelivr.net (Bootstrap CDN - required)
         - fonts.googleapis.com, fonts.gstatic.com (Google Fonts - required for UI)
         - data: URLs (inline resources)
-        
+
         Any request to other hosts (including yahoo.co.jp, auctions.yahoo.co.jp,
         img.auctions.yahoo.co.jp) will be captured and cause test failure.
         """
@@ -536,12 +536,12 @@ class TestNotificationsBrowser:
             browser = p.chromium.launch(headless=True)
             context = browser.new_context(viewport={"width": 1280, "height": 720})
             page = context.new_page()
-            
+
             blocked_requests = []
-            
+
             def handle_request(request):
                 url = request.url
-                
+
                 # Allowlist: localhost, 127.0.0.1, allowed CDNs, and data URLs
                 allowed_hosts = [
                     "localhost",
@@ -550,28 +550,30 @@ class TestNotificationsBrowser:
                     "fonts.googleapis.com",  # Google Fonts CSS
                     "fonts.gstatic.com",  # Google Fonts assets
                 ]
-                
+
                 parsed = urlparse(url)
                 hostname = parsed.hostname or ""
-                
+
                 # Allow data URLs (inline resources)
                 if url.startswith("data:"):
                     return
-                
+
                 # Check if hostname is in allowlist
                 is_allowed = (
-                    hostname in allowed_hosts or
-                    hostname.endswith(".localhost") or
-                    hostname.endswith(".127.0.0.1")
+                    hostname in allowed_hosts
+                    or hostname.endswith(".localhost")
+                    or hostname.endswith(".127.0.0.1")
                 )
-                
+
                 if not is_allowed:
                     # Request is to an external host - block and record
-                    blocked_requests.append({
-                        "url": url,
-                        "hostname": hostname,
-                    })
-            
+                    blocked_requests.append(
+                        {
+                            "url": url,
+                            "hostname": hostname,
+                        }
+                    )
+
             page.on("request", handle_request)
 
             try:
@@ -584,17 +586,14 @@ class TestNotificationsBrowser:
                 time.sleep(1)
                 page.goto(f"{live_server.url}/taskle/notifications")
                 time.sleep(1)
-                
+
                 # Verify notifications page loaded
                 assert "通知" in page.content()
-                
+
                 # Verify no blocked requests were made
                 assert not blocked_requests, (
                     "Blocked external requests detected:\n"
-                    + "\n".join([
-                        f"  {req['hostname']}: {req['url']}"
-                        for req in blocked_requests
-                    ])
+                    + "\n".join([f"  {req['hostname']}: {req['url']}" for req in blocked_requests])
                     + "\nAllowed hosts: localhost, 127.0.0.1, cdn.jsdelivr.net, "
                     + "fonts.googleapis.com, fonts.gstatic.com"
                 )
@@ -609,7 +608,7 @@ class TestNotificationsBrowser:
     ):
         """
         Test behavior when user has no notifications.
-        
+
         Steps:
         1. Log in with user who has no notifications
         2. Verify notifications page displays empty state or no items
@@ -620,12 +619,12 @@ class TestNotificationsBrowser:
             browser = p.chromium.launch(headless=True)
             context = browser.new_context(viewport={"width": 1280, "height": 720})
             page = context.new_page()
-            
+
             console_errors = []
-            page.on("console", lambda msg: (
-                console_errors.append(msg.text)
-                if msg.type == "error" else None
-            ))
+            page.on(
+                "console",
+                lambda msg: (console_errors.append(msg.text) if msg.type == "error" else None),
+            )
 
             try:
                 # Login
@@ -637,17 +636,15 @@ class TestNotificationsBrowser:
                 time.sleep(1)
                 page.goto(f"{live_server.url}/taskle/notifications")
                 time.sleep(1)
-                
+
                 # Verify page title is present
                 assert "通知" in page.content()
-                
+
                 # Verify control elements are present in the DOM
                 # (They might be disabled or hidden when empty, but should exist)
-                
+
                 # Verify no console errors
-                assert not console_errors, (
-                    f"Console errors detected: {console_errors}"
-                )
+                assert not console_errors, f"Console errors detected: {console_errors}"
             finally:
                 context.close()
                 browser.close()
