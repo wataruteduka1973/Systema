@@ -13,7 +13,12 @@ from Main.models.watchitem import WatchItem
 from Main.scraping.seller_listing import ListingObservation
 from Main.services.inventory import convert_watch_to_inventory, simulate_inventory_profit
 from Main.services.purchase_budget import save_cost_settings, save_decision
-from Main.services.seller_listings import create_listing, serialize_listing, update_listing, refresh_listing
+from Main.services.seller_listings import (
+    create_listing,
+    refresh_listing,
+    serialize_listing,
+    update_listing,
+)
 
 pytestmark = pytest.mark.django_db
 
@@ -183,8 +188,16 @@ def test_api_settings_and_null_override(client, owner, watch):
 def test_unknown_observation_stays_null_after_later_cost_edit(owner, watch, monkeypatch):
     save_decision(owner, watch.pk, payload(shippingCost=None))
     stock, _ = convert_watch_to_inventory(owner, watch.pk, {})
-    listing = create_listing(owner, {"inventoryItemId": stock.pk, "url": "https://auctions.yahoo.co.jp/jp/auction/b123456789"})
-    monkeypatch.setattr("Main.services.seller_listings.fetch_listing", lambda url: ListingObservation("camera", 10000, 1, timezone.now() + timedelta(days=1), "active"))
+    listing = create_listing(
+        owner,
+        {"inventoryItemId": stock.pk, "url": "https://auctions.yahoo.co.jp/jp/auction/b123456789"},
+    )
+    monkeypatch.setattr(
+        "Main.services.seller_listings.fetch_listing",
+        lambda url: ListingObservation(
+            "camera", 10000, 1, timezone.now() + timedelta(days=1), "active"
+        ),
+    )
     refreshed = refresh_listing(owner, listing.pk)
     snapshot = refreshed.snapshots.get()
     assert snapshot.estimated_profit is None and snapshot.estimated_fee is None
