@@ -76,7 +76,9 @@ jobs:
       - run: python -c "import sys; print(sys.executable)"
       - run: python -m playwright install --with-deps --only-shell
       - run: python -m playwright install --list
-      - run: python -c "from playwright.sync_api import sync_playwright; p = sync_playwright().start(); browser = p.chromium.launch(); browser.close(); p.stop(); print('Chromium headless shell launch: OK')"
+      - name: Verify Chromium headless shell launch
+        run: >-
+          python -c "from playwright.sync_api import sync_playwright; p = sync_playwright().start(); browser = p.chromium.launch(); browser.close(); p.stop(); print('Chromium headless shell launch: OK')"
       - run: python -m pytest -m e2e -v
 
   docs:
