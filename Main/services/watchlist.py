@@ -12,6 +12,7 @@ from django.utils import timezone
 
 from Main.domain.buying_opportunity import evaluate_buying_opportunity
 from Main.models.watchitem import WatchItem, WatchPriceSnapshot
+from Main.services.alert_rules import evaluate_watch_alert_rules
 from Main.services.notifications import notify_watch_observation
 from Main.services.ownership import RequestOwner, owner_query
 from Main.services.watchlist_analysis import analyze_watch_history
@@ -97,6 +98,10 @@ def save_watch_item(payload: Mapping[str, Any], owner: RequestOwner) -> tuple[Wa
             remaining_seconds=_optional_non_negative_int(payload.get("remainingSeconds")),
             snapshot=snapshot,
         )
+        evaluate_watch_alert_rules(
+            item,
+            remaining_seconds=_optional_non_negative_int(payload.get("remainingSeconds")),
+        )
     return item, created
 
 
@@ -179,6 +184,10 @@ def refresh_watched_item(payload: Mapping[str, Any], owner: RequestOwner) -> boo
         previous_price=previous_price,
         remaining_seconds=_optional_non_negative_int(payload.get("remainingSeconds")),
         snapshot=snapshot,
+    )
+    evaluate_watch_alert_rules(
+        item,
+        remaining_seconds=_optional_non_negative_int(payload.get("remainingSeconds")),
     )
     return True
 

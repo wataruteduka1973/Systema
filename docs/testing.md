@@ -35,7 +35,7 @@ coverage report
 ## E2E browser testing (pytest-playwright)
 
 E2Eテストは、起動済みのDjangoアプリケーションに対してPlaywright同期APIでブラウザー自動化を行う。
-通知画面（`/taskle/notifications`）の以下を検証する:
+通知画面（`/taskle/notifications`）とアラート条件画面（`/taskle/alerts`）の以下を検証する:
 
 - ログインと初期表示
 - 通知の未読フィルター
@@ -45,6 +45,7 @@ E2Eテストは、起動済みのDjangoアプリケーションに対してPlayw
 - JavaScriptコンソールエラー検出
 - 通知なし時の空状態表示
 - 外部通信（Yahoo! Auctionsへのアクセス）がないこと
+- アラート条件の作成・編集・削除と所有者分離
 
 ### 前提条件
 
@@ -69,6 +70,8 @@ pytest tests/e2e/test_notifications_browser.py -v
 ```powershell
 pytest -m e2e -v
 ```
+
+Phase 6の絞り込み検証は`python manage.py verify --feature alerts`、保存済みデータだけの手動評価は`python manage.py run_alerts --evaluate-only`を使用する。
 
 GitHub Actionsではヘッドレス実行だけを行うため、E2Eジョブは
 `python -m playwright install --with-deps --only-shell` でPlaywrightの

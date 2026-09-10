@@ -1,3 +1,4 @@
+from .alertrule import *
 from .auththrottle import *
 from .errorlog import *
 from .inventoryitem import *

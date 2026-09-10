@@ -23,6 +23,7 @@ from Main.domain.seller_status import ACTION_LABELS, assess_listing, listing_pri
 from Main.models.inventoryitem import InventoryItem
 from Main.models.sellerlisting import SaleRecord, SellerListing, SellerListingSnapshot
 from Main.scraping.seller_listing import fetch_listing
+from Main.services.alert_rules import evaluate_seller_alert_rules
 from Main.services.exceptions import SearchRateLimitError
 
 MONEY_FIELDS = {
@@ -391,6 +392,7 @@ def refresh_listing(user: Any, listing_id: int) -> SellerListing:
             observed_status=observation.status,
             observed_at=observed_at,
         )
+    evaluate_seller_alert_rules(item)
     return item
 
 

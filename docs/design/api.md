@@ -266,8 +266,10 @@ Phase 3B specifics:
 
 Alert rule types:
 
-- buyer: `price_below`, `median_discount`, `ending_soon`, `low_bids`, `buy_score`
+- buyer: `price_below`, `median_discount`, `ending_soon`, `low_bids`, `buy_score`, `new_listing`, `within_budget`
 - seller: `bid_stalled`, `ending_without_bids`, `loss_risk`, `target_profit`, `market_decline`
+
+Create requires exactly one of `savedSearchId`, `watchItemId`, or `sellerListingId`, plus `ruleType`, non-negative `thresholdValue`, positive `cooldownMinutes`, and optional boolean `isEnabled`. PATCH accepts the same mutable values. Ownership is checked before target assignment.
 
 重複イベントは`dedupe_key`とcooldownで抑止する。メール配信は通知作成とは別のoutbox処理とする。
 

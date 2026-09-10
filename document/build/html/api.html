@@ -52,6 +52,8 @@
 <li class="toctree-l1"><a class="reference internal" href="endpoints.html">HTTPエンドポイント</a></li>
 <li class="toctree-l1 current"><a class="current reference internal" href="#">API</a><ul>
 <li class="toctree-l2"><a class="reference internal" href="#Main.views.api.RealtimeSearch"><code class="docutils literal notranslate"><span class="pre">RealtimeSearch()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#Main.views.api.alert_rule_item"><code class="docutils literal notranslate"><span class="pre">alert_rule_item()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#Main.views.api.alert_rules"><code class="docutils literal notranslate"><span class="pre">alert_rules()</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="#Main.views.api.complex_market_data"><code class="docutils literal notranslate"><span class="pre">complex_market_data()</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="#Main.views.api.convert_watch_item_to_inventory"><code class="docutils literal notranslate"><span class="pre">convert_watch_item_to_inventory()</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="#Main.views.api.delete_market_data"><code class="docutils literal notranslate"><span class="pre">delete_market_data()</span></code></a></li>
@@ -118,6 +120,18 @@
 <dt class="sig sig-object py" id="Main.views.api.RealtimeSearch">
 <span class="sig-prename descclassname"><span class="pre">Main.views.api.</span></span><span class="sig-name descname"><span class="pre">RealtimeSearch</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">request</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/Main/views/api.html#RealtimeSearch"><span class="viewcode-link"><span class="pre">[ソース]</span></span></a><a class="headerlink" href="#Main.views.api.RealtimeSearch" title="Link to this definition"></a></dt>
 <dd><p>現在出品されている商品のデータを取得して処理する。</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="Main.views.api.alert_rule_item">
+<span class="sig-prename descclassname"><span class="pre">Main.views.api.</span></span><span class="sig-name descname"><span class="pre">alert_rule_item</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">request</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">alert_rule_id</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/Main/views/api.html#alert_rule_item"><span class="viewcode-link"><span class="pre">[ソース]</span></span></a><a class="headerlink" href="#Main.views.api.alert_rule_item" title="Link to this definition"></a></dt>
+<dd><p>Read, update, or delete an owner-scoped alert rule.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="Main.views.api.alert_rules">
+<span class="sig-prename descclassname"><span class="pre">Main.views.api.</span></span><span class="sig-name descname"><span class="pre">alert_rules</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">request</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/Main/views/api.html#alert_rules"><span class="viewcode-link"><span class="pre">[ソース]</span></span></a><a class="headerlink" href="#Main.views.api.alert_rules" title="Link to this definition"></a></dt>
+<dd><p>List or create rules owned by the authenticated user.</p>
 </dd></dl>
 
 <dl class="py function">

@@ -36,7 +36,7 @@ python manage.py check
 
 ### Playwright E2Eテスト
 
-通知画面のE2Eテストは`pytest-playwright`とChromiumを使い、SQLiteのテストDBで実行します。本番DBの認証情報やYahoo! Auctionsへの通信は使用しません。
+通知画面とアラート条件画面のE2Eテストは`pytest-playwright`とChromiumを使い、SQLiteのテストDBで実行します。本番DBの認証情報やYahoo! Auctionsへの通信は使用しません。
 
 **テスト対象**:
 - ログイン・初期表示・所有者分離
@@ -45,6 +45,9 @@ python manage.py check
 - JavaScriptコンソールエラー
 - 通知なし時の空状態表示
 - 外部通信（Yahoo! Auctions）なし
+- アラート条件の作成・編集・削除、所有者分離
+
+Phase 6の保存済みデータだけを評価する場合は`python manage.py run_alerts --evaluate-only`を実行します。外部取得を含む保存検索更新は`python manage.py run_alerts`で手動実行し、スケジューラー接続はデプロイ工程で行います。
 
 **Windowsでの実行**:
 

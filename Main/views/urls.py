@@ -4,6 +4,8 @@ from django.urls import reverse
 from django.views.decorators.csrf import ensure_csrf_cookie
 
 from Main.models.savedsearch import SavedSearch
+from Main.models.sellerlisting import SellerListing
+from Main.models.watchitem import WatchItem
 
 MARKET_SEARCH_MODES = {
     "closed": ("落札相場", "yahuoku"),
@@ -86,3 +88,28 @@ def seller_management(request):
 @ensure_csrf_cookie
 def notifications_page(request):
     return render(request, "notifications.html")
+
+
+@login_required
+@ensure_csrf_cookie
+def alert_rules_page(request):
+    return render(
+        request,
+        "alert_rules.html",
+        {
+            "alert_targets": {
+                "savedSearch": [
+                    {"id": item.pk, "label": item.name}
+                    for item in SavedSearch.objects.filter(user=request.user)
+                ],
+                "watchItem": [
+                    {"id": item.pk, "label": item.name}
+                    for item in WatchItem.objects.filter(user=request.user)
+                ],
+                "sellerListing": [
+                    {"id": item.pk, "label": item.name}
+                    for item in SellerListing.objects.filter(user=request.user)
+                ],
+            }
+        },
+    )

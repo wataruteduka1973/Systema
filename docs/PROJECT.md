@@ -21,6 +21,7 @@ Systema is a Django application that searches Yahoo! Auctions data, stores owner
 | Market prediction and backtest | `docs/features/market-prediction.md` |
 | Authentication and profile | `docs/features/accounts.md` |
 | Notification center | `docs/features/notifications.md` |
+| Alert rules | `docs/features/alert-rules.md` |
 | Seller and inventory management | `docs/features/seller-management.md` |
 | Yahoo scraping | `docs/architecture.md` and parser tests |
 | Release feature roadmap | `docs/plans/release-feature-roadmap.md` |

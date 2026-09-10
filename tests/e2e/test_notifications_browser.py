@@ -18,6 +18,8 @@ from playwright.sync_api import sync_playwright
 
 from Main.services.notifications import create_notification
 
+pytestmark = pytest.mark.e2e
+
 
 @pytest.fixture(scope="function")
 def test_user_owner(db_for_e2e):

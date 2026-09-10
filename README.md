@@ -62,7 +62,7 @@ pytest・Ruff・Black・mypy・SphinxはpushとPull RequestごとにGitHub Actio
 
 ### ブラウザーE2Eテスト
 
-Playwrightを使った通知画面のE2Eテストは、本番DBに接続せず、SQLiteのテストDBで実行します。Windowsでは次の手順でChromiumを準備します。
+Playwrightを使った通知・アラート条件画面のE2Eテストは、本番DBに接続せず、SQLiteのテストDBで実行します。Windowsでは次の手順でChromiumを準備します。
 
 ```powershell
 python -m pip install -r requirements-dev.txt
@@ -87,6 +87,13 @@ E2Eテスト対象:
 - JavaScriptコンソールエラー検出
 - 通知なし時の空状態表示
 - Yahoo! Auctionsへの外部通信がないこと
+- アラート条件の作成・編集・削除、所有者分離、390px幅での表示
+
+Phase 6のアラートを保存済みデータだけで手動評価する場合:
+
+```powershell
+python manage.py run_alerts --evaluate-only
+```
 
 テスト実行環境:
 - SQLiteテストDB（本番DB接続なし）

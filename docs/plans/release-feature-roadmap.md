@@ -175,6 +175,8 @@ Phase 0は後続機能の依存関係に沿って分割し、検索契約を先�
 - 新着候補と購入上限内の候補を通知対象に加える。相場根拠、費用前提、更新日時を通知先で確認でき、ウォッチへ登録できること。
 - 通知頻度、停止、重複抑制を用意する。初回検索結果を全件新着扱いせず、取得失敗を商品消失や値下げと判定しない。
 
+**Status:** Implemented and locally verified on 2026-09-10: owner-scoped rule CRUD/UI, watch and saved-search buyer evaluation, new and within-budget candidate evidence with watch registration, five seller evaluations, cooldown/dedupe, and the `run_alerts` management command. `verify --feature alerts`, targeted mypy, Sphinx, JavaScript syntax checks, 291 non-E2E regression tests (one skipped), and 9 SQLite Playwright E2E tests passed. Scheduler connection and email outbox remain intentionally deferred until deployment and in-app stability. Production migration, PostgreSQL behavior, production browser behavior, scheduler, email, and GitHub CI remain **NOT VERIFIED**.
+
 ### Phase 7: Seller intelligence and outcome learning
 
 - 開始価格・即決価格・送料条件を変える利益シミュレーターを追加する。

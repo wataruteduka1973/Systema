@@ -2,6 +2,8 @@ from django.urls import path
 
 from Main.views.api import (
     RealtimeSearch,
+    alert_rule_item,
+    alert_rules,
     complex_market_data,
     convert_watch_item_to_inventory,
     delete_market_data,
@@ -39,6 +41,7 @@ from Main.views.urls import (
     Yahuoku_history,
     Yahuoku_now,
     Yahuoku_prediction,
+    alert_rules_page,
     index,
     introduction,
     market_search,
@@ -63,6 +66,7 @@ urlpatterns = [
     path("developer/", developer_dashboard, name="developer_dashboard"),
     path("seller-management", seller_management, name="seller_management"),
     path("notifications", notifications_page, name="notifications_page"),
+    path("alerts", alert_rules_page, name="alert_rules_page"),
     path("perform_search", perform_search, name="perform_search"),
     path("RealtimeSearch", RealtimeSearch, name="RealtimeSearch"),
     path("get_search_words", get_search_words, name="get_search_words"),
@@ -81,6 +85,12 @@ urlpatterns = [
     ),
     path("api/v1/saved-searches", saved_searches, name="saved_searches"),
     path("api/v1/notifications", notifications, name="notifications"),
+    path("api/v1/alert-rules", alert_rules, name="alert_rules"),
+    path(
+        "api/v1/alert-rules/<int:alert_rule_id>",
+        alert_rule_item,
+        name="alert_rule_item",
+    ),
     path(
         "api/v1/notifications/read-all",
         notifications_read_all,

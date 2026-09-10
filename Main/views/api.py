@@ -5,12 +5,20 @@ from django.http import JsonResponse
 from django.utils import timezone
 
 from Main.domain.product_condition import enrich_market_items, summarize_condition_market
+from Main.models.alertrule import AlertRule
 from Main.models.inventoryitem import InventoryItem
 from Main.models.savedsearch import SavedSearch
 from Main.models.searchrun import SearchRun
 from Main.models.sellerlisting import SellerListing
 from Main.models.watchitem import WatchItem
 from Main.scraping.seller_listing import ListingParseError
+from Main.services.alert_rules import (
+    AlertRuleInputError,
+    evaluate_saved_search_alert_rules,
+    list_alert_rules,
+    save_alert_rule,
+    serialize_alert_rule,
+)
 from Main.services.exceptions import (
     ExternalServiceError,
     SearchInputError,
@@ -717,6 +725,16 @@ def run_saved_search(request, saved_search_id):
     recorded_runs = getattr(request, "recorded_search_runs", [])
     if recorded_runs:
         notify_saved_search_run(recorded_runs[-1])
+        current_run = next(
+            (
+                run
+                for run in reversed(recorded_runs)
+                if run.search_type == SearchRun.CURRENT and run.succeeded
+            ),
+            None,
+        )
+        if current_run is not None:
+            evaluate_saved_search_alert_rules(current_run)
 
     SavedSearch.objects.filter(pk=saved_search.pk, user=request.user).update(
         last_run_at=timezone.now()
@@ -778,3 +796,46 @@ def notifications_read_all(request):
     if request.method != "POST":
         return JsonResponse({"error": "Invalid request method"}, status=400)
     return JsonResponse({"updatedCount": mark_all_read(request.user)})
+
+
+def alert_rules(request):
+    """List or create rules owned by the authenticated user."""
+    denied = _authenticated_json(request)
+    if denied:
+        return denied
+    if request.method == "GET":
+        return JsonResponse({"items": list_alert_rules(request.user)})
+    if request.method != "POST":
+        return JsonResponse({"error": "Invalid request method"}, status=400)
+    try:
+        item = save_alert_rule(request.user, _json_payload(request))
+        return JsonResponse({"item": serialize_alert_rule(item)}, status=201)
+    except (json.JSONDecodeError, AlertRuleInputError) as error:
+        return JsonResponse({"error": str(error)}, status=400)
+
+
+def alert_rule_item(request, alert_rule_id):
+    """Read, update, or delete an owner-scoped alert rule."""
+    denied = _authenticated_json(request)
+    if denied:
+        return denied
+    item = AlertRule.objects.filter(user=request.user, pk=alert_rule_id).first()
+    if item is None:
+        return JsonResponse({"error": "アラート条件が見つかりません"}, status=404)
+    if request.method == "GET":
+        return JsonResponse({"item": serialize_alert_rule(item)})
+    if request.method == "PATCH":
+        try:
+            return JsonResponse(
+                {
+                    "item": serialize_alert_rule(
+                        save_alert_rule(request.user, _json_payload(request), item)
+                    )
+                }
+            )
+        except (json.JSONDecodeError, AlertRuleInputError) as error:
+            return JsonResponse({"error": str(error)}, status=400)
+    if request.method == "DELETE":
+        item.delete()
+        return JsonResponse({}, status=204)
+    return JsonResponse({"error": "Invalid request method"}, status=400)

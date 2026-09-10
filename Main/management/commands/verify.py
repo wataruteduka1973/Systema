@@ -8,6 +8,11 @@ from pathlib import Path
 from django.core.management.base import BaseCommand, CommandError
 
 FEATURE_TESTS = {
+    "alerts": (
+        "tests/integration/test_alert_rules.py",
+        "tests/integration/test_notifications.py",
+        "tests/unit/test_database_config.py",
+    ),
     "notifications": (
         "tests/integration/test_notifications.py",
         "tests/integration/test_saved_searches.py",
@@ -75,6 +80,11 @@ FEATURE_TESTS = {
 }
 
 PATH_FEATURES = {
+    "Main/models/alertrule.py": "alerts",
+    "Main/services/alert_rules.py": "alerts",
+    "Main/static/JS/AlertRules.js": "alerts",
+    "Main/templates/alert_rules.html": "alerts",
+    "Main/management/commands/run_alerts.py": "alerts",
     "Main/models/notification.py": "notifications",
     "Main/services/notifications.py": "notifications",
     "Main/static/JS/Notifications.js": "notifications",

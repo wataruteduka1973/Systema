@@ -254,6 +254,8 @@ Both models are added without changing existing tables or ownership. Inventory d
 - last_triggered_at nullable DateTime
 - created_at/updated_at
 
+Buyer rule types are `price_below`, `median_discount`, `ending_soon`, `low_bids`, `buy_score`, `new_listing`, and `within_budget`. Seller rule types are `bid_stalled`, `ending_without_bids`, `loss_risk`, `target_profit`, and `market_decline`.
+
 DB CHECKで対象FKがちょうど1つだけ非NULLになるようにする。対象リソースのuserとrule.user一致はserviceとテストで保証する。
 
 ### 8.2 Notification
