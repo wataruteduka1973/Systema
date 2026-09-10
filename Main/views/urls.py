@@ -86,6 +86,12 @@ def seller_management(request):
 
 @login_required
 @ensure_csrf_cookie
+def seller_outcomes_page(request):
+    return render(request, "seller_outcomes.html")
+
+
+@login_required
+@ensure_csrf_cookie
 def notifications_page(request):
     return render(request, "notifications.html")
 

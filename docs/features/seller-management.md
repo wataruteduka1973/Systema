@@ -39,7 +39,7 @@ Move authenticated users from buying candidates into owned inventory, maintain a
 
 - Yahoo credentials, cookies, access tokens, or automated listing actions
 - Automatic market matching, sell-through risk, advanced scenario simulations and recommendations
-- Persisted sale outcomes and confirmed-profit analytics (Phase 7)
+- Advanced recommendations that require a larger set of sale outcomes (Phase 7B)
 
 ## Related Files
 
@@ -88,3 +88,9 @@ Phase 4A adds a server-derived `actionStatus` to each listing. It distinguishes 
 Phase 4C connects that status to an explicit card action. Missing costs open the existing editor at the first unknown cost; missing price/loss risk focus expected price, target shortfall focuses target profit, and ended/manual states focus management status. Unobserved, stale, ending-soon and stalled listings promote the existing public refresh button (one button, one request). Opening an editor never saves automatically. Save/refresh use existing owner-scoped, CSRF-protected APIs and reload the filtered/sorted list to reassess priority; failed edits retain input and allow retry. Normal listings have no promoted action. No API/schema changes are required for 4C itself.
 
 Phase 4D adds owner-scoped summary counts to the listing response: all listings, listings requiring action, priority-one listings, and listings awaiting a sale result. The compact summary is shown above the listing cards, and the sale-result count opens its corresponding filter. Phase 4E adds `PUT /api/v1/seller-listings/{id}/sale`. A seller can enter the sale price, actual fee, shipping, packaging, other costs, and timezone-aware sale time. The server recalculates confirmed profit, rejects client-supplied calculated values, allows negative results, marks the listing and linked inventory as sold, and exposes the saved result on the listing. A sold listing without a record is explicitly marked `sale_result_missing`; public closure still never implies a sale. The sale record is owner-scoped and deleted with its listing.
+
+## Phase 7A: Confirmed sale analysis
+
+`/taskle/seller-outcomes` aggregates only the signed-in user's confirmed `SaleRecord` values. It shows all-time sales count, sale amount, total expenses, net profit, profitable/loss-making counts, category totals, and up to ten lowest-profit sales. Empty results are explicit; no projected values or recommendation are fabricated.
+
+At sale confirmation the linked inventory category is copied to `SaleRecord.category`. This keeps historical category totals stable when inventory is edited or deleted. Existing records are backfilled from an extant linked inventory during the Phase 7 migration; records without one remain `未分類`.

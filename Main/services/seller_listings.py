@@ -179,10 +179,17 @@ def save_sale_record(user: Any, listing_id: int, payload: Mapping[str, Any]) -> 
         acquisition_cost=listing.acquisition_cost,
         purchase_shipping_cost=listing.purchase_shipping_cost,
     )
-    record, _ = SaleRecord.objects.update_or_create(
+    record, created = SaleRecord.objects.update_or_create(
         seller_listing=listing,
-        defaults={**values, "sold_at": sold_at, "confirmed_profit": confirmed_profit},
+        defaults={
+            **values,
+            "sold_at": sold_at,
+            "confirmed_profit": confirmed_profit,
+        },
     )
+    if created:
+        record.category = inventory.category if inventory else ""
+        record.save(update_fields=("category",))
     if listing.status != "sold":
         listing.status = "sold"
         listing.save(update_fields=("status", "updated_at"))
@@ -201,6 +208,7 @@ def serialize_sale_record(record: SaleRecord) -> dict[str, Any]:
         "actualOtherCost": record.actual_other_cost,
         "soldAt": record.sold_at.isoformat(),
         "confirmedProfit": record.confirmed_profit,
+        "category": record.category,
         "updatedAt": record.updated_at.isoformat(),
     }
 

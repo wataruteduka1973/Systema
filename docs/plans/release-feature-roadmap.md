@@ -14,7 +14,7 @@ Related designs: `docs/design/api.md` and `docs/design/database.md`.
 - ユーザーページとAPIには所有者分離テストがある。
 - 管理者画面には基本件数、直近エラー、ログ末尾表示がある。
 - 本番用Secret、DEBUG禁止、Hosts、HTTPS、Secure Cookie、CSRF、外部検索レート制限は設定済み。
-- 在庫、出品、費用、出品観測履歴はPhase 3A/3Bで実装済み。確定販売利益と仕入れ時予測の比較は未実装（Phase 7）。本番適用の検証状況は各PhaseのStatusを参照する。
+- 在庫、出品、費用、出品観測履歴はPhase 3A/3Bで実装済み。Phase 7Aは確定販売実績の集計、Phase 7Bは十分な実績が得られた後の推薦を扱う。本番適用の検証状況は各PhaseのStatusを参照する。
 
 ## Conflicts and Decisions
 

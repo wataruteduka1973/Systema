@@ -243,7 +243,15 @@ Phase 3B specifics:
 - Refresh accepts an empty JSON object. 429 includes `Retry-After`; 409 means concurrent modification; 502 separates `listing_parse_failed` from `external_service_unavailable`. Neither failure writes a snapshot or erases prior data.
 - History preserves signed `estimatedProfit` and `calculationInputs` at observation time, and is owner-filtered through its parent listing. No raw upstream HTML, cookies, tokens, or seller profile data are stored.
 
-### 6.5 Seller recommendations (Phase 7)
+### 6.5 Seller outcome analysis (Phase 7A)
+
+| Method | Path | Purpose |
+|---|---|---|
+| GET | `/api/v1/seller-outcomes` | 本人の確定販売実績の合計、カテゴリ別内訳、利益が低い販売結果 |
+
+結果は確定した`SaleRecord`だけを対象とし、販売価格・費用・純利益はサーバー保存済みの実績値から返す。カテゴリは販売確定時のスナップショットで、在庫の後変更を反映しない。
+
+### 6.6 Seller recommendations (Phase 7B)
 
 | Method | Path | Purpose |
 |---|---|---|
@@ -254,7 +262,7 @@ Phase 3B specifics:
 
 根拠件数と品質を必ず返し、データ不足時は提案を生成せず`available: false`と理由を返す。
 
-### 6.6 Notifications and alerts
+### 6.7 Notifications and alerts
 
 | Method | Path | Purpose |
 |---|---|---|
@@ -273,7 +281,7 @@ Create requires exactly one of `savedSearchId`, `watchItemId`, or `sellerListing
 
 重複イベントは`dedupe_key`とcooldownで抑止する。メール配信は通知作成とは別のoutbox処理とする。
 
-### 6.7 Staff monitoring
+### 6.8 Staff monitoring
 
 | Method | Path | Purpose |
 |---|---|---|

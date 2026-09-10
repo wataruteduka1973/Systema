@@ -74,6 +74,7 @@ from Main.services.seller_listings import (
     serialize_snapshot,
     update_listing,
 )
+from Main.services.seller_outcomes import seller_outcome_analytics
 from Main.services.watchlist import (
     list_watch_items,
     save_watch_item,
@@ -567,6 +568,14 @@ def seller_listing_sale(request, listing_id):
         return _seller_error("出品が見つかりません", "not_found", 404)
     except ValueError as error:
         return _seller_error(str(error), "validation_error", 400)
+
+
+def seller_outcomes(request):
+    if not request.user.is_authenticated:
+        return _seller_error("ログインが必要です", "authentication_required", 401)
+    if request.method != "GET":
+        return _seller_error("許可されていないメソッドです", "method_not_allowed", 405)
+    return JsonResponse({"data": seller_outcome_analytics(request.user)})
 
 
 def inventory_items(request):

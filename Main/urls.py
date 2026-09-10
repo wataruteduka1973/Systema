@@ -28,6 +28,7 @@ from Main.views.api import (
     seller_listing_sale,
     seller_listing_snapshots,
     seller_listings,
+    seller_outcomes,
     update_market_data,
     watchlist,
     watchlist_item,
@@ -47,6 +48,7 @@ from Main.views.urls import (
     market_search,
     notifications_page,
     seller_management,
+    seller_outcomes_page,
 )
 
 urlpatterns = [
@@ -65,6 +67,7 @@ urlpatterns = [
     path("introduction", introduction, name="introduction"),
     path("developer/", developer_dashboard, name="developer_dashboard"),
     path("seller-management", seller_management, name="seller_management"),
+    path("seller-outcomes", seller_outcomes_page, name="seller_outcomes_page"),
     path("notifications", notifications_page, name="notifications_page"),
     path("alerts", alert_rules_page, name="alert_rules_page"),
     path("perform_search", perform_search, name="perform_search"),
@@ -103,6 +106,7 @@ urlpatterns = [
     ),
     path("api/v1/inventory-items", inventory_items, name="inventory_items"),
     path("api/v1/seller-listings", seller_listings, name="seller_listings"),
+    path("api/v1/seller-outcomes", seller_outcomes, name="seller_outcomes"),
     path(
         "api/v1/seller-listings/<int:listing_id>", seller_listing_item, name="seller_listing_item"
     ),

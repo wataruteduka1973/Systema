@@ -28,6 +28,8 @@ FEATURE_TESTS = {
         "tests/unit/test_seller_status.py",
         "tests/integration/test_seller_priority.py",
         "tests/integration/test_seller_outcomes.py",
+        "tests/integration/test_seller_outcome_analytics.py",
+        "tests/e2e/test_seller_outcomes_browser.py",
         "tests/integration/test_seller_listings.py",
     ),
     "purchase-budget": (
@@ -98,6 +100,9 @@ PATH_FEATURES = {
     "Main/models/sellerlisting.py": "seller-management",
     "Main/scraping/seller_listing.py": "seller-management",
     "Main/services/seller_listings.py": "seller-management",
+    "Main/services/seller_outcomes.py": "seller-outcomes",
+    "Main/static/JS/SellerOutcomes.js": "seller-outcomes",
+    "Main/templates/seller_outcomes.html": "seller-outcomes",
     "Main/static/JS/SellerListings.js": "seller-management",
     "Main/services/search_criteria.py": "market-search",
     "Main/services/search_observability.py": "market-search",

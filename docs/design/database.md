@@ -237,9 +237,11 @@ Both models are added without changing existing tables or ownership. Inventory d
 | actual_other_cost | PositiveBigInteger default=0 |
 | sold_at | DateTime |
 | confirmed_profit | BigInteger | 負利益を許可 |
+| category | CharField(100), blank, indexed | 販売確定時の在庫カテゴリ |
 | created_at/updated_at | DateTime |
 
 `confirmed_profit`は確定時の監査用スナップショット。serviceで再計算した値だけ保存し、入力された計算結果は採用しない。
+`category`も同時に固定し、在庫の編集・削除によって過去の集計を変えない。空値は集計画面で未分類として扱う。
 
 ## 8. Alerts and Notifications
 
