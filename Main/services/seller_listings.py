@@ -350,6 +350,17 @@ def remaining_seconds(item: SellerListing) -> int | None:
     return max(0, int((item.ends_at - timezone.now()).total_seconds())) if item.ends_at else None
 
 
+def unique_observed_at(item: SellerListing, candidate: datetime) -> datetime:
+    latest = (
+        item.snapshots.order_by("-observed_at", "-pk").values_list("observed_at", flat=True).first()
+    )
+    return (
+        latest + timedelta(microseconds=1)
+        if latest is not None and latest >= candidate
+        else candidate
+    )
+
+
 def refresh_listing(user: Any, listing_id: int) -> SellerListing:
     initial = owned_listing(user, listing_id)
     enforce_refresh_limit(user)
@@ -359,6 +370,7 @@ def refresh_listing(user: Any, listing_id: int) -> SellerListing:
         item = SellerListing.objects.select_for_update().get(user=user, pk=listing_id)
         if item.updated_at != initial.updated_at:
             raise ListingConflictError("取得中に出品が変更されました。再度更新してください")
+        observed_at = unique_observed_at(item, observed_at)
         item.name = observation.name
         item.current_price = observation.current_price
         item.start_price = observation.start_price

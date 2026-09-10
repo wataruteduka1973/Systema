@@ -55,6 +55,7 @@
 <li class="toctree-l1 current"><a class="current reference internal" href="#">エラーログ設定</a><ul>
 <li class="toctree-l2"><a class="reference internal" href="#Main.middleware.error_logging_middleware.ErrorLoggingMiddleware"><code class="docutils literal notranslate"><span class="pre">ErrorLoggingMiddleware</span></code></a><ul>
 <li class="toctree-l3"><a class="reference internal" href="#Main.middleware.error_logging_middleware.ErrorLoggingMiddleware.process_exception"><code class="docutils literal notranslate"><span class="pre">ErrorLoggingMiddleware.process_exception()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#Main.middleware.error_logging_middleware.ErrorLoggingMiddleware.record"><code class="docutils literal notranslate"><span class="pre">ErrorLoggingMiddleware.record()</span></code></a></li>
 </ul>
 </li>
 </ul>
@@ -85,20 +86,29 @@
           <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
            <div itemprop="articleBody">
              
-  <section id="module-Main.middleware.error_logging_middleware">
-<span id="id1"></span><h1>エラーログ設定<a class="headerlink" href="#module-Main.middleware.error_logging_middleware" title="Link to this heading"></a></h1>
+  <section id="id1">
+<h1>エラーログ設定<a class="headerlink" href="#id1" title="Link to this heading"></a></h1>
+<p>HTTP 4xx/5xx、ブラウザーのJavaScriptエラー種別、管理コマンドの失敗を、
+リクエスト内容や認証情報を保存せず記録します。HTTP応答の <code class="docutils literal notranslate"><span class="pre">X-Request-ID</span></code>
+を使ってサーバーログとDBの <code class="docutils literal notranslate"><span class="pre">ErrorLog</span></code> を照合できます。</p>
+<p>ファイルログは既定10 MiB、5世代でローテーションします。
+<code class="docutils literal notranslate"><span class="pre">LOG_MAX_BYTES</span></code> と <code class="docutils literal notranslate"><span class="pre">LOG_BACKUP_COUNT</span></code> で変更できます。DBログは既定90日で、
+<code class="docutils literal notranslate"><span class="pre">ERROR_LOG_RETENTION_DAYS</span></code> で変更できます。手動削除確認には
+<code class="docutils literal notranslate"><span class="pre">python</span> <span class="pre">manage.py</span> <span class="pre">prune_error_logs</span></code> を使用します。</p>
+<p id="module-Main.middleware.error_logging_middleware">Capture HTTP failures without exposing request data or masking the original failure.</p>
 <dl class="py class">
 <dt class="sig sig-object py" id="Main.middleware.error_logging_middleware.ErrorLoggingMiddleware">
 <span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">Main.middleware.error_logging_middleware.</span></span><span class="sig-name descname"><span class="pre">ErrorLoggingMiddleware</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">get_response</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/Main/middleware/error_logging_middleware.html#ErrorLoggingMiddleware"><span class="viewcode-link"><span class="pre">[ソース]</span></span></a><a class="headerlink" href="#Main.middleware.error_logging_middleware.ErrorLoggingMiddleware" title="Link to this definition"></a></dt>
 <dd><p>ベースクラス: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
-<p>アプリケーションのエラーと例外を記録するミドルウェアです。
-このクラスは HTTP エラー (4xx と 5xx のステータスコード) と例外をキャプチャ、
-ログの記録とデータベースの保存を行います。</p>
 <dl class="py method">
 <dt class="sig sig-object py" id="Main.middleware.error_logging_middleware.ErrorLoggingMiddleware.process_exception">
 <span class="sig-name descname"><span class="pre">process_exception</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">request</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">exception</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/Main/middleware/error_logging_middleware.html#ErrorLoggingMiddleware.process_exception"><span class="viewcode-link"><span class="pre">[ソース]</span></span></a><a class="headerlink" href="#Main.middleware.error_logging_middleware.ErrorLoggingMiddleware.process_exception" title="Link to this definition"></a></dt>
-<dd><p>例外が発生した場合に呼び出され、エラーログを記録します。</p>
-</dd></dl>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="Main.middleware.error_logging_middleware.ErrorLoggingMiddleware.record">
+<span class="sig-name descname"><span class="pre">record</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">request</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">status</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">exception</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/Main/middleware/error_logging_middleware.html#ErrorLoggingMiddleware.record"><span class="viewcode-link"><span class="pre">[ソース]</span></span></a><a class="headerlink" href="#Main.middleware.error_logging_middleware.ErrorLoggingMiddleware.record" title="Link to this definition"></a></dt>
+<dd></dd></dl>
 
 </dd></dl>
 

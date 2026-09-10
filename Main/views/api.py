@@ -1,8 +1,12 @@
+import hashlib
 import json
 import logging
 
-from django.http import JsonResponse
+from django.conf import settings
+from django.core.cache import cache
+from django.http import HttpResponse, JsonResponse
 from django.utils import timezone
+from django.views.decorators.csrf import csrf_exempt
 
 from Main.domain.product_condition import enrich_market_items, summarize_condition_market
 from Main.models.alertrule import AlertRule
@@ -19,6 +23,7 @@ from Main.services.alert_rules import (
     save_alert_rule,
     serialize_alert_rule,
 )
+from Main.services.error_logging import persist_client_error
 from Main.services.exceptions import (
     ExternalServiceError,
     SearchInputError,
@@ -101,6 +106,34 @@ from .utils import (
 logger = logging.getLogger("search_logger")
 
 EXTERNAL_SERVICE_MESSAGE = "外部サービスからデータを取得できませんでした"
+CLIENT_ERROR_KINDS = {"error", "unhandledrejection", "resource"}
+
+
+@csrf_exempt
+def client_errors(request):
+    """Accept a bounded browser error signal without client-provided details."""
+    if request.method != "POST" or len(request.body) > 256:
+        return HttpResponse(status=204)
+    try:
+        payload = _json_payload(request)
+    except (json.JSONDecodeError, ValueError, UnicodeDecodeError):
+        return HttpResponse(status=204)
+    if set(payload) != {"kind"} or payload["kind"] not in CLIENT_ERROR_KINDS:
+        return HttpResponse(status=204)
+    remote = str(request.META.get("REMOTE_ADDR", "unknown"))
+    identity = hashlib.sha256(f"{settings.SECRET_KEY}:{remote}".encode()).hexdigest()
+    key = f"client-error:{identity}"
+    if cache.add(key, 1, timeout=settings.CLIENT_ERROR_RATE_WINDOW_SECONDS):
+        allowed = True
+    else:
+        try:
+            allowed = cache.incr(key) <= settings.CLIENT_ERROR_RATE_LIMIT
+        except ValueError:
+            cache.set(key, 1, timeout=settings.CLIENT_ERROR_RATE_WINDOW_SECONDS)
+            allowed = True
+    if allowed:
+        persist_client_error(request, payload["kind"])
+    return HttpResponse(status=204)
 
 
 def _external_search_guard(request, search_type="closed"):

@@ -78,70 +78,68 @@
            <div itemprop="articleBody">
              
   <h1>Main.middleware.error_logging_middleware のソースコード</h1><div class="highlight"><pre>
-<span></span><span class="kn">import</span><span class="w"> </span><span class="nn">logging</span>
-<span class="kn">import</span><span class="w"> </span><span class="nn">traceback</span>
+<span></span><span class="sd">&quot;&quot;&quot;Capture HTTP failures without exposing request data or masking the original failure.&quot;&quot;&quot;</span>
 
-<span class="kn">from</span><span class="w"> </span><span class="nn">..models.errorlog</span><span class="w"> </span><span class="kn">import</span> <span class="n">ErrorLog</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">logging</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">traceback</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">uuid</span><span class="w"> </span><span class="kn">import</span> <span class="n">uuid4</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">Main.services.error_logging</span><span class="w"> </span><span class="kn">import</span> <span class="n">persist_error</span>
 
 
 <div class="viewcode-block" id="ErrorLoggingMiddleware">
 <a class="viewcode-back" href="../../../errorlog.html#Main.middleware.error_logging_middleware.ErrorLoggingMiddleware">[ドキュメント]</a>
 <span class="k">class</span><span class="w"> </span><span class="nc">ErrorLoggingMiddleware</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">    アプリケーションのエラーと例外を記録するミドルウェアです。</span>
-<span class="sd">    このクラスは HTTP エラー (4xx と 5xx のステータスコード) と例外をキャプチャ、</span>
-<span class="sd">    ログの記録とデータベースの保存を行います。</span>
-<span class="sd">    &quot;&quot;&quot;</span>
-
     <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">get_response</span><span class="p">):</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">        初期化メソッド。ミドルウェアのインスタンスを初期化します。</span>
-<span class="sd">        &quot;&quot;&quot;</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">get_response</span> <span class="o">=</span> <span class="n">get_response</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">logger</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="s2">&quot;error_logger&quot;</span><span class="p">)</span>
 
     <span class="k">def</span><span class="w"> </span><span class="fm">__call__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">request</span><span class="p">):</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">        リクエストを処理し、HTTP エラーが発生した場合にエラーログを記録します。</span>
-<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">request</span><span class="o">.</span><span class="n">error_request_id</span> <span class="o">=</span> <span class="n">uuid4</span><span class="p">()</span><span class="o">.</span><span class="n">hex</span>
+        <span class="n">request</span><span class="o">.</span><span class="n">error_recorded</span> <span class="o">=</span> <span class="kc">False</span>
         <span class="n">response</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_response</span><span class="p">(</span><span class="n">request</span><span class="p">)</span>
-        <span class="k">if</span> <span class="mi">400</span> <span class="o">&lt;=</span> <span class="n">response</span><span class="o">.</span><span class="n">status_code</span> <span class="o">&lt;</span> <span class="mi">600</span><span class="p">:</span>
-            <span class="n">error_code</span> <span class="o">=</span> <span class="n">response</span><span class="o">.</span><span class="n">status_code</span>
-            <span class="n">error_message</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;HTTP </span><span class="si">{</span><span class="n">error_code</span><span class="si">}</span><span class="s2"> Error: </span><span class="si">{</span><span class="n">response</span><span class="o">.</span><span class="n">reason_phrase</span><span class="si">}</span><span class="s2">&quot;</span>
-            <span class="n">file_path</span> <span class="o">=</span> <span class="n">request</span><span class="o">.</span><span class="n">path</span>
-            <span class="n">line_number</span> <span class="o">=</span> <span class="kc">None</span>
-
-            <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">error</span><span class="p">(</span>
-                <span class="sa">f</span><span class="s2">&quot;Error Code: </span><span class="si">{</span><span class="n">error_code</span><span class="si">}</span><span class="s2">, Message: </span><span class="si">{</span><span class="n">error_message</span><span class="si">}</span><span class="s2">, Path: </span><span class="si">{</span><span class="n">file_path</span><span class="si">}</span><span class="s2">&quot;</span>
-            <span class="p">)</span>
-
-            <span class="n">ErrorLog</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">create</span><span class="p">(</span>
-                <span class="n">error_code</span><span class="o">=</span><span class="nb">str</span><span class="p">(</span><span class="n">error_code</span><span class="p">),</span>
-                <span class="n">error_message</span><span class="o">=</span><span class="n">error_message</span><span class="p">,</span>
-                <span class="n">file_path</span><span class="o">=</span><span class="n">file_path</span><span class="p">,</span>
-                <span class="n">line_number</span><span class="o">=</span><span class="n">line_number</span><span class="p">,</span>
-            <span class="p">)</span>
+        <span class="n">response</span><span class="p">[</span><span class="s2">&quot;X-Request-ID&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">request</span><span class="o">.</span><span class="n">error_request_id</span>
+        <span class="k">if</span> <span class="n">response</span><span class="o">.</span><span class="n">status_code</span> <span class="o">&gt;=</span> <span class="mi">400</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">request</span><span class="o">.</span><span class="n">error_recorded</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">record</span><span class="p">(</span><span class="n">request</span><span class="p">,</span> <span class="n">response</span><span class="o">.</span><span class="n">status_code</span><span class="p">)</span>
         <span class="k">return</span> <span class="n">response</span>
+
+<div class="viewcode-block" id="ErrorLoggingMiddleware.record">
+<a class="viewcode-back" href="../../../errorlog.html#Main.middleware.error_logging_middleware.ErrorLoggingMiddleware.record">[ドキュメント]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">record</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">request</span><span class="p">,</span> <span class="n">status</span><span class="p">,</span> <span class="n">exception</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="n">request</span><span class="o">.</span><span class="n">error_recorded</span> <span class="o">=</span> <span class="kc">True</span>
+        <span class="n">match</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">request</span><span class="p">,</span> <span class="s2">&quot;resolver_match&quot;</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+        <span class="n">route</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">match</span><span class="p">,</span> <span class="s2">&quot;view_name&quot;</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span> <span class="ow">or</span> <span class="s2">&quot;unresolved&quot;</span>
+        <span class="c1"># Only route names are retained: raw paths can contain personal data.</span>
+        <span class="n">location</span> <span class="o">=</span> <span class="n">route</span><span class="p">[:</span><span class="mi">255</span><span class="p">]</span>
+        <span class="n">line</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="n">frames</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">if</span> <span class="n">exception</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">for</span> <span class="n">frame</span> <span class="ow">in</span> <span class="n">traceback</span><span class="o">.</span><span class="n">extract_tb</span><span class="p">(</span><span class="n">exception</span><span class="o">.</span><span class="n">__traceback__</span><span class="p">):</span>
+                <span class="c1"># Retain code locations, never source lines, local variables or exception text.</span>
+                <span class="n">filename</span> <span class="o">=</span> <span class="n">frame</span><span class="o">.</span><span class="n">filename</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s2">&quot;</span><span class="se">\\</span><span class="s2">&quot;</span><span class="p">,</span> <span class="s2">&quot;/&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">rsplit</span><span class="p">(</span><span class="s2">&quot;/&quot;</span><span class="p">,</span> <span class="mi">1</span><span class="p">)[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+                <span class="n">frames</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">filename</span><span class="si">}</span><span class="s2">:</span><span class="si">{</span><span class="n">frame</span><span class="o">.</span><span class="n">lineno</span><span class="si">}</span><span class="s2">:</span><span class="si">{</span><span class="n">frame</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">frames</span><span class="p">:</span>
+                <span class="n">location</span> <span class="o">=</span> <span class="n">frames</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">][:</span><span class="mi">255</span><span class="p">]</span>
+                <span class="n">line</span> <span class="o">=</span> <span class="n">traceback</span><span class="o">.</span><span class="n">extract_tb</span><span class="p">(</span><span class="n">exception</span><span class="o">.</span><span class="n">__traceback__</span><span class="p">)[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">lineno</span>
+        <span class="n">message</span> <span class="o">=</span> <span class="p">(</span>
+            <span class="sa">f</span><span class="s2">&quot;request_id=</span><span class="si">{</span><span class="n">request</span><span class="o">.</span><span class="n">error_request_id</span><span class="si">}</span><span class="s2"> status=</span><span class="si">{</span><span class="n">status</span><span class="si">}</span><span class="s2"> route=</span><span class="si">{</span><span class="n">route</span><span class="si">}</span><span class="s2"> &quot;</span>
+            <span class="sa">f</span><span class="s2">&quot;exception=</span><span class="si">{</span><span class="nb">type</span><span class="p">(</span><span class="n">exception</span><span class="p">)</span><span class="o">.</span><span class="vm">__name__</span><span class="w"> </span><span class="k">if</span><span class="w"> </span><span class="n">exception</span><span class="w"> </span><span class="ow">is</span><span class="w"> </span><span class="ow">not</span><span class="w"> </span><span class="kc">None</span><span class="w"> </span><span class="k">else</span><span class="w"> </span><span class="s1">&#39;none&#39;</span><span class="si">}</span><span class="s2">&quot;</span>
+        <span class="p">)</span>
+        <span class="k">if</span> <span class="n">frames</span><span class="p">:</span>
+            <span class="n">message</span> <span class="o">+=</span> <span class="s2">&quot; frames=&quot;</span> <span class="o">+</span> <span class="s2">&quot; &gt; &quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">frames</span><span class="p">[</span><span class="o">-</span><span class="mi">20</span><span class="p">:])</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="s2">&quot;</span><span class="si">%s</span><span class="s2">&quot;</span><span class="p">,</span> <span class="n">message</span><span class="p">)</span>
+        <span class="n">persist_error</span><span class="p">(</span>
+            <span class="n">error_code</span><span class="o">=</span><span class="nb">str</span><span class="p">(</span><span class="n">status</span><span class="p">),</span>
+            <span class="n">message</span><span class="o">=</span><span class="n">message</span><span class="p">,</span>
+            <span class="n">location</span><span class="o">=</span><span class="n">location</span><span class="p">,</span>
+            <span class="n">line_number</span><span class="o">=</span><span class="n">line</span><span class="p">,</span>
+        <span class="p">)</span></div>
+
 
 <div class="viewcode-block" id="ErrorLoggingMiddleware.process_exception">
 <a class="viewcode-back" href="../../../errorlog.html#Main.middleware.error_logging_middleware.ErrorLoggingMiddleware.process_exception">[ドキュメント]</a>
     <span class="k">def</span><span class="w"> </span><span class="nf">process_exception</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">request</span><span class="p">,</span> <span class="n">exception</span><span class="p">):</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">        例外が発生した場合に呼び出され、エラーログを記録します。</span>
-<span class="sd">        &quot;&quot;&quot;</span>
-        <span class="n">tb</span> <span class="o">=</span> <span class="n">traceback</span><span class="o">.</span><span class="n">format_exc</span><span class="p">()</span>
-        <span class="n">error_code</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">exception</span><span class="p">,</span> <span class="s2">&quot;status_code&quot;</span><span class="p">,</span> <span class="mi">500</span><span class="p">)</span>
-        <span class="n">error_message</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">exception</span><span class="p">)</span>
-        <span class="n">file_path</span> <span class="o">=</span> <span class="n">traceback</span><span class="o">.</span><span class="n">extract_tb</span><span class="p">(</span><span class="n">exception</span><span class="o">.</span><span class="n">__traceback__</span><span class="p">)[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">filename</span>
-        <span class="n">line_number</span> <span class="o">=</span> <span class="n">traceback</span><span class="o">.</span><span class="n">extract_tb</span><span class="p">(</span><span class="n">exception</span><span class="o">.</span><span class="n">__traceback__</span><span class="p">)[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">lineno</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Error Code: </span><span class="si">{</span><span class="n">error_code</span><span class="si">}</span><span class="s2">, Message: </span><span class="si">{</span><span class="n">error_message</span><span class="si">}</span><span class="s2">, Traceback: </span><span class="si">{</span><span class="n">tb</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
-
-        <span class="n">ErrorLog</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">create</span><span class="p">(</span>
-            <span class="n">error_code</span><span class="o">=</span><span class="nb">str</span><span class="p">(</span><span class="n">error_code</span><span class="p">),</span>
-            <span class="n">error_message</span><span class="o">=</span><span class="n">error_message</span><span class="p">,</span>
-            <span class="n">file_path</span><span class="o">=</span><span class="n">file_path</span><span class="p">,</span>
-            <span class="n">line_number</span><span class="o">=</span><span class="n">line_number</span><span class="p">,</span>
-        <span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">record</span><span class="p">(</span><span class="n">request</span><span class="p">,</span> <span class="mi">500</span><span class="p">,</span> <span class="n">exception</span><span class="p">)</span>
         <span class="k">return</span> <span class="kc">None</span></div>
 </div>
 

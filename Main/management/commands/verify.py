@@ -8,6 +8,10 @@ from pathlib import Path
 from django.core.management.base import BaseCommand, CommandError
 
 FEATURE_TESTS = {
+    "error-logging": (
+        "tests/unit/test_logging_safety.py",
+        "tests/integration/test_error_logging.py",
+    ),
     "alerts": (
         "tests/integration/test_alert_rules.py",
         "tests/integration/test_notifications.py",
@@ -82,6 +86,12 @@ FEATURE_TESTS = {
 }
 
 PATH_FEATURES = {
+    "Main/logging_filters.py": "error-logging",
+    "Main/middleware/error_logging_middleware.py": "error-logging",
+    "Main/services/error_logging.py": "error-logging",
+    "Main/static/JS/ClientErrors.js": "error-logging",
+    "Main/management/commands/prune_error_logs.py": "error-logging",
+    "manage.py": "error-logging",
     "Main/models/alertrule.py": "alerts",
     "Main/services/alert_rules.py": "alerts",
     "Main/static/JS/AlertRules.js": "alerts",

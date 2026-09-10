@@ -62,6 +62,12 @@ EXTERNAL_SEARCH_TRUST_X_FORWARDED_FOR = os.getenv(
     "EXTERNAL_SEARCH_TRUST_X_FORWARDED_FOR", "false"
 ).strip().lower() in {"1", "true", "yes", "on"}
 
+CLIENT_ERROR_RATE_LIMIT = int(os.getenv("CLIENT_ERROR_RATE_LIMIT", "20"))
+CLIENT_ERROR_RATE_WINDOW_SECONDS = int(os.getenv("CLIENT_ERROR_RATE_WINDOW_SECONDS", "60"))
+ERROR_LOG_RETENTION_DAYS = int(os.getenv("ERROR_LOG_RETENTION_DAYS", "90"))
+LOG_MAX_BYTES = int(os.getenv("LOG_MAX_BYTES", "10485760"))
+LOG_BACKUP_COUNT = int(os.getenv("LOG_BACKUP_COUNT", "5"))
+
 AUTH_LOGIN_ACCOUNT_MAX_FAILURES = int(os.getenv("AUTH_LOGIN_ACCOUNT_MAX_FAILURES", "5"))
 AUTH_LOGIN_IP_MAX_FAILURES = int(os.getenv("AUTH_LOGIN_IP_MAX_FAILURES", "30"))
 AUTH_LOGIN_WINDOW_SECONDS = int(os.getenv("AUTH_LOGIN_WINDOW_SECONDS", "900"))
@@ -99,6 +105,7 @@ INSTALLED_APPS = [
 ]
 
 MIDDLEWARE = [
+    "Main.middleware.error_logging_middleware.ErrorLoggingMiddleware",
     "django.middleware.security.SecurityMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "whitenoise.middleware.WhiteNoiseMiddleware",
@@ -107,7 +114,6 @@ MIDDLEWARE = [
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
-    "Main.middleware.error_logging_middleware.ErrorLoggingMiddleware",
 ]
 
 if django.VERSION >= (6, 0):
@@ -230,30 +236,45 @@ LOGGING = {
             "style": "{",
         },
     },
+    "filters": {
+        "redact_sensitive": {"()": "Main.logging_filters.RedactSensitiveDataFilter"},
+    },
     "handlers": {
         "file": {
             "level": "INFO",
-            "class": "logging.FileHandler",
+            "class": "logging.handlers.RotatingFileHandler",
             "filename": str(LOG_DIR / "search.log"),
             "formatter": "verbose",
             "encoding": "utf-8",
+            "maxBytes": LOG_MAX_BYTES,
+            "backupCount": LOG_BACKUP_COUNT,
+            "filters": ["redact_sensitive"],
         },
         "console": {
             "level": "INFO",
             "class": "logging.StreamHandler",
             "formatter": "verbose",
+            "filters": ["redact_sensitive"],
         },
         "error_file": {
             "level": "ERROR",
-            "class": "logging.FileHandler",
+            "class": "logging.handlers.RotatingFileHandler",
             "filename": str(LOG_DIR / "error.log"),
             "formatter": "verbose",
+            "encoding": "utf-8",
+            "maxBytes": LOG_MAX_BYTES,
+            "backupCount": LOG_BACKUP_COUNT,
+            "filters": ["redact_sensitive"],
         },
         "server_file": {
             "level": "INFO",
-            "class": "logging.FileHandler",
+            "class": "logging.handlers.RotatingFileHandler",
             "filename": str(LOG_DIR / "server.log"),
             "formatter": "verbose",
+            "encoding": "utf-8",
+            "maxBytes": LOG_MAX_BYTES,
+            "backupCount": LOG_BACKUP_COUNT,
+            "filters": ["redact_sensitive"],
         },
     },
     "loggers": {
@@ -273,7 +294,7 @@ LOGGING = {
             "propagate": False,
         },
         "django.server": {
-            "handlers": ["console"],
+            "handlers": ["server_file", "console"],
             "level": "INFO",
             "propagate": False,
         },

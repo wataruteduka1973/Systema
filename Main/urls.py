@@ -4,6 +4,7 @@ from Main.views.api import (
     RealtimeSearch,
     alert_rule_item,
     alert_rules,
+    client_errors,
     complex_market_data,
     convert_watch_item_to_inventory,
     delete_market_data,
@@ -52,6 +53,7 @@ from Main.views.urls import (
 )
 
 urlpatterns = [
+    path("api/v1/client-errors", client_errors, name="client_errors"),
     path("api/v1/cost-settings", purchase_cost_settings, name="purchase_cost_settings"),
     path(
         "api/v1/watch-items/<int:item_id>/purchase-budget", purchase_budget, name="purchase_budget"

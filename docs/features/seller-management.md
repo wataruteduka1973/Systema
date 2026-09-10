@@ -33,6 +33,7 @@ Move authenticated users from buying candidates into owned inventory, maintain a
 - Refresh has a separate user cache rate limit (10 requests / 60 seconds, `SELLER_REFRESH_RATE_LIMIT` / `SELLER_REFRESH_RATE_WINDOW_SECONDS` Django settings). With a process-local cache this is per process; deployment needs a shared cache for multi-worker enforcement.
 - Ownership is checked before I/O and again under a row lock before persistence. A concurrent edit/refresh causes 409; deletion or ownership loss causes 404. No transaction spans external I/O. Observation and snapshot commit together, or neither does. Fetch/parse failures leave prior observations and history untouched.
 - Every accepted refresh creates one timestamped snapshot, including unchanged prices (a new observation). Unique `(seller_listing, observed_at)` rejects a duplicate timestamp; racing requests cannot overwrite a newer result. There is no background polling or batch scraping.
+- If two accepted observations receive the same clock value, the later snapshot advances by one microsecond so rapid manual refreshes do not violate the unique history constraint.
 - Snapshots retain price, bids, remaining seconds, manual median, expected price, fee, signed profit, observation status, and the exact cost/rate/price-source/target inputs. History is newest first with pagination and price/bid/profit deltas within the displayed page. Profit changes may reflect changed assumptions, not only market prices.
 
 ## Deferred to Later Phases

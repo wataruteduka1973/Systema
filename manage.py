@@ -1,5 +1,6 @@
 import logging
 import os
+import re
 import sys
 import time
 import webbrowser
@@ -9,6 +10,29 @@ import requests
 from django.conf import settings
 
 logger = logging.getLogger("server_logger")
+
+
+def management_command_name(argv):
+    if len(argv) < 2 or re.fullmatch(r"[a-zA-Z0-9_-]{1,80}", argv[1]) is None:
+        return "unknown"
+    return argv[1]
+
+
+def execute_management_command(executor, argv):
+    command = management_command_name(argv)
+    try:
+        return executor(argv)
+    except SystemExit as error:
+        if error.code not in (None, 0):
+            logger.error("management_command_failed command=%s failure=SystemExit", command)
+        raise
+    except BaseException as error:
+        logger.error(
+            "management_command_failed command=%s failure=%s",
+            command,
+            type(error).__name__,
+        )
+        raise
 
 
 def check_server_and_open(port=8000, max_attempts=10, delay=1.0):
@@ -65,7 +89,7 @@ def main():
             thread = Thread(target=check_server_and_open, args=(port,), daemon=True)
             thread.start()
 
-    execute_from_command_line(sys.argv)
+    execute_management_command(execute_from_command_line, sys.argv)
 
 
 if __name__ == "__main__":
