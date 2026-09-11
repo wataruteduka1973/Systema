@@ -29,11 +29,6 @@ The page supports create, edit, stop/resume through `isEnabled`, and delete. All
 
 The command is the deployment boundary for a future scheduler. No scheduler or long-running process is started by Phase 6. Email delivery remains deferred until in-app notification behavior is stable and will use a separate outbox model.
 
-Phase 9 adds a nonblocking job lock, positive option validation, cooperative
-`--max-runtime-seconds`, nonzero exit on search failures, and saved-search-only
-evaluation scope. Disabled accounts are excluded. See `release-readiness.md`
-for production connection, cache and hard scheduler timeout requirements.
-
 ## Related Files
 
 - `Main/models/alertrule.py`, `Main/migrations/0021_alert_rules_phase6.py`

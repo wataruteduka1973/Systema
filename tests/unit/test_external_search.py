@@ -73,7 +73,6 @@ def test_http_client_does_not_follow_redirects(monkeypatch):
         status_code=302,
         url="https://auctions.yahoo.co.jp/redirect",
         headers={"Location": "http://127.0.0.1/private"},
-        close=lambda: None,
     )
     monkeypatch.setattr("Main.infrastructure.http.requests.get", lambda *args, **kwargs: response)
 

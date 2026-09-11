@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-from collections.abc import Callable
-from time import monotonic
 from typing import Any
 
 from django.core.management.base import BaseCommand, CommandError
@@ -18,7 +16,6 @@ from Main.services.alert_rules import (
     evaluate_seller_alert_rules,
     evaluate_watch_alert_rules,
 )
-from Main.services.job_lock import JobAlreadyRunning, alert_job_lock
 from Main.services.notifications import notify_saved_search_run
 from Main.services.saved_searches import criteria_from_saved_search
 from Main.views.utils import complex_market_data_logic
@@ -28,7 +25,6 @@ class Command(BaseCommand):
     help = "Refresh active saved searches and evaluate enabled Phase 6 alert rules."
 
     def add_arguments(self, parser: Any) -> None:
-        parser.add_argument("--max-runtime-seconds", type=int, default=300)
         parser.add_argument("--user-id", type=int)
         parser.add_argument("--saved-search-id", type=int)
         parser.add_argument(
@@ -38,34 +34,7 @@ class Command(BaseCommand):
         )
 
     def handle(self, *args: Any, **options: Any) -> None:
-        for key in ("user_id", "saved_search_id", "max_runtime_seconds"):
-            if options[key] is not None and options[key] <= 0:
-                raise CommandError(f"{key} must be positive")
-        started = monotonic()
-        try:
-            with alert_job_lock() as check_ownership:
-
-                def checkpoint() -> None:
-                    check_ownership()
-                    if monotonic() - started >= options["max_runtime_seconds"]:
-                        raise CommandError(
-                            "Alert job time budget exhausted; remaining items were not started"
-                        )
-
-                self._run(options, checkpoint)
-        except JobAlreadyRunning:
-            raise CommandError(
-                "Alert job is already running; this invocation did not execute"
-            ) from None
-        except CommandError:
-            raise
-        except Exception:
-            raise CommandError("Alert job failed; check database and job configuration") from None
-
-    def _run(self, options: dict[str, Any], checkpoint: Callable[[], None]) -> None:
-        searches = SavedSearch.objects.filter(is_active=True, user__is_active=True).select_related(
-            "user"
-        )
+        searches = SavedSearch.objects.filter(is_active=True).select_related("user")
         if options["user_id"]:
             searches = searches.filter(user_id=options["user_id"])
         if options["saved_search_id"]:
@@ -77,7 +46,6 @@ class Command(BaseCommand):
         if not options["evaluate_only"]:
             factory = RequestFactory()
             for saved_search in searches.iterator():
-                checkpoint()
                 request = factory.get("/taskle/complex_market_data")
                 request.user = saved_search.user
                 request.saved_search = saved_search
@@ -106,32 +74,21 @@ class Command(BaseCommand):
                     failed += 1
                     self.stderr.write(f"saved search {saved_search.pk}: {error.__class__.__name__}")
                 SavedSearch.objects.filter(pk=saved_search.pk).update(last_run_at=timezone.now())
-        else:
-            for saved_search in searches.iterator():
-                checkpoint()
-                latest = saved_search.runs.filter(search_type="current").first()
-                if latest is not None and latest.succeeded:
-                    notifications += evaluate_saved_search_alert_rules(latest)
 
-        watches = WatchItem.objects.filter(user__is_active=True, lifecycle_status="active")
-        sellers = SellerListing.objects.filter(user__is_active=True).exclude(
+        watches = WatchItem.objects.filter(user__isnull=False, lifecycle_status="active")
+        sellers = SellerListing.objects.filter(user__isnull=False).exclude(
             status__in=("sold", "cancelled")
         )
         if options["user_id"]:
             watches = watches.filter(user_id=options["user_id"])
             sellers = sellers.filter(user_id=options["user_id"])
-        if options["saved_search_id"]:
-            watches = watches.none()
-            sellers = sellers.none()
         for item in watches.iterator():
-            checkpoint()
             latest = item.price_snapshots.first()
             notifications += evaluate_watch_alert_rules(
                 item,
                 remaining_seconds=latest.remaining_seconds if latest else None,
             )
         for item in sellers.iterator():
-            checkpoint()
             notifications += evaluate_seller_alert_rules(item)
 
         self.stdout.write(
@@ -140,7 +97,3 @@ class Command(BaseCommand):
                 f"notifications_created={notifications}"
             )
         )
-        if failed:
-            raise CommandError(
-                f"Alert job completed with {failed} failed searches; inspect safe diagnostics"
-            )

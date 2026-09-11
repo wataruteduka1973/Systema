@@ -175,17 +175,6 @@ WSGI_APPLICATION = "System_Config.wsgi.application"
 
 DATABASES = build_database_config(BASE_DIR, os.environ)
 
-# Deployment selects a shared cache for rate counters across web workers.
-# Local development retains Django's in-process cache by default.
-if os.getenv("DJANGO_CACHE_BACKEND"):
-    CACHES = {
-        "default": {
-            "BACKEND": os.environ["DJANGO_CACHE_BACKEND"],
-            "LOCATION": os.getenv("DJANGO_CACHE_LOCATION", ""),
-            "KEY_PREFIX": "systema",
-        }
-    }
-
 # Password validation
 # https://docs.djangoproject.com/en/5.0/ref/settings/#auth-password-validators
 

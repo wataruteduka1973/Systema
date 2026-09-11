@@ -63,16 +63,6 @@ This project keeps the existing Django layout, but the scraper/parser boundary s
 
 ## Release expansion boundaries
 
-Phase 9 operational boundaries: `run_alerts` orchestrates work under a dedicated
-PostgreSQL session advisory lock (`Main/services/job_lock.py`) without holding a
-transaction across HTTP. The command's elapsed-time budget is cooperative; an
-external scheduler must enforce process termination. HTTP retry eligibility,
-response cleanup and request budgets remain in `Main/infrastructure/http.py`.
-Production rate counters require a shared cache selected through environment
-configuration. The read-only `check_release` command checks local prerequisites;
-remote deployment evidence remains separate in
-[Release readiness](features/release-readiness.md).
-
 Phase 8 monitoring validates bounded filters in `views/developer.py` and aggregates
 retained `SearchRun`/`ErrorLog` rows in `services/admin_monitoring.py`. Only fixed
 labels, counts, durations and timestamps reach the staff template. Raw logs and

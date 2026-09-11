@@ -39,16 +39,6 @@ coverage report
 
 ## E2E browser testing (pytest-playwright)
 
-Phase 9: `python manage.py verify --feature release` verifies deployment diagnostics,
-job locking/failure exits, HTTP retries and existing authorization contracts. Run
-this suite against PostgreSQL to exercise advisory locks. The separate
-`tests/e2e/test_release_workflow_browser.py` connects saved-search reruns, watch
-price notifications/dedupe, inventory, listing and confirmed profit through real
-session/CSRF APIs, then checks rendered notification and outcome pages. Yahoo
-retrieval uses deterministic observations. Run it with `DB_ENGINE=sqlite` and
-Chromium installed; `verify --full` includes it. These checks do not prove a live
-deployment or an external scheduler.
-
 E2Eテストは、起動済みのDjangoアプリケーションに対してPlaywright同期APIでブラウザー自動化を行う。
 通知画面（`/taskle/notifications`）とアラート条件画面（`/taskle/alerts`）の以下を検証する:
 
