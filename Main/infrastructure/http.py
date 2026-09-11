@@ -2,6 +2,7 @@
 
 import logging
 from collections.abc import Mapping
+from time import monotonic, sleep
 from urllib.parse import urlsplit
 
 import requests
@@ -25,13 +26,21 @@ def get_with_retry(
     *,
     max_retries: int = 3,
     timeout: int = 15,
+    total_timeout: int = 60,
 ) -> requests.Response:
     """GETを再試行し、最終失敗をドメイン固有例外へ変換する。"""
     _validate_external_url(url)
+    if max_retries < 1 or timeout < 1 or total_timeout < 1:
+        raise ValueError("HTTP attempt and timeout limits must be positive")
     parsed = urlsplit(url)
     safe_target = f"{parsed.hostname}{parsed.path}"
     last_error: requests.RequestException | None = None
+    deadline = monotonic() + total_timeout
     for attempt in range(1, max_retries + 1):
+        response = None
+        remaining = deadline - monotonic()
+        if remaining <= 0:
+            break
         try:
             logger.info(
                 "fetching external page attempt=%s/%s target=%s",
@@ -42,7 +51,7 @@ def get_with_retry(
             response = requests.get(
                 url,
                 headers=dict(headers),
-                timeout=timeout,
+                timeout=min(timeout, remaining),
                 allow_redirects=False,
                 stream=True,
             )
@@ -60,6 +69,8 @@ def get_with_retry(
                 raise ExternalServiceError("外部ページの応答サイズが上限を超えました")
             content = bytearray()
             for chunk in response.iter_content(chunk_size=64 * 1024):
+                if monotonic() >= deadline:
+                    raise ExternalServiceError("外部ページの取得時間が上限を超えました")
                 content.extend(chunk)
                 if len(content) > MAX_EXTERNAL_RESPONSE_BYTES:
                     response.close()
@@ -68,9 +79,20 @@ def get_with_retry(
             return response
         except requests.RequestException as exc:
             last_error = exc
+            retryable = isinstance(exc, (requests.Timeout, requests.ConnectionError)) or (
+                isinstance(exc, requests.HTTPError)
+                and response is not None
+                and (response.status_code == 429 or 500 <= response.status_code < 600)
+            )
+            if not retryable:
+                break
             if attempt < max_retries:
                 logger.warning(
                     "retrying external request attempt=%s target=%s", attempt, safe_target
                 )
+                sleep(max(0, min(2 ** (attempt - 1), deadline - monotonic())))
+        finally:
+            if response is not None:
+                response.close()
 
     raise ExternalServiceError("外部ページの取得に失敗しました") from last_error

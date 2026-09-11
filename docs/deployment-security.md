@@ -28,3 +28,8 @@ $env:DJANGO_BEHIND_HTTPS_PROXY = "true"
 ```powershell
 python manage.py check --deploy
 ```
+
+Phase 9の診断は `python manage.py check_release`。開発モードのまま実行すると
+意図的に不合格になります。診断の合格は本番接続・復元・運用の証明ではありません。
+共有キャッシュ、ジョブ排他、時間制限、バックアップ復元と公開条件は
+[Release readiness](features/release-readiness.md) を参照してください。

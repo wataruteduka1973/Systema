@@ -92,6 +92,8 @@ Phase 4D adds owner-scoped summary counts to the listing response: all listings,
 
 ## Phase 7A: Confirmed sale analysis
 
+Status: Phase 7's agreed minimum scope is complete (2026-09-10), with local integration and browser verification. Recommendations, forecast comparison and sale-duration analytics remain future Phase 7B work. Production verification belongs to Phase 9; local tests do not establish GitHub CI or production readiness.
+
 `/taskle/seller-outcomes` aggregates only the signed-in user's confirmed `SaleRecord` values. It shows all-time sales count, sale amount, total expenses, net profit, profitable/loss-making counts, category totals, and up to ten lowest-profit sales. Empty results are explicit; no projected values or recommendation are fabricated.
 
 At sale confirmation the linked inventory category is copied to `SaleRecord.category`. This keeps historical category totals stable when inventory is edited or deleted. Existing records are backfilled from an extant linked inventory during the Phase 7 migration; records without one remain `未分類`.

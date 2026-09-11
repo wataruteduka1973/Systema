@@ -177,16 +177,17 @@ Phase 0は後続機能の依存関係に沿って分割し、検索契約を先�
 
 **Status:** Implemented and locally verified on 2026-09-10: owner-scoped rule CRUD/UI, watch and saved-search buyer evaluation, new and within-budget candidate evidence with watch registration, five seller evaluations, cooldown/dedupe, and the `run_alerts` management command. `verify --feature alerts`, targeted mypy, Sphinx, JavaScript syntax checks, 291 non-E2E regression tests (one skipped), and 9 SQLite Playwright E2E tests passed. Scheduler connection and email outbox remain intentionally deferred until deployment and in-app stability. Production migration, PostgreSQL behavior, production browser behavior, scheduler, email, and GitHub CI remain **NOT VERIFIED**.
 
-### Phase 7: Seller intelligence and outcome learning
+### Phase 7: Confirmed sale analysis
 
-- 開始価格・即決価格・送料条件を変える利益シミュレーターを追加する。
-- 早期売却、標準、利益重視の推奨価格を提示する。
-- 相場差、入札推移、類似出品数から売れ残りリスクと改善理由を表示する。
-- 類似落札タイトルから重要語、状態、型番、付属品を抽出し、タイトル改善候補を提示する。
-- 曜日・時間帯別実績が十分な場合だけ終了日時候補を提示する。
-- 販売完了時の確定費用・利益の保存と、在庫/出品の次の作業表示はPhase 4で提供する。Phase 7Aでは想定値との差、販売日数、カテゴリ別利益の集計へ拡張する。
-- 高度な推奨や学習をPhase 7Bとする。7Bは販売実績の蓄積後に着手する。
-- 仕入れ時の買い時スコア・予測利益と販売実績をバックテストする。
+**Status:** Completed within the agreed minimum scope on 2026-09-10. Implementation and local integration/browser verification are complete. GitHub Actions and production DB/browser verification are NOT VERIFIED; production checks remain in Phase 9.
+
+- 既存の販売結果入力とサーバー側の確定利益計算を再利用する。
+- 販売実績分析画面に累計落札額、費用、純利益、販売件数、黒字・赤字件数を表示する。
+- カテゴリ別利益と、純利益が低い販売結果を最大10件表示する。
+- 所有者分離、空状態、販売確定時のカテゴリ固定を保証する。
+- 既存の出品・在庫管理と重複するシミュレーターは追加しない。
+
+**Future Phase 7B (deferred, not required for Phase 7 completion):** 販売実績蓄積後に推奨価格、売れ残りリスク、タイトル改善、終了日時候補、買い時スコア・予測利益のバックテストを再検討する。想定値との差と販売日数の分析も将来拡張として保持する。開始判断は件数だけでなくデータ品質と予測精度の検証に基づく。
 
 ### Phase 8: Administrator monitoring
 
@@ -198,6 +199,8 @@ Phase 0は後続機能の依存関係に沿って分割し、検索契約を先�
 - メール、セッションキー、Cookie、完全な検索語をログ・画面へ表示しない。
 
 ### Phase 9: Deployment release gate
+
+**Status:** Production preparation implemented on 2026-09-11. Deployment provider is undecided; the approved current scope is portable preparation and local verification. Release diagnostics, job overlap protection/runtime bounds, selective HTTP retries, and connected workflow regression coverage are implemented. Actual deployment remains gated by the [release evidence checklist](../features/release-readiness.md); HTTPS/proxy, shared cache, backup restore and scheduler evidence must be collected after provider selection. Historical search comparison remains deferred under Recommended Order.
 
 - `manage.py check --deploy`、環境変数、HTTPS/proxy、静的ファイル、DBバックアップ・復元を確認する。
 - ログイン・検索レート制限を実環境で検証する。

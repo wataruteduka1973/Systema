@@ -8,6 +8,16 @@ from pathlib import Path
 from django.core.management.base import BaseCommand, CommandError
 
 FEATURE_TESTS = {
+    "release": (
+        "tests/integration/test_release_gate.py",
+        "tests/integration/test_alert_job.py",
+        "tests/integration/test_alert_rules.py",
+        "tests/integration/test_notifications.py",
+        "tests/integration/test_auth.py",
+        "tests/integration/test_external_search_api.py",
+        "tests/unit/test_http_retry.py",
+        "tests/unit/test_external_search.py",
+    ),
     "admin-monitoring": (
         "tests/integration/test_admin_monitoring.py",
         "tests/integration/test_external_search_api.py",
@@ -95,6 +105,9 @@ FEATURE_TESTS = {
 }
 
 PATH_FEATURES = {
+    "Main/management/commands/check_release.py": "release",
+    "Main/services/job_lock.py": "release",
+    "Main/infrastructure/http.py": "release",
     "Main/services/admin_monitoring.py": "admin-monitoring",
     "Main/views/developer.py": "admin-monitoring",
     "Main/templates/developer/dashboard.html": "admin-monitoring",
@@ -108,7 +121,7 @@ PATH_FEATURES = {
     "Main/services/alert_rules.py": "alerts",
     "Main/static/JS/AlertRules.js": "alerts",
     "Main/templates/alert_rules.html": "alerts",
-    "Main/management/commands/run_alerts.py": "alerts",
+    "Main/management/commands/run_alerts.py": "release",
     "Main/models/notification.py": "notifications",
     "Main/services/notifications.py": "notifications",
     "Main/static/JS/Notifications.js": "notifications",
