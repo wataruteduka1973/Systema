@@ -13,6 +13,10 @@ class ExternalServiceError(ApplicationError):
     """外部サービスとの通信・応答エラーを表す。"""
 
 
+class SearchParseError(ExternalServiceError):
+    """取得済み検索ページの解析失敗。公開APIは従来の503を維持する。"""
+
+
 class SearchInputError(ApplicationError):
     """外部検索へ渡せない入力を表す。"""
 

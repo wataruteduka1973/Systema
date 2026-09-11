@@ -15,7 +15,7 @@ from Main.models.scraping import scraping
 from Main.models.searchrun import SearchRun
 from Main.models.searchwordlog import searchwordlog
 from Main.scraping.yahoo import YahooAuctionParser
-from Main.services.exceptions import ExternalServiceError
+from Main.services.exceptions import ExternalServiceError, SearchParseError
 from Main.services.external_search import normalize_search_keyword
 from Main.services.market_statistics import (
     analyze_market_prices,
@@ -24,11 +24,11 @@ from Main.services.market_statistics import (
 from Main.services.ownership import get_request_owner, owner_query
 from Main.services.search_criteria import SearchCriteria
 from Main.services.search_observability import (
-    FAILURE_EXTERNAL_SERVICE,
     FAILURE_INSUFFICIENT_DATA,
     FAILURE_NO_DATA,
     FAILURE_UNEXPECTED,
     SearchTimer,
+    external_failure_code,
 )
 from Main.services.time_series_analysis import (
     analyze_snapshot_history,
@@ -139,7 +139,7 @@ def scrape_data(searchname):
             html = response.text
             items = _extract_listing_items(html)
             if not items:
-                logger.warning(f"No Yahoo item data extracted from {url}")
+                logger.warning("No Yahoo item data extracted")
                 continue
 
             for item in items:
@@ -156,12 +156,14 @@ def scrape_data(searchname):
                         }
                     )
 
+        except SearchParseError:
+            raise
         except ExternalServiceError:
             logger.exception("Yahoo終了商品ページの取得に失敗しました")
             continue
         except Exception:
             logger.exception("Yahoo終了商品ページの解析に失敗しました")
-            continue
+            raise SearchParseError("検索ページを解析できませんでした") from None
 
     if successful_pages == 0:
         raise ExternalServiceError(EXTERNAL_SERVICE_MESSAGE)
@@ -212,12 +214,14 @@ def scrape_current_listings(searchname):
                     }
                 )
 
+        except SearchParseError:
+            raise
         except ExternalServiceError:
             logger.exception("Yahoo出品中ページの取得に失敗しました")
             continue
         except Exception:
             logger.exception("Yahoo出品中ページの解析に失敗しました")
-            continue
+            raise SearchParseError("検索ページを解析できませんでした") from None
 
     if successful_pages == 0:
         raise ExternalServiceError(EXTERNAL_SERVICE_MESSAGE)
@@ -291,7 +295,7 @@ def save_to_database(searchname, scraped_data_list, search_run=None):
                 URL=scraped_data.get("url", "#"),
             )
         except Exception:
-            logger.exception("相場データの保存に失敗しました keyword=%s", searchname)
+            logger.exception("相場データの保存に失敗しました")
 
     if search_run is not None:
         owner = {"user": search_run.user, "session_key": search_run.session_key}
@@ -390,7 +394,7 @@ def update_market_data_logic(request, criteria=None):
         save_to_database(searchname, scraped_data_list, run)
         update_search_run_observability(run, duration_ms=timer.elapsed_ms())
         return JsonResponse({"message": "相場データを更新しました"})
-    except ExternalServiceError:
+    except ExternalServiceError as error:
         logger.exception("Market data update failed")
         if run is None:
             record_search_run(
@@ -401,14 +405,14 @@ def update_market_data_logic(request, criteria=None):
                 succeeded=False,
                 criteria_snapshot=criteria.snapshot(),
                 duration_ms=timer.elapsed_ms(),
-                failure_code=FAILURE_EXTERNAL_SERVICE,
+                failure_code=external_failure_code(error),
             )
         else:
             update_search_run_observability(
                 run,
                 duration_ms=timer.elapsed_ms(),
                 succeeded=False,
-                failure_code=FAILURE_EXTERNAL_SERVICE,
+                failure_code=external_failure_code(error),
             )
         return JsonResponse(
             {"error": EXTERNAL_SERVICE_MESSAGE, "code": "external_service_unavailable"},
@@ -595,7 +599,7 @@ def complex_market_data_logic(request, criteria=None):
         current_run.save(update_fields=("result_snapshot",))
         update_search_run_observability(current_run, duration_ms=active_timer.elapsed_ms())
         return JsonResponse(response_data)
-    except ExternalServiceError:
+    except ExternalServiceError as error:
         logger.exception("Complex market search failed")
         if active_run is None:
             record_search_run(
@@ -607,14 +611,14 @@ def complex_market_data_logic(request, criteria=None):
                 record_word=active_search_type == SearchRun.CLOSED,
                 criteria_snapshot=criteria.snapshot(),
                 duration_ms=active_timer.elapsed_ms(),
-                failure_code=FAILURE_EXTERNAL_SERVICE,
+                failure_code=external_failure_code(error),
             )
         else:
             update_search_run_observability(
                 active_run,
                 duration_ms=active_timer.elapsed_ms(),
                 succeeded=False,
-                failure_code=FAILURE_EXTERNAL_SERVICE,
+                failure_code=external_failure_code(error),
             )
         return JsonResponse(
             {"error": EXTERNAL_SERVICE_MESSAGE, "code": "external_service_unavailable"},
@@ -688,7 +692,7 @@ def prediction_market_logic(request, criteria=None):
         update_search_run_observability(run, duration_ms=timer.elapsed_ms())
         return JsonResponse({"keyword": searchname, **prediction})
 
-    except ExternalServiceError:
+    except ExternalServiceError as error:
         logger.exception("Prediction market search failed")
         if run is None:
             record_search_run(
@@ -699,14 +703,14 @@ def prediction_market_logic(request, criteria=None):
                 succeeded=False,
                 criteria_snapshot=criteria.snapshot(),
                 duration_ms=timer.elapsed_ms(),
-                failure_code=FAILURE_EXTERNAL_SERVICE,
+                failure_code=external_failure_code(error),
             )
         else:
             update_search_run_observability(
                 run,
                 duration_ms=timer.elapsed_ms(),
                 succeeded=False,
-                failure_code=FAILURE_EXTERNAL_SERVICE,
+                failure_code=external_failure_code(error),
             )
         return JsonResponse(
             {"error": EXTERNAL_SERVICE_MESSAGE, "code": "external_service_unavailable"},

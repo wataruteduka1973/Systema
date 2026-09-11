@@ -16,6 +16,13 @@ class RedactSensitiveDataFilter(logging.Filter):
 
     def filter(self, record: logging.LogRecord) -> bool:
         message = record.getMessage()
+        # Headers and labelled secrets may contain spaces, commas and semicolons.
+        message = re.sub(
+            r"(?im)\b(cookie|set-cookie|authorization|session[_-]?key|sessionid|keyword)\s*[:=].*$",
+            r"\1=[REDACTED]",
+            message,
+        )
+        message = re.sub(r"[\w.+-]+@[\w.-]+\.[A-Za-z]{2,}", "[REDACTED]", message)
         for pattern in self._patterns:
             if pattern.groups == 3:
                 message = pattern.sub(r"\1\2[REDACTED]", message)
@@ -26,7 +33,8 @@ class RedactSensitiveDataFilter(logging.Filter):
             exception_name = exception_type.__name__ if exception_type else "Exception"
             message = f"{message} exception={exception_name}"
             record.exc_info = None
-            record.exc_text = None
+        record.exc_text = None
+        record.stack_info = None
         record.msg = message
         record.args = ()
         return True

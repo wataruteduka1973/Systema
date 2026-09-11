@@ -16,6 +16,11 @@ python manage.py verify
 python manage.py verify --feature market-search
 ```
 
+Phase 8: `python manage.py verify --feature admin-monitoring` includes the staff
+dashboard browser workflow. If Windows/OneDrive denies reuse of the default temp
+directory, pass `--basetemp=C:/tmp/systema-phase8-verify` (a dedicated disposable
+test directory). This option changes only pytest's temporary directory.
+
 `verify`は成功時に各検査の要約だけを表示し、失敗時に限り末尾40行を表示する。
 通常実行と機能単位実行では`slow`を除外する。
 

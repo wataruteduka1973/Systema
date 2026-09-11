@@ -278,6 +278,12 @@ Unique `(user, dedupe_key)`。同じ条件が再通知可能な場合、dedupe k
 
 ### OperationalEvent
 
+Future design, deferred from Phase 8: the accepted monitoring scope aggregates
+existing `SearchRun` and `ErrorLog` rows. No OperationalEvent table or migration is
+introduced. See `docs/features/admin-monitoring.md` for retained-record limits and
+the safe dashboard severity mapping. `SearchRun.failure_code` additionally accepts
+`html_parse_error`; existing values and column definitions remain unchanged.
+
 - event_type、severity、failure_code、duration_ms、status_code
 - actor_type: user/anonymous/system（user FKは必要時のみnullable）
 - request_id、occurred_at

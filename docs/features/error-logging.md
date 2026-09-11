@@ -50,6 +50,11 @@ browser reproduction remains a separate diagnostic step.
 
 ## Related Files
 
+The staff dashboard uses the safe aggregate contract in
+`docs/features/admin-monitoring.md`; it no longer reads file tails or displays raw
+legacy error messages. Source search logs omit keywords; the shared filter also
+removes email/session/header values and preformatted exception/stack text.
+
 - `Main/middleware/error_logging_middleware.py`
 - `Main/logging_filters.py`
 - `Main/services/error_logging.py`

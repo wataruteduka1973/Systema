@@ -3,28 +3,52 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>開発者ダッシュボード | Systema</title>
+    <title>管理者モニタリング | Systema</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
-    <style>pre { max-height: 24rem; overflow: auto; white-space: pre-wrap; }</style>
 </head>
 <body class="bg-light">
     {% include 'header.html' %}
-    <main class="container-fluid py-4 px-lg-5">
-        <div class="d-flex justify-content-between align-items-center mb-4">
-            <div><h1 class="h2 mb-1">開発者ダッシュボード</h1><p class="text-muted mb-0">データベースとログの状態を確認できます。</p></div>
-            <a class="btn btn-outline-primary" href="{% url 'admin:index' %}">Django管理画面</a>
+    <main class="container py-4">
+        <div class="d-flex flex-wrap justify-content-between gap-2 mb-4">
+            <div><h1 class="h2">管理者モニタリング</h1><p class="text-muted">検索の稼働状況と、対応が必要なデータを確認できます。</p></div>
+            <a class="btn btn-outline-primary align-self-start" href="{% url 'admin:index' %}">Django管理画面</a>
         </div>
-        <div class="row row-cols-2 row-cols-md-4 g-3 mb-4">
-            <div class="col"><div class="card h-100"><div class="card-body"><div class="text-muted">ユーザー</div><div class="fs-3">{{ user_count }}</div><small>有効 {{ active_user_count }} / staff {{ staff_count }}</small></div></div></div>
-            <div class="col"><div class="card h-100"><div class="card-body"><div class="text-muted">相場データ</div><div class="fs-3">{{ market_data_count }}</div><small>検索実行 {{ search_run_count }} / ワード記録 {{ search_log_count }}</small></div></div></div>
-            <div class="col"><div class="card h-100"><div class="card-body"><div class="text-muted">ウォッチ商品</div><div class="fs-3">{{ watch_count }}</div><small>旧データ未割当 {{ legacy_watch_count }}</small></div></div></div>
-            <div class="col"><div class="card h-100"><div class="card-body"><div class="text-muted">DBエラー記録</div><div class="fs-3">{{ error_count }}</div></div></div></div>
+        <form method="get" class="card card-body mb-4" aria-label="監視フィルター">
+            {% if filter_form.errors %}<p role="alert" class="text-danger">フィルターの値が不正です。選択肢から選び直してください。</p>{% endif %}
+            <div class="d-flex flex-wrap gap-3 align-items-end">
+                {% for field in filter_form %}<div><label for="{{ field.id_for_label }}" class="d-block fw-bold mb-1">{{ field.label }}</label>{{ field }}</div>{% endfor %}
+                <button class="btn btn-primary" type="submit">適用</button>
+                <a href="{% url 'developer_dashboard' %}" class="btn btn-outline-secondary">リセット</a>
+            </div>
+            <small class="text-muted mt-2">期間は検索とエラーに適用。レベル・種別はエラーだけに適用します。</small>
+        </form>
+        {% if aggregate_error %}<p role="alert" class="alert alert-warning">監視データを読み込めませんでした。時間をおいて再度「適用」を押してください。</p>{% endif %}
+        {% if not filter_form.errors and not aggregate_error %}
+        <p class="small text-muted">{{ cutoff|date:'Y-m-d H:i' }} ～ {{ generated_at|date:'Y-m-d H:i' }}（日本時間）・保存されている記録の集計です。削除済み履歴は含みません。</p>
+        <section aria-label="検索の稼働状況" class="row g-3 mb-4" id="monitoringSummary">
+            <div class="col-6 col-lg-3"><div class="card card-body h-100"><h2 class="h6">検索成功率</h2><strong class="fs-3">{% if totals.success_rate != None %}{{ totals.success_rate }}%{% else %}—{% endif %}</strong><small>成功 {{ totals.successful }} / 全 {{ totals.total }} 件</small></div></div>
+            <div class="col-6 col-lg-3"><div class="card card-body h-100"><h2 class="h6">平均実行時間</h2><strong class="fs-3">{{ totals.average_ms|floatformat:0|default:'—' }}</strong><small>ms / 計測済み {{ totals.timed }} 件</small></div></div>
+            <div class="col-6 col-lg-3"><div class="card card-body h-100"><h2 class="h6">最大実行時間</h2><strong class="fs-3">{{ totals.maximum_ms|default_if_none:'—' }}</strong><small>ms</small></div></div>
+            <div class="col-6 col-lg-3"><div class="card card-body h-100"><h2 class="h6">エラー記録</h2><strong class="fs-3">{{ error_count }}</strong><small>選択中の条件に一致</small></div></div>
+        </section>
+        <p class="small text-muted">成功率は保存された succeeded の真偽で計算します。結果ゼロでも正常終了なら成功です。実行時間は未計測を除外します。</p>
+        <div class="row g-3 mb-4">
+            <section class="col-md-4"><div class="card card-body h-100"><h2 class="h5">失敗分類</h2>{% for row in failures %}<p>{{ row.label }} <strong>{{ row.count }} 件</strong></p>{% empty %}<p>失敗記録はありません。</p>{% endfor %}</div></section>
+            <section class="col-md-4"><div class="card card-body h-100"><h2 class="h5">実行主体</h2>{% for row in actors %}<p>{{ row.label }} <strong>{{ row.count }} 件</strong></p>{% empty %}<p>検索記録はありません。</p>{% endfor %}</div></section>
+            <section class="col-md-4"><div class="card card-body h-100"><h2 class="h5">実行契機</h2>{% for row in triggers %}<p>{{ row.label }} <strong>{{ row.count }} 件</strong></p>{% empty %}<p>検索記録はありません。</p>{% endfor %}</div></section>
         </div>
-        <div class="row g-4 mb-4">
-            <section class="col-lg-6"><div class="card h-100"><div class="card-header fw-bold">最近のユーザー</div><div class="table-responsive"><table class="table table-sm mb-0"><thead><tr><th>ユーザー名</th><th>登録日時</th><th>権限</th></tr></thead><tbody>{% for item in recent_users %}<tr><td>{{ item.username }}</td><td>{{ item.date_joined|date:'Y-m-d H:i' }}</td><td>{% if item.is_superuser %}管理者{% elif item.is_staff %}staff{% else %}一般{% endif %}</td></tr>{% empty %}<tr><td colspan="3">ユーザーはいません。</td></tr>{% endfor %}</tbody></table></div></div></section>
-            <section class="col-lg-6"><div class="card h-100"><div class="card-header fw-bold">最近のエラー</div><div class="table-responsive"><table class="table table-sm mb-0"><thead><tr><th>日時</th><th>コード</th><th>内容</th></tr></thead><tbody>{% for item in recent_errors %}<tr><td>{{ item.timestamp|date:'Y-m-d H:i' }}</td><td>{{ item.error_code }}</td><td>{{ item.error_message|truncatechars:80 }}</td></tr>{% empty %}<tr><td colspan="3">記録はありません。</td></tr>{% endfor %}</tbody></table></div></div></section>
+        <section class="card card-body mb-4" aria-label="過剰検索">
+            <h2 class="h5">検索集中の注意</h2>
+            <p>直近1時間で60記録以上：ログイン利用者 <strong>{{ high_users }}</strong> / 匿名セッション <strong>{{ high_sessions }}</strong></p>
+            <p class="small text-muted mb-0">件数は SearchRun 単位（複合検索は複数記録）。利用者の特定や自動停止は行いません。所有者なし記録は判定対象外です。</p>
+        </section>
+        <div class="row g-3 mb-4">
+            <section class="col-lg-5"><div class="card card-body h-100"><h2 class="h5">日次エラー</h2><table class="table"><thead><tr><th scope="col">日付（日本時間）</th><th scope="col">件数</th></tr></thead><tbody>{% for row in daily_errors %}<tr><td>{{ row.day|date:'Y-m-d' }}</td><td>{{ row.count }}</td></tr>{% empty %}<tr><td colspan="2">エラー記録はありません。</td></tr>{% endfor %}</tbody></table></div></section>
+            <section class="col-lg-7"><div class="card card-body h-100"><h2 class="h5">直近エラー（最大20件）</h2><div class="table-responsive"><table class="table"><thead><tr><th scope="col">日時</th><th scope="col">種別</th><th scope="col">レベル</th></tr></thead><tbody>{% for row in recent_errors %}<tr><td>{{ row.timestamp|date:'m-d H:i' }}</td><td>{{ row.kind }}</td><td>{{ row.level }}</td></tr>{% empty %}<tr><td colspan="3">エラー記録はありません。</td></tr>{% endfor %}</tbody></table></div></div></section>
         </div>
-        <section><h2 class="h4">ログファイル</h2><div class="accordion" id="logs">{% for name, lines in logs.items %}<div class="accordion-item"><h3 class="accordion-header" id="heading{{ forloop.counter }}"><button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#log{{ forloop.counter }}">{{ name }}</button></h3><div id="log{{ forloop.counter }}" class="accordion-collapse collapse" data-bs-parent="#logs"><div class="accordion-body"><pre class="bg-dark text-light p-3 rounded">{% for line in lines %}{{ line }}{% empty %}ログはありません。{% endfor %}</pre></div></div></div>{% endfor %}</div></section>
+        <section class="card card-body mb-4"><h2 class="h5">所有者なしデータ（全期間）</h2><p>検索 {{ unowned_runs }} 件 / ウォッチ {{ unowned_watches }} 件 / 商品 {{ unowned_items }} 件</p><p class="small text-muted mb-0">ユーザーとセッションの両方がない記録、または検索記録に紐づかない商品。正常な匿名セッションの記録は除外します。</p></section>
+        <section class="card card-body"><h2 class="h5">DB保存件数（全期間）</h2><p class="small text-muted">Systemaのモデル別件数です。ディスク使用容量ではありません。</p><table class="table"><thead><tr><th scope="col">データ</th><th scope="col">件数</th></tr></thead><tbody>{% for row in inventory %}<tr><td>{{ row.label }}</td><td>{{ row.count }}</td></tr>{% endfor %}</tbody></table></section>
+        {% endif %}
     </main>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
 </body>

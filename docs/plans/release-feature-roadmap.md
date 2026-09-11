@@ -190,6 +190,8 @@ Phase 0は後続機能の依存関係に沿って分割し、検索契約を先�
 
 ### Phase 8: Administrator monitoring
 
+**Status:** Completed and locally verified on 2026-09-11. The staff-only monitoring dashboard now provides bounded search success/duration, safe failure, actor/trigger, daily error, retained DB volume, unowned-data and search-concentration aggregates. Yahoo fetch and HTML parsing failures are separated internally while the public 503 contract remains compatible. `verify --feature admin-monitoring`, the full verification suite, mypy, migration drift check, Sphinx build, and desktop/mobile SQLite Playwright E2E passed. Production PostgreSQL behavior, production browser behavior, deployment settings and GitHub CI remain **NOT VERIFIED** and belong to Phase 9.
+
 - 既存管理画面に検索成功率、失敗分類、実行時間、主体別件数、日次エラー、DB量、所有者なしデータ、過剰検索を追加する。
 - Yahoo取得失敗とHTML解析失敗を`failure_code`で分離する。
 - DB上の構造化情報を優先し、安全な期間・レベル・種別フィルターを付ける。

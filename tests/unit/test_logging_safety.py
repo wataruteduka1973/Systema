@@ -48,3 +48,28 @@ def test_management_command_failure_logs_no_arguments(monkeypatch):
         "run_alerts",
         "RuntimeError",
     )
+
+
+@pytest.mark.parametrize(
+    "text",
+    [
+        "email=person@example.test",
+        "session_key=private-session",
+        "Cookie: first=private-one; second=private-two",
+        "Authorization: Bearer private-token",
+        "keyword=private, query; rest",
+    ],
+)
+def test_monitoring_sensitive_log_values_are_redacted(text):
+    message, _ = filtered_message(text)
+    assert "private" not in message
+    assert "person@example.test" not in message
+
+
+def test_preformatted_traceback_and_stack_are_removed():
+    record = logging.LogRecord("test", logging.ERROR, __file__, 1, "safe", (), None)
+    record.exc_text = "private exception"
+    record.stack_info = "private stack"
+    RedactSensitiveDataFilter().filter(record)
+    assert record.exc_text is None
+    assert record.stack_info is None

@@ -63,9 +63,9 @@ from Main.services.saved_searches import (
 )
 from Main.services.search_criteria import SearchCriteria
 from Main.services.search_observability import (
-    FAILURE_EXTERNAL_SERVICE,
     FAILURE_UNEXPECTED,
     SearchTimer,
+    external_failure_code,
 )
 from Main.services.seller_listings import (
     ListingConflictError,
@@ -185,7 +185,7 @@ def handle_search_response(
 
     try:
         scraped_data_list = criteria.apply(data_fetch_func(searchname))
-        logger.info(f"Scraped {len(scraped_data_list)} items for keyword: {searchname}")
+        logger.info("Scraped items count=%s", len(scraped_data_list))
         search_run = record_search_run(
             request,
             searchname,
@@ -196,7 +196,7 @@ def handle_search_response(
         )
         if save_func:
             save_func(searchname, scraped_data_list, search_run)
-            logger.info(f"Data saved to database for keyword: {searchname}")
+            logger.info("Search data saved to database")
         response_data = {"data": scraped_data_list}
         if include_condition_analysis:
             enriched_items = enrich_market_items(scraped_data_list)
@@ -211,7 +211,7 @@ def handle_search_response(
             }
         update_search_run_observability(search_run, duration_ms=timer.elapsed_ms())
         return JsonResponse(response_data)
-    except ExternalServiceError:
+    except ExternalServiceError as error:
         logger.exception("External search failed")
         if search_run is None:
             record_search_run(
@@ -222,14 +222,14 @@ def handle_search_response(
                 succeeded=False,
                 criteria_snapshot=criteria.snapshot(),
                 duration_ms=timer.elapsed_ms(),
-                failure_code=FAILURE_EXTERNAL_SERVICE,
+                failure_code=external_failure_code(error),
             )
         else:
             update_search_run_observability(
                 search_run,
                 duration_ms=timer.elapsed_ms(),
                 succeeded=False,
-                failure_code=FAILURE_EXTERNAL_SERVICE,
+                failure_code=external_failure_code(error),
             )
         return JsonResponse(
             {"error": EXTERNAL_SERVICE_MESSAGE, "code": "external_service_unavailable"},

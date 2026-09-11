@@ -6,6 +6,8 @@ from typing import Any
 from bs4 import BeautifulSoup
 from bs4.element import Tag
 
+from Main.services.exceptions import SearchParseError
+
 
 class YahooAuctionParser:
     @staticmethod
@@ -122,6 +124,8 @@ class YahooAuctionParser:
         if not html:
             return []
 
+        malformed_payload = False
+
         match = re.search(
             r'<script[^>]*id=["\']__NEXT_DATA__["\'][^>]*>(.*?)</script>', html, re.S | re.I
         )
@@ -132,7 +136,7 @@ class YahooAuctionParser:
                 if items:
                     return items
             except (TypeError, ValueError, json.JSONDecodeError):
-                pass
+                malformed_payload = True
 
         soup = BeautifulSoup(html, "html.parser")
         extracted = []
@@ -231,6 +235,8 @@ class YahooAuctionParser:
                         },
                     )
                 extracted.append(data)
+            if not extracted and malformed_payload:
+                raise SearchParseError("検索ページの構造化データを解析できませんでした")
             return extracted
 
         for card in soup.select("article, li, div, tr"):
@@ -298,6 +304,8 @@ class YahooAuctionParser:
                 data["url"] = href
             extracted.append(data)
 
+        if not extracted and malformed_payload:
+            raise SearchParseError("検索ページの構造化データを解析できませんでした")
         return extracted
 
     @staticmethod

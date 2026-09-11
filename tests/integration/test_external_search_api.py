@@ -198,3 +198,33 @@ def test_prediction_records_no_data_as_safe_failure(monkeypatch):
     assert run.succeeded is False
     assert run.failure_code == "no_data"
     assert run.duration_ms is not None
+
+
+@pytest.mark.parametrize(
+    "handler",
+    [
+        api.perform_search,
+        utils.update_market_data_logic,
+        utils.complex_market_data_logic,
+        utils.prediction_market_logic,
+    ],
+)
+def test_parse_failure_keeps_public_503_and_records_distinct_code(monkeypatch, handler):
+    from Main.services.exceptions import SearchParseError
+
+    def fail(keyword):
+        raise SearchParseError("private parser detail")
+
+    cache.clear()
+    monkeypatch.setattr(api, "scrape_data", fail)
+    monkeypatch.setattr(utils, "scrape_data", fail)
+    request = RequestFactory().get("/taskle/search", {"keyword": "カメラ"})
+    if handler is utils.update_market_data_logic:
+        request = RequestFactory().post("/taskle/search?keyword=カメラ")
+    response = handler(request)
+    assert response.status_code == 503
+    assert json.loads(response.content)["code"] == "external_service_unavailable"
+    run = SearchRun.objects.get()
+    assert not run.succeeded
+    assert run.failure_code == "html_parse_error"
+    assert "private parser detail" not in response.content.decode()

@@ -78,3 +78,35 @@ def test_http_client_does_not_follow_redirects(monkeypatch):
 
     with pytest.raises(ExternalServiceError):
         get_with_retry("https://auctions.yahoo.co.jp/search/search", headers={})
+
+
+@pytest.mark.parametrize("scrape", [utils.scrape_data, utils.scrape_current_listings])
+def test_malformed_search_fixture_is_not_reported_as_success(monkeypatch, scrape):
+    from pathlib import Path
+
+    from Main.services.exceptions import SearchParseError
+
+    fixture = Path(__file__).resolve().parents[1] / "fixtures/yahoo/search_malformed_payload.html"
+    monkeypatch.setattr(
+        utils,
+        "_request_with_retry",
+        lambda *args, **kwargs: SimpleNamespace(text=fixture.read_text(encoding="utf-8")),
+    )
+    with pytest.raises(SearchParseError):
+        scrape("private-query")
+
+
+@pytest.mark.parametrize("scrape", [utils.scrape_data, utils.scrape_current_listings])
+def test_parser_exception_is_not_swallowed(monkeypatch, scrape):
+    from Main.services.exceptions import SearchParseError
+
+    monkeypatch.setattr(
+        utils, "_request_with_retry", lambda *args, **kwargs: SimpleNamespace(text="html")
+    )
+
+    def fail(html):
+        raise ValueError("private-query")
+
+    monkeypatch.setattr(utils, "_extract_listing_items", fail)
+    with pytest.raises(SearchParseError):
+        scrape("private-query")

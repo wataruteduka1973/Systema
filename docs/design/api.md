@@ -283,6 +283,14 @@ Create requires exactly one of `savedSearchId`, `watchItemId`, or `sellerListing
 
 ### 6.8 Staff monitoring
 
+Phase 8 uses the existing staff-only HTML `GET /taskle/developer/` with bounded
+`days=1|7|30`, `level=warning|error` and `kind=http|browser|other` query filters
+(level and kind may be empty). Invalid choices return 400; aggregation failure
+returns a safe retry page with 503. The JSON endpoints below remain future design,
+not implemented routes. See `docs/features/admin-monitoring.md`.
+Search APIs preserve their existing external 503 payload; internal SearchRun
+classification additionally distinguishes `html_parse_error`.
+
 | Method | Path | Purpose |
 |---|---|---|
 | GET | `/api/v1/admin/metrics` | 成功率、失敗分類、実行時間、DB量 |

@@ -107,7 +107,7 @@ class TestAuthentication:
         client.force_login(staff)
         allowed = client.get(reverse("developer_dashboard"))
         assert allowed.status_code == 200
-        assert "開発者ダッシュボード" in allowed.content.decode("utf-8")
+        assert "管理者モニタリング" in allowed.content.decode("utf-8")
 
     def test_watchlist_supports_anonymous_sessions_and_is_isolated_by_user(self, client):
         endpoint = reverse("watchlist")

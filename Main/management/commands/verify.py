@@ -8,6 +8,15 @@ from pathlib import Path
 from django.core.management.base import BaseCommand, CommandError
 
 FEATURE_TESTS = {
+    "admin-monitoring": (
+        "tests/integration/test_admin_monitoring.py",
+        "tests/integration/test_external_search_api.py",
+        "tests/integration/test_auth.py",
+        "tests/unit/test_external_search.py",
+        "tests/unit/test_yahoo_parser.py",
+        "tests/unit/test_logging_safety.py",
+        "tests/e2e/test_admin_monitoring_browser.py",
+    ),
     "error-logging": (
         "tests/unit/test_logging_safety.py",
         "tests/integration/test_error_logging.py",
@@ -86,6 +95,9 @@ FEATURE_TESTS = {
 }
 
 PATH_FEATURES = {
+    "Main/services/admin_monitoring.py": "admin-monitoring",
+    "Main/views/developer.py": "admin-monitoring",
+    "Main/templates/developer/dashboard.html": "admin-monitoring",
     "Main/logging_filters.py": "error-logging",
     "Main/middleware/error_logging_middleware.py": "error-logging",
     "Main/services/error_logging.py": "error-logging",
@@ -157,6 +169,7 @@ class Command(BaseCommand):
     help = "Run concise, scope-aware project verification."
 
     def add_arguments(self, parser):
+        parser.add_argument("--basetemp", default=".verify-pytest-tmp")
         group = parser.add_mutually_exclusive_group()
         group.add_argument("--feature", choices=sorted(FEATURE_TESTS))
         group.add_argument("--full", action="store_true")
@@ -188,7 +201,7 @@ class Command(BaseCommand):
                 "-q",
                 "--maxfail=1",
                 "--disable-warnings",
-                "--basetemp=.verify-pytest-tmp",
+                f"--basetemp={options['basetemp']}",
             ]
             if not include_slow:
                 pytest_command.extend(("-m", "not slow"))
