@@ -128,6 +128,7 @@ PATH_FEATURES = {
     "Main/static/JS/SellerListings.js": "seller-management",
     "Main/services/search_criteria.py": "market-search",
     "Main/services/search_observability.py": "market-search",
+    "Main/services/search_persistence.py": "market-search",
     "Main/views/api.py": "market-search",
     "Main/views/utils.py": "market-search",
     "Main/static/JS/MarketSearch.js": "market-search",

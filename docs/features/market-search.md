@@ -13,6 +13,10 @@ Search closed auctions, current listings, or saved snapshots through one screen.
 - Applied criteria are stored on `SearchRun.criteria_snapshot`; UI-only interpretation is not authoritative.
 - Each completed attempt stores `SearchRun.duration_ms`. Failed attempts use only the privacy-safe codes
   `external_service_unavailable`, `unexpected_error`, `no_data`, or `insufficient_data`; exception details are not stored.
+- A successful search persists its `SearchRun`, legacy item rows, optional search-word entry, and
+  history retention in one transaction. Item rows are validated before the write and inserted in
+  one bounded batch. If item persistence fails, no successful run or partial item rows remain; the
+  existing API error contract records a separate failed run.
 
 ## Boundaries
 
@@ -27,8 +31,10 @@ Search closed auctions, current listings, or saved snapshots through one screen.
 - `Main/views/urls.py`
 - `Main/views/api.py`
 - `Main/views/utils.py`
+- `Main/services/search_persistence.py`
 - `tests/integration/test_market_search.py`
 - `tests/integration/test_api.py`
+- `tests/integration/test_search_persistence.py`
 
 ## Verification
 

@@ -94,6 +94,7 @@ from .utils import (
     get_market_data_logic,
     get_popular_words_logic,
     get_search_words_logic,
+    persist_search_results,
     prediction_market_logic,
     record_search_run,
     save_to_database,
@@ -186,17 +187,25 @@ def handle_search_response(
     try:
         scraped_data_list = criteria.apply(data_fetch_func(searchname))
         logger.info("Scraped items count=%s", len(scraped_data_list))
-        search_run = record_search_run(
-            request,
-            searchname,
-            search_type,
-            len(scraped_data_list),
-            criteria_snapshot=criteria.snapshot(),
-            duration_ms=timer.elapsed_ms(),
-        )
         if save_func:
-            save_func(searchname, scraped_data_list, search_run)
+            search_run = persist_search_results(
+                request,
+                searchname,
+                search_type,
+                scraped_data_list,
+                criteria_snapshot=criteria.snapshot(),
+                duration_ms=timer.elapsed_ms(),
+            )
             logger.info("Search data saved to database")
+        else:
+            search_run = record_search_run(
+                request,
+                searchname,
+                search_type,
+                len(scraped_data_list),
+                criteria_snapshot=criteria.snapshot(),
+                duration_ms=timer.elapsed_ms(),
+            )
         response_data = {"data": scraped_data_list}
         if include_condition_analysis:
             enriched_items = enrich_market_items(scraped_data_list)

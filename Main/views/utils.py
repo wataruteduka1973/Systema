@@ -30,6 +30,10 @@ from Main.services.search_observability import (
     SearchTimer,
     external_failure_code,
 )
+from Main.services.search_persistence import (
+    persist_successful_search,
+    replace_items_for_existing_run,
+)
 from Main.services.time_series_analysis import (
     analyze_snapshot_history,
     analyze_stored_market,
@@ -276,37 +280,46 @@ def update_search_run_observability(run, *, duration_ms, succeeded=True, failure
 
 
 def save_to_database(searchname, scraped_data_list, search_run=None):
-    """
-    スクレイピングされたデータをデータベースに保存する。
-    """
-    now_time = datetime.now()
-    SearchDay = now_time.strftime("%Y-%m-%d %H:%M:%S")
+    """後方互換のため公開名を維持し、保存サービスへ委譲する。"""
+    if search_run is None:
+        raise ValueError("search_run is required")
+    replace_items_for_existing_run(searchname, scraped_data_list, search_run)
 
-    for scraped_data in scraped_data_list:
-        try:
-            scraping.objects.create(
-                search_run=search_run,
-                SearchWord=searchname,
-                SearchDay=SearchDay,
-                Name=scraped_data["name"],
-                EndPrice=scraped_data.get("price", scraped_data.get("currentPrice", 0)),
-                StartPrice=scraped_data.get("startPrice", scraped_data.get("currentPrice", 0)),
-                Bidding=scraped_data.get("bidding", 0),
-                URL=scraped_data.get("url", "#"),
-            )
-        except Exception:
-            logger.exception("相場データの保存に失敗しました")
 
-    if search_run is not None:
-        owner = {"user": search_run.user, "session_key": search_run.session_key}
-        retained_ids = list(
-            SearchRun.objects.filter(
-                **owner, keyword=searchname, search_type=search_run.search_type
-            ).values_list("id", flat=True)[:50]
-        )
-        SearchRun.objects.filter(
-            **owner, keyword=searchname, search_type=search_run.search_type
-        ).exclude(pk__in=retained_ids).delete()
+def persist_search_results(
+    request,
+    searchname,
+    search_type,
+    items,
+    *,
+    record_word=True,
+    criteria_snapshot=None,
+    trigger="manual",
+    duration_ms=None,
+    saved_search=None,
+):
+    """HTTP情報を所有者へ変換し、成功した検索全体を原子的に保存する。"""
+    owner = get_request_owner(request)
+    saved_search = saved_search or getattr(request, "saved_search", None)
+    if trigger == "manual":
+        trigger = getattr(request, "search_trigger", trigger)
+    run = persist_successful_search(
+        owner=owner,
+        keyword=searchname,
+        search_type=search_type,
+        items=items,
+        record_word=record_word,
+        criteria_snapshot=criteria_snapshot,
+        trigger=trigger,
+        duration_ms=duration_ms,
+        saved_search=saved_search,
+    )
+    recorded_runs = getattr(request, "recorded_search_runs", None)
+    if recorded_runs is None:
+        recorded_runs = []
+        request.recorded_search_runs = recorded_runs
+    recorded_runs.append(run)
+    return run
 
 
 def get_search_words_logic(request):
@@ -383,15 +396,14 @@ def update_market_data_logic(request, criteria=None):
     run = None
     try:
         scraped_data_list = criteria.apply(scrape_data(searchname))
-        run = record_search_run(
+        run = persist_search_results(
             request,
             searchname,
             SearchRun.CLOSED,
-            len(scraped_data_list),
+            scraped_data_list,
             criteria_snapshot=criteria.snapshot(),
             duration_ms=timer.elapsed_ms(),
         )
-        save_to_database(searchname, scraped_data_list, run)
         update_search_run_observability(run, duration_ms=timer.elapsed_ms())
         return JsonResponse({"message": "相場データを更新しました"})
     except ExternalServiceError as error:
@@ -482,16 +494,15 @@ def complex_market_data_logic(request, criteria=None):
     try:
         # 落札履歴データ取得＆DB更新
         closed_data = criteria.apply(scrape_data(searchname), search_type=SearchRun.CLOSED)
-        closed_run = record_search_run(
+        closed_run = persist_search_results(
             request,
             searchname,
             SearchRun.CLOSED,
-            len(closed_data),
+            closed_data,
             criteria_snapshot=criteria.snapshot(),
             duration_ms=active_timer.elapsed_ms(),
         )
         active_run = closed_run
-        save_to_database(searchname, closed_data, closed_run)
         update_search_run_observability(closed_run, duration_ms=active_timer.elapsed_ms())
         closed_prices = [
             item["price"]
@@ -507,17 +518,16 @@ def complex_market_data_logic(request, criteria=None):
         now_data = criteria.apply(
             scrape_current_listings(searchname), search_type=SearchRun.CURRENT
         )
-        current_run = record_search_run(
+        current_run = persist_search_results(
             request,
             searchname,
             SearchRun.CURRENT,
-            len(now_data),
+            now_data,
             record_word=False,
             criteria_snapshot=criteria.snapshot(),
             duration_ms=active_timer.elapsed_ms(),
         )
         active_run = current_run
-        save_to_database(searchname, now_data, current_run)
 
         now_items = []
         for item in now_data:
