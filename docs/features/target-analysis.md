@@ -55,6 +55,10 @@ Compare current listings with the closed-auction market and identify buying oppo
 
 Market comparison is centralized here. See `docs/decisions/0002-centralize-market-comparison.md`.
 
+将来の市場横断比較は[ADR 0003](../decisions/0003-market-identity-and-observation-contract.md)、
+金額・評価履歴は[ADR 0004](../decisions/0004-money-fx-and-evaluation-contract.md)に従う。
+既存JPY計算とsnapshot version=1は維持し、新Money/FXと物理モデルは後続で実装する。
+
 ## Verification
 
 Use mocked scraper results or fixtures. Verify market statistics, comparison labels, buying decisions, unknown remaining time, watchlist ownership, user-managed-field preservation, snapshot creation, history analysis, and insufficient-data behavior.

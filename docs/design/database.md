@@ -8,7 +8,7 @@
 
 以下の表は`0009_search_ownership`時点を中心とする歴史的baseline。現在のSearchRunにはcriteria_snapshot/result_snapshot/trigger/duration_ms/failure_codeが追加済みであり、表の不足項目を現在も未実装と解釈しない。ソース上のheadは0022、実DB適用は本改訂で未検証。
 
-A0計画（未実装）: [越境ロードマップ](../plans/cross-border-research-roadmap.md)にCore/Commerce/CrossBorderと既存モデルの対応、原子保存、追加→backfill→検算→読取切替の契約を定義する。Mainのapp label/既存PK・FK・JPY列は維持し、scrapingの即時改名/削除は行わない。Product未照合、SearchDayの時刻不明、ownerless行を推測で補完しない。新物理スキーマはA0のADRとX1で確定し、既存PurchaseDecisionのversion=1を新algorithm_versionと同一視しない。rollbackは読取窓口の切戻しを基本とし、新データをDROPしない。
+A0保存境界は実装済み。新Core物理モデルは未実装: [越境ロードマップ](../plans/cross-border-research-roadmap.md)にCore/Commerce/CrossBorderと既存モデルの対応、原子保存、追加→backfill→検算→読取切替の契約を定義する。Mainのapp label/既存PK・FK・JPY列は維持し、scrapingの即時改名/削除は行わない。Product未照合、SearchDayの時刻不明、ownerless行を推測で補完しない。新物理スキーマはA0のADRとX1で確定し、既存PurchaseDecisionのversion=1を新algorithm_versionと同一視しない。rollbackは読取窓口の切戻しを基本とし、新データをDROPしない。
 
 | Model/table | Main fields | Ownership/relations | Current issue |
 |---|---|---|---|
@@ -27,6 +27,16 @@ A0計画（未実装）: [越境ロードマップ](../plans/cross-border-resear
 - 通常参照は`owner_query()`で必ず絞り、ログイン時に匿名データをclaimする。
 
 ## 3. Design Principles
+
+A0.5/6の新領域契約は[ADR 0003](../decisions/0003-market-identity-and-observation-contract.md)と
+[ADR 0004](../decisions/0004-money-fx-and-evaluation-contract.md)を正とする。
+以下の円整数原則は既存Commerce/JPY列へ適用し、新しい元通貨額へ流用しない。
+新MoneyはDecimalとcurrency、観測は所有者・価格種別・時刻・保持条件を持つ。
+具体的な追加テーブル名、FK、一意制約、インデックスはX1で確定し、本改訂でmigrationは追加しない。
+
+移行は旧PKとの対応を保存して再実行可能にし、件数・金額・所有者・価格種別を検算してから
+読取を切り替える。SearchDayの不明時刻、ownerless行、未照合Productは推測で補完しない。
+戻す際は経路を切り戻し、新データをDROPしない。根拠の削除期限は評価snapshotにも適用する。
 
 - 既存データを破壊的に置換せず、nullable追加→backfill→読取切替→制約強化の順で移行する。
 - 金額は円単位`PositiveBigIntegerField`。率は`DecimalField`を使いfloatを保存しない。

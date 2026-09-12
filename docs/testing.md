@@ -9,6 +9,12 @@
 
 ## Local verification
 
+A0.5/6の設計受入例は[ADR 0003](decisions/0003-market-identity-and-observation-contract.md)と
+[ADR 0004](decisions/0004-money-fx-and-evaluation-contract.md)に記録する。
+文書変更時は相対リンクと計算例を確認する。新Money/FX・観測DBの実行試験は実装時に追加し、
+ADRの存在を試験成功とみなさない。A0.7では既存JPY、所有者、保存失敗、Web/CLI同条件、
+再送と通知の重複、検索/watch動線をSQLite/PostgreSQL/CIで照合する。
+
 通常の開発では、変更差分から必要なテストだけを選択する。
 
 ```bash

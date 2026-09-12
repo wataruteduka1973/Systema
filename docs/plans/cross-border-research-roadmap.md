@@ -1,6 +1,6 @@
 # 越境EC価格差リサーチ ロードマップ
 
-更新日: 2026-09-12。状態: **A0.0〜A0.4実装・SQLiteローカル検証済み、CrossBorder機能未実装**。
+更新日: 2026-09-12。状態: **A0.0〜A0.4実装・SQLiteローカル検証済み、A0.5/A0.6設計契約策定済み、CrossBorder機能未実装**。
 
 ## 目的と採用方針
 
@@ -59,8 +59,8 @@ A0はP0の作業ツリー/契約ベースライン確認後に着手可能。本
 | A0.2 Required: 保存境界 | **実装・SQLiteローカル検証済み（2026-09-12）**。`Main/services/search_persistence.py`へrun+行保存と保持処理を移した | 全行事前検証、最大200件のbulk_create、atomic、実保存件数で成功記録。途中エラー注入で成功run/部分行が残らず、別の失敗runになることを確認。旧行/カラムは未変更。PostgreSQL、CI、本番はNOT VERIFIED |
 | A0.3 Required: 検索UseCase | **実装済み・SQLiteローカル検証済み**。target検索を`Main/services/market_search.py`へ抽出し、Webは所有者・条件・trigger・saved searchを明示入力へ変換 | domainとUseCaseはHttpRequest/JsonResponse/RequestFactory不要。targetのclosed/current、watch更新の順序と回数が旧契約と一致。途中失敗は完了runと失敗対象を分離してWebへ返す |
 | A0.4 Required: Job/CLI共通化 | **実装済み・SQLiteローカル検証済み**。`run_alerts`を共通UseCaseへ接続し、owner・条件・provider・repository・trigger・saved searchを明示渡し | RequestFactory/View importを除去。成功currentだけ通知・ルール評価し、途中失敗は共通分類で保存・失敗通知。P0のlock/timeout統合は別差分 |
-| A0.5 Required: Core概念ADR | X0の識別子・価格種別・保持情報を随時反映。下記モデル契約とlegacy対応を決定 | Productの照合未確定、Listing識別子、Observationの意味/所有者/削除方針が合意。未知の外部条件は未対応として表現。新DB全実装は不要 |
-| A0.6 Required: Money/評価ADR | A0.5と並行。既存JPY変換、Decimal精度、FX方向/版、履歴契約を決定 | 整数JPYの旧契約維持、元通貨非破壊、欠損と0、計算版とschema版の区別を例で確認。値オブジェクト実装はX2前まで |
+| A0.5 Required: Core概念ADR | **設計契約策定済み**。[ADR 0003](../decisions/0003-market-identity-and-observation-contract.md)に識別・価格種別・所有者・保持・移行を固定。物理モデルは未実装 | Productの照合未確定、Listing識別子、Observationの意味/所有者/削除方針が合意。未知の外部条件は未対応として表現。新DB全実装は不要 |
+| A0.6 Required: Money/評価ADR | **設計契約策定済み**。[ADR 0004](../decisions/0004-money-fx-and-evaluation-contract.md)にJPY互換・精度・FX・丸め・評価版を固定。値オブジェクトは未実装 | 整数JPYの旧契約維持、元通貨非破壊、欠損と0、計算版とschema版の区別を例で確認。値オブジェクト実装はX2前まで |
 | A0.7 Required: 互換・移行ゲート | A0.2〜6後。API/DB設計と回帰試験を更新 | 下記X1ゲートを満たし対象revisionのCI成功を確認。失敗時は最後の通過単位まで戻す。既存API削除やDB逆migrationはしない |
 | A0.8 Recommended: 残りの整理 | 必須経路確立後。予測/保存履歴等の残るutils経路を1本ずつ移行。requirementsをruntime/devへ分離。新境界のmypy・意味のあるテストを拡張 | 各変更で対応API/画面、runtimeのみの起動、devでの検査を確認。依存バージョン変更は別作業。MVPを一律に止めない |
 | A0.9 Cleanup: 生成物 | A0.0後に独立可能。参照/生成/配信経路を確認して追跡除外を計画 | Main/static原本とcollectstaticを確認。root models.pyの参照は限定検索では見つからないが削除確定ではない。必要ファイルを再生成/復元できること |
@@ -113,14 +113,14 @@ A0はP0の作業ツリー/契約ベースライン確認後に着手可能。本
 
 全旧APIのv1統一、予測/履歴の残りの抽出、全件Product照合、JPY列の全面移行、全watchの評価履歴化、JS共通化、requirements分割、生成物削除は並行/後続でよい。移行対象経路に影響しない整理をゲートに含めない。JSはMain/static/JSにMarketComparison等の共有が既にあり、実際の重複・回帰コストを計測して限定する。
 
-**現在の判定: X1へはまだ進めない。** A0.0〜A0.4はSQLiteでローカル検証済み。A0.5/6の具体契約とA0.7のPostgreSQL/CIを含むゲートが残っている。次はA0.5/6へ進む。X0は継続可能。
+**現在の判定: X1へはまだ進めない。** A0.0〜A0.4はSQLiteでローカル検証済み。A0.5/6の設計契約は策定済み。A0.7のPostgreSQL/CIを含む互換ゲートが残っている。次はA0.7へ進む。X0は継続可能。
 
 ## 実施順序と段階別ゲート
 
 | 段階 | 利用者に届けるもの・作業範囲 | 開始条件 | 完了条件 | 現在 |
 |---|---|---|---|---|
 | P0 既存版の公開準備 | Phase 9の未統合差分と資料を照合し、既存フローを安定させる | 現行差分・既存検証記録の確認 | ローカル適合性と本番証跡を別々に記録。公開にはHTTPS、DB、所有者分離、復元、静的配信、利用制限、必要なジョブ運用の確認が必要 | 差分あり・本計画では未検証 |
-| A0 Core安定化 | Web/CLI共通UseCase、Yahoo Provider、保存境界、Core/金額/移行契約 | P0のベースライン確認後。P0の本番完了は待たない | A0-RequiredとX1開始ゲートを通過。Recommended/Cleanupは後続可 | A0.0〜A0.4を実装・SQLite検証済み。A0.5以降は未実装 |
+| A0 Core安定化 | Web/CLI共通UseCase、Yahoo Provider、保存境界、Core/金額/移行契約 | P0のベースライン確認後。P0の本番完了は待たない | A0-RequiredとX1開始ゲートを通過。Recommended/Cleanupは後続可 | A0.0〜A0.4を実装・SQLite検証済み。A0.5/6は設計契約策定済み。A0.7は未完了 |
 | X0 取得と対象の選定 | 国内/海外の取得経路、用途、カテゴリ、配送先、必要データと原価を調査 | 今すぐ開始可能 | 証拠URL・確認日・条件を記録し、API利用/手入力で限定検証/保留のいずれかを決める。成約根拠の有無を明示 | 未着手 |
 | X1 境界・金額・根拠の設計 | A0の契約に沿うCrossBorder API/DB追加設計、所有者、商品照合、計算例、試験用データ | A0-Required完了かつX0で少なくとも手入力の入力範囲と利用条件が確定 | 既存互換、通貨精度、欠損、保存期限、移行/戻し方、在庫連携窓口を定義。代表例を手計算と照合 | A0待ち |
 | X2 手入力MVP | 候補URL・価格・根拠・為替・費用の入力、比較、利益/購入上限、保存 | X1完了 | ログイン所有の候補を作成・比較・修正できる。前提不足は判定不可。単体・所有者/DB・画面検証を通過 | 未着手 |
@@ -209,7 +209,7 @@ A0はP0の作業ツリー/契約ベースライン確認後に着手可能。本
 
 日付の約束は置かない。X0終了時に取得条件と試験データ、X1終了時に変更対象と受入例からX2/X3の工数を見積もる。API申請待ちと開発工数を分け、各段階を実装・検証・文書更新までの小さな単位に分割する。
 
-次の実作業は **A0.5/6のCore・Money・評価契約ADRと、並行するX0の取得・用途台帳の作成**。A0.2のPostgreSQL検証はDB認証情報を利用できる環境でA0.7までに実施する。P0では既存公開準備の未統合差分を別スコープで確認する。各段階の状態は「計画済み/実装済み/ローカル検証済み/CI検証済み/本番検証済み」を分け、対象revisionと証跡を記録する。
+次の実作業は **A0.7の互換・移行ゲート確認と、並行するX0の取得・用途台帳の作成**。A0.2のPostgreSQL検証はDB認証情報を利用できる環境でA0.7までに実施する。P0では既存公開準備の未統合差分を別スコープで確認する。各段階の状態は「計画済み/実装済み/ローカル検証済み/CI検証済み/本番検証済み」を分け、対象revisionと証跡を記録する。
 
 ## 関連資料
 

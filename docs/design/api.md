@@ -35,7 +35,7 @@
 
 ## 3. Compatibility Strategy
 
-A0計画（未実装）: [越境ロードマップ](../plans/cross-border-research-roadmap.md)に従い、legacy endpoint→HTTP互換adapter→検索UseCaseの順へ移す。v1とCLIも同じUseCaseを呼ぶ。旧status/JSON/所有者/副作用は契約テストで維持し、保存失敗を成功として記録する問題は修正契約を明記する。API削除・一括envelope変更はしない。既存APIのJPY整数契約は維持し、外貨用amount/currencyの追加契約はA0のMoney ADRとX1で別定義する。
+A0.0〜4は対象検索経路で実装済み。A0.5/6は設計契約策定済み: [越境ロードマップ](../plans/cross-border-research-roadmap.md)に従い、legacy endpoint→HTTP互換adapter→検索UseCaseの順へ移す。v1とCLIも同じUseCaseを呼ぶ。旧status/JSON/所有者/副作用は契約テストで維持し、保存失敗を成功として記録する問題は修正契約を明記する。API削除・一括envelope変更はしない。既存APIのJPY整数契約は維持し、外貨用amount/currencyの追加契約はA0のMoney ADRとX1で別定義する。
 
 - 現行エンドポイントは既存画面の互換層として当面維持する。
 - 新機能は`/taskle/api/v1/`へ追加する。
@@ -44,6 +44,24 @@ A0計画（未実装）: [越境ロードマップ](../plans/cross-border-resear
 - API viewは認証、HTTP、入力変換までとし、条件・利益・通知・比較ロジックはservice/domainへ置く。
 
 ## 4. Common v1 Contract
+
+### A0 Core / Money compatibility map
+
+設計上の正は[ADR 0003](../decisions/0003-market-identity-and-observation-contract.md)と
+[ADR 0004](../decisions/0004-money-fx-and-evaluation-contract.md)。新CrossBorder endpointはX1で確定する。
+
+| 既存契約 | 新領域での対応（未実装） |
+|---|---|
+| `price` / `currentPrice`等のJPY整数 | `{amount: "100.25", currency: "USD"}`。新領域だけで使用し旧キーの型を変えない |
+| `medianPrice`の既存JSON数値 | 既存応答を維持。新領域は価格種別と通貨を一致させた根拠だけを集計 |
+| URL・タイトルによる表示 | marketplace/外部IDと未照合状態を追加。タイトルだけでProductを確定しない |
+| 検索GETの保存副作用 | 旧契約維持。将来の新規取得実行APIはPOSTとしてX1で設計 |
+| target失敗時の503/500 | 公開応答を維持し、内部はclosed成功とcurrent失敗を区別 |
+| snapshot `version=1` | 既存JSON維持。新評価でschema/algorithm版を別々に保持 |
+
+新領域では不明値をnull、未対応通貨・無効数値を入力エラー、必要費用欠損をinsufficient、
+根拠削除をevidence_unavailableとして区別する。具体HTTP status/envelopeはX1で固定する。
+新規所有者は認証情報から導出し、クライアント指定ownerを信用しない。
 
 ### Authentication and ownership
 

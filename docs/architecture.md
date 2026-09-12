@@ -16,7 +16,7 @@ This project is a Django-based Yahoo! Auction market analysis tool. It fetches a
 
 ## Responsibility layers
 
-[越境ロードマップのA0](plans/cross-border-research-roadmap.md)では、既存Main app labelとAPIを維持したままYahoo Provider、検索Repository、HTTP非依存のtarget検索UseCaseへ段階移行している。Webと`run_alerts`は同じUseCaseを呼び、legacy viewsは互換adapterとして残す。失敗runの分類と保存もWeb/CLI共通サービスが担当する。CoreのProduct/Listing/Observation/Moneyは次に契約をADR化し、全モデル移行やマイクロサービス化は前提にしない。A0-Required完了後にX1へ進む。
+[越境ロードマップのA0](plans/cross-border-research-roadmap.md)では、既存Main app labelとAPIを維持したままYahoo Provider、検索Repository、HTTP非依存のtarget検索UseCaseへ段階移行している。Webと`run_alerts`は同じUseCaseを呼び、legacy viewsは互換adapterとして残す。失敗runの分類と保存もWeb/CLI共通サービスが担当する。Coreの識別・観測契約は[ADR 0003](decisions/0003-market-identity-and-observation-contract.md)、Money・FX・評価契約は[ADR 0004](decisions/0004-money-fx-and-evaluation-contract.md)に固定した。新しい物理モデルと値オブジェクトは未実装であり、全モデル移行やマイクロサービス化は前提にしない。A0-Required完了後にX1へ進む。
 
 - `Main/domain/`: 外部I/Oに依存しない値変換・判定ロジック
 - `Main/services/`: ユースケースとアプリケーション固有例外
