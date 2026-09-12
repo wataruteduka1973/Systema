@@ -55,9 +55,9 @@ A0はP0の作業ツリー/契約ベースライン確認後に着手可能。本
 | 単位・優先度 | 作業と依存 | 完了条件・戻し方 |
 |---|---|---|
 | A0.0 Required: 基準固定 | **実装・SQLiteローカル検証済み（2026-09-12）**。P0差分・現行ルート/JSON/所有者/副作用/保存件数を確認。legacy成功応答、所有者、SearchRun/商品行/検索語の副作用と失敗応答を契約テストで固定 | `verify --feature market-search`通過。PostgreSQL、CI、本番はNOT VERIFIED |
-| A0.1 Required: Yahoo取得窓口 | A0.0後。`Main/services/marketplace.py`に最小Protocol、`Main/domain/market_data.py`にDTO候補、`Main/infrastructure/marketplaces/yahoo.py`にURL/HTTP/パーサー調整を置く | closed/currentをYahoo一実装で確認。Parserを再実装せず使う。utilsの旧名は委譲ラッパーで維持し、単位ごとに戻せる |
+| A0.1 Required: Yahoo取得窓口 | **実装済み・SQLiteローカル検証済み**。`MarketplaceProvider`、`MarketListingObservation`、Yahoo adapterへ分離し、既存Parserを再利用。utils旧名は委譲ラッパーで維持 | closed/currentをYahoo一実装で確認。Parserを再実装せず使う。utilsの旧名は委譲ラッパーで維持し、単位ごとに戻せる |
 | A0.2 Required: 保存境界 | **実装・SQLiteローカル検証済み（2026-09-12）**。`Main/services/search_persistence.py`へrun+行保存と保持処理を移した | 全行事前検証、最大200件のbulk_create、atomic、実保存件数で成功記録。途中エラー注入で成功run/部分行が残らず、別の失敗runになることを確認。旧行/カラムは未変更。PostgreSQL、CI、本番はNOT VERIFIED |
-| A0.3 Required: 検索UseCase | A0.1/2後。`Main/services/market_search.py`へtarget検索経路を先に抽出。Webは所有者・条件・triggerを明示入力に変換し、結果DTO/例外をJSONへ変換 | domainとUseCaseはHttpRequest/JsonResponse/RequestFactory不要。targetのclosed/current、watch更新、通知判断の順序と回数が旧契約と一致。失敗時だけ保存成功と偽らない契約を明記 |
+| A0.3 Required: 検索UseCase | **実装済み・SQLiteローカル検証済み**。target検索を`Main/services/market_search.py`へ抽出し、Webは所有者・条件・trigger・saved searchを明示入力へ変換 | domainとUseCaseはHttpRequest/JsonResponse/RequestFactory不要。targetのclosed/current、watch更新の順序と回数が旧契約と一致。途中失敗は完了runと失敗対象を分離してWebへ返す |
 | A0.4 Required: Job/CLI共通化 | A0.3後。run_alertsを同じUseCaseへ接続。保存条件所有者・有効ユーザー・trigger・実行結果を明示渡し | 実運用コマンドにRequestFactory/View importなし。Web/CLI同条件の結果・記録・通知重複を照合。P0のlock/timeout統合とは差分を分け、互いの契約を検証 |
 | A0.5 Required: Core概念ADR | X0の識別子・価格種別・保持情報を随時反映。下記モデル契約とlegacy対応を決定 | Productの照合未確定、Listing識別子、Observationの意味/所有者/削除方針が合意。未知の外部条件は未対応として表現。新DB全実装は不要 |
 | A0.6 Required: Money/評価ADR | A0.5と並行。既存JPY変換、Decimal精度、FX方向/版、履歴契約を決定 | 整数JPYの旧契約維持、元通貨非破壊、欠損と0、計算版とschema版の区別を例で確認。値オブジェクト実装はX2前まで |
@@ -113,7 +113,7 @@ A0はP0の作業ツリー/契約ベースライン確認後に着手可能。本
 
 全旧APIのv1統一、予測/履歴の残りの抽出、全件Product照合、JPY列の全面移行、全watchの評価履歴化、JS共通化、requirements分割、生成物削除は並行/後続でよい。移行対象経路に影響しない整理をゲートに含めない。JSはMain/static/JSにMarketComparison等の共有が既にあり、実際の重複・回帰コストを計測して限定する。
 
-**現在の判定: X1へはまだ進めない。** A0.0とA0.2はSQLiteでローカル検証済み。A0.1、A0.3、A0.4の実装・検証、A0.5/6の具体契約、A0.7のPostgreSQL/CIを含むゲートが残っている。次はA0.1のYahoo取得窓口とA0.3の検索UseCaseへ進む。X0は継続可能。
+**現在の判定: X1へはまだ進めない。** A0.0〜A0.3はSQLiteでローカル検証済み。A0.4のJob/CLI共通化、A0.5/6の具体契約、A0.7のPostgreSQL/CIを含むゲートが残っている。次はA0.4へ進む。X0は継続可能。
 
 ## 実施順序と段階別ゲート
 
@@ -209,7 +209,7 @@ A0はP0の作業ツリー/契約ベースライン確認後に着手可能。本
 
 日付の約束は置かない。X0終了時に取得条件と試験データ、X1終了時に変更対象と受入例からX2/X3の工数を見積もる。API申請待ちと開発工数を分け、各段階を実装・検証・文書更新までの小さな単位に分割する。
 
-次の実作業は **A0.1のYahoo取得窓口、A0.3の検索UseCaseと、並行するX0の取得・用途台帳の作成**。A0.2のPostgreSQL検証はDB認証情報を利用できる環境でA0.7までに実施する。P0では既存公開準備の未統合差分を別スコープで確認する。各段階の状態は「計画済み/実装済み/ローカル検証済み/CI検証済み/本番検証済み」を分け、対象revisionと証跡を記録する。
+次の実作業は **A0.4のJob/CLI共通化と、並行するX0の取得・用途台帳の作成**。A0.2のPostgreSQL検証はDB認証情報を利用できる環境でA0.7までに実施する。P0では既存公開準備の未統合差分を別スコープで確認する。各段階の状態は「計画済み/実装済み/ローカル検証済み/CI検証済み/本番検証済み」を分け、対象revisionと証跡を記録する。
 
 ## 関連資料
 

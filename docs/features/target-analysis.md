@@ -23,6 +23,13 @@ Compare current listings with the closed-auction market and identify buying oppo
 - Authenticated users automatically save the complete criteria and execute it as a saved search, so the same displayed result remains available on the profile; the keyword is the default name, and an existing same-named condition is updated instead of duplicated.
 - Profile creation and rerun use the same complete target-analysis criteria contract without involving market search.
 - Saved-search execution persists the exact displayed recommendation result for profile-page revisits.
+- Target search orchestration lives in `Main/services/market_search.py` and accepts criteria,
+  owner, marketplace provider, repository, trigger, and saved-search context explicitly. It has no
+  `HttpRequest`, `JsonResponse`, or `RequestFactory` dependency. The web adapter maps its result and
+  privacy-safe failure state to the existing JSON/status contract.
+- Closed and current runs are saved separately. If current acquisition or processing fails after a
+  closed success, the closed run remains successful and a distinct failed current run is recorded;
+  watch refresh runs once per enriched current recommendation after both successful saves.
 
 ## Related Files
 
@@ -31,6 +38,8 @@ Compare current listings with the closed-auction market and identify buying oppo
 - `Main/static/JS/MarketComparison.js`
 - `Main/views/utils.py` (`complex_market_data_logic`)
 - `Main/services/market_statistics.py`
+- `Main/services/market_search.py`
+- `Main/services/marketplace.py`
 - `Main/domain/buying_opportunity.py`
 - `Main/services/watchlist.py`
 - `Main/services/watchlist_analysis.py`
@@ -40,6 +49,7 @@ Compare current listings with the closed-auction market and identify buying oppo
 - `tests/unit/test_watchlist_analysis.py`
 - `tests/unit/test_buying_opportunity.py`
 - `tests/unit/test_market_statistics.py`
+- `tests/unit/test_market_search_usecase.py`
 
 ## Product Decision
 

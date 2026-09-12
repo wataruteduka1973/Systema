@@ -17,6 +17,10 @@ Search closed auctions, current listings, or saved snapshots through one screen.
   history retention in one transaction. Item rows are validated before the write and inserted in
   one bounded batch. If item persistence fails, no successful run or partial item rows remain; the
   existing API error contract records a separate failed run.
+- Marketplace acquisition uses `MarketplaceProvider` and normalized
+  `MarketListingObservation` values. Yahoo URL construction, HTTP retrieval, parser coordination,
+  and source validation live in `Main/infrastructure/marketplaces/yahoo.py`; the old
+  `scrape_data` and `scrape_current_listings` names remain compatibility wrappers.
 
 ## Boundaries
 
@@ -32,9 +36,13 @@ Search closed auctions, current listings, or saved snapshots through one screen.
 - `Main/views/api.py`
 - `Main/views/utils.py`
 - `Main/services/search_persistence.py`
+- `Main/services/marketplace.py`
+- `Main/infrastructure/marketplaces/yahoo.py`
+- `Main/domain/market_listing.py`
 - `tests/integration/test_market_search.py`
 - `tests/integration/test_api.py`
 - `tests/integration/test_search_persistence.py`
+- `tests/unit/test_yahoo_marketplace.py`
 
 ## Verification
 

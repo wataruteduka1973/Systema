@@ -17,6 +17,30 @@ MAX_RETAINED_RUNS = 50
 MAX_ITEMS_PER_RUN = 200
 
 
+class DjangoSearchRepository:
+    """検索ユースケース向けのDjango ORM保存窓口。"""
+
+    def save_successful(self, **values: Any) -> SearchRun:
+        return persist_successful_search(**values)
+
+    def update_run(
+        self,
+        run: SearchRun,
+        *,
+        duration_ms: int,
+        succeeded: bool = True,
+        failure_code: str = "",
+    ) -> None:
+        run.duration_ms = duration_ms
+        run.succeeded = succeeded
+        run.failure_code = failure_code
+        run.save(update_fields=("duration_ms", "succeeded", "failure_code"))
+
+    def save_result_snapshot(self, run: SearchRun, snapshot: Mapping[str, Any]) -> None:
+        run.result_snapshot = dict(snapshot)
+        run.save(update_fields=("result_snapshot",))
+
+
 def _legacy_row(keyword: str, item: Mapping[str, Any], observed_at: str) -> scraping:
     """既存scraping列へ保存する値をDB書込み前に組み立てる。"""
     name = str(item["name"])

@@ -63,6 +63,7 @@ FEATURE_TESTS = {
         "tests/integration/test_inventory.py",
     ),
     "market-search": (
+        "tests/unit/test_yahoo_marketplace.py",
         "tests/unit/test_search_criteria.py",
         "tests/unit/test_search_observability.py",
         "tests/unit/test_market_statistics.py",
@@ -78,6 +79,7 @@ FEATURE_TESTS = {
         "tests/integration/test_api.py",
     ),
     "target-analysis": (
+        "tests/unit/test_market_search_usecase.py",
         "tests/unit/test_buying_opportunity.py",
         "tests/unit/test_market_statistics.py",
         "tests/unit/test_watchlist_analysis.py",
@@ -129,6 +131,8 @@ PATH_FEATURES = {
     "Main/services/search_criteria.py": "market-search",
     "Main/services/search_observability.py": "market-search",
     "Main/services/search_persistence.py": "market-search",
+    "Main/services/marketplace.py": "market-search",
+    "Main/infrastructure/marketplaces/yahoo.py": "market-search",
     "Main/views/api.py": "market-search",
     "Main/views/utils.py": "market-search",
     "Main/static/JS/MarketSearch.js": "market-search",
@@ -140,6 +144,8 @@ PATH_FEATURES = {
     "Main/templates/accounts/profile.html": "accounts",
     "Main/services/time_series_analysis.py": "prediction",
     "Main/models/watchitem.py": "target-analysis",
+    "Main/domain/market_listing.py": "target-analysis",
+    "Main/services/market_search.py": "target-analysis",
     "Main/services/watchlist.py": "target-analysis",
     "Main/services/watchlist_analysis.py": "target-analysis",
     "Main/static/JS/Deep_Analysis_now.js": "target-analysis",

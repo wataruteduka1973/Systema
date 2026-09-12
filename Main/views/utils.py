@@ -1,5 +1,4 @@
 import logging
-import math
 import re
 from collections import Counter
 from datetime import datetime
@@ -7,20 +6,23 @@ from urllib.parse import urlencode
 
 from django.http import JsonResponse
 
-from Main.domain.auction_time import format_remaining_time, parse_duration_seconds
-from Main.domain.buying_opportunity import evaluate_buying_opportunity
+from Main.domain.auction_time import format_remaining_time
+from Main.domain.market_listing import MarketListingObservation
 from Main.domain.product_condition import enrich_market_items
 from Main.infrastructure.http import get_with_retry
+from Main.infrastructure.marketplaces.yahoo import (
+    YahooMarketplaceProvider,
+    closed_items,
+    current_items,
+)
 from Main.models.scraping import scraping
 from Main.models.searchrun import SearchRun
 from Main.models.searchwordlog import searchwordlog
 from Main.scraping.yahoo import YahooAuctionParser
-from Main.services.exceptions import ExternalServiceError, SearchParseError
+from Main.services.exceptions import ExternalServiceError
 from Main.services.external_search import normalize_search_keyword
-from Main.services.market_statistics import (
-    analyze_market_prices,
-    enrich_items_with_market_comparison,
-)
+from Main.services.market_search import TargetSearchFailure, execute_target_search
+from Main.services.market_statistics import enrich_items_with_market_comparison
 from Main.services.ownership import get_request_owner, owner_query
 from Main.services.search_criteria import SearchCriteria
 from Main.services.search_observability import (
@@ -31,6 +33,7 @@ from Main.services.search_observability import (
     external_failure_code,
 )
 from Main.services.search_persistence import (
+    DjangoSearchRepository,
     persist_successful_search,
     replace_items_for_existing_run,
 )
@@ -120,116 +123,59 @@ def _request_with_retry(url, headers, max_retries=3, timeout=15):
 
 
 def scrape_data(searchname):
-    """
-    指定されたキーワードでヤフオクの落札履歴をスクレイピングする。
-    """
-    base_url = "https://auctions.yahoo.co.jp/closedsearch/closedsearch"
-    searchname = normalize_search_keyword(searchname)
-    urls = [
-        _build_search_url(
-            base_url,
-            {"p": searchname, "va": searchname, "b": offset, "n": 100, "select": 6},
-        )
-        for offset in (1, 101)
-    ]
-
-    scraped_data_list = []
-    successful_pages = 0
-    headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"}
-    for url in urls:
-        try:
-            response = _request_with_retry(url, headers=headers)
-            successful_pages += 1
-            html = response.text
-            items = _extract_listing_items(html)
-            if not items:
-                logger.warning("No Yahoo item data extracted")
-                continue
-
-            for item in items:
-                normalized = _normalize_yahoo_item(item)
-                if _is_valid_listing(normalized):
-                    scraped_data_list.append(
-                        {
-                            "name": normalized["name"],
-                            "price": normalized["price"],
-                            "startPrice": normalized["startPrice"],
-                            "bidding": normalized["bidding"],
-                            "time": normalized["time"],
-                            "url": normalized["url"],
-                        }
-                    )
-
-        except SearchParseError:
-            raise
-        except ExternalServiceError:
-            logger.exception("Yahoo終了商品ページの取得に失敗しました")
-            continue
-        except Exception:
-            logger.exception("Yahoo終了商品ページの解析に失敗しました")
-            raise SearchParseError("検索ページを解析できませんでした") from None
-
-    if successful_pages == 0:
-        raise ExternalServiceError(EXTERNAL_SERVICE_MESSAGE)
-    return scraped_data_list[:200]
+    """後方互換名を維持してYahoo Providerへ委譲する。"""
+    provider = YahooMarketplaceProvider(
+        fetch=_request_with_retry,
+        extract=_extract_listing_items,
+        normalize=_normalize_yahoo_item,
+    )
+    return closed_items(provider, searchname)
 
 
 def scrape_current_listings(searchname):
-    """
-    指定されたキーワードでヤフオクの現在出品されている商品をスクレイピングする。
-    """
-    base_url = "https://auctions.yahoo.co.jp/search/search"
-    searchname = normalize_search_keyword(searchname)
-    urls = [
-        _build_search_url(
-            base_url,
-            {
-                "auccat": "",
-                "tab_ex": "commerce",
-                "aq": "-",
-                "p": searchname,
-                "f": "0:1",
-                "b": offset,
-                "n": 100,
-            },
-        )
-        for offset in (1, 101)
-    ]
-    scraped_data_list = []
-    successful_pages = 0
-    headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"}
+    """後方互換名を維持してYahoo Providerへ委譲する。"""
+    provider = YahooMarketplaceProvider(
+        fetch=_request_with_retry,
+        extract=_extract_listing_items,
+        normalize=_normalize_yahoo_item,
+    )
+    return current_items(provider, searchname)
 
-    for url in urls:
-        try:
-            response = _request_with_retry(url, headers=headers)
-            successful_pages += 1
-            items = _extract_listing_items(response.text)
-            for item in items:
-                normalized = _normalize_yahoo_item(item)
-                if not _is_valid_listing(normalized):
-                    continue
-                scraped_data_list.append(
-                    {
-                        "name": normalized["name"],
-                        "currentPrice": normalized["price"],
-                        "bidding": normalized["bidding"],
-                        "remainingTime": _format_remaining_time(normalized["time"]),
-                        "url": normalized["url"],
-                    }
-                )
 
-        except SearchParseError:
-            raise
-        except ExternalServiceError:
-            logger.exception("Yahoo出品中ページの取得に失敗しました")
-            continue
-        except Exception:
-            logger.exception("Yahoo出品中ページの解析に失敗しました")
-            raise SearchParseError("検索ページを解析できませんでした") from None
+class _YahooSearchProvider:
+    """既存の差替え可能な取得関数をDTO契約へ変換するWeb互換アダプター。"""
 
-    if successful_pages == 0:
-        raise ExternalServiceError(EXTERNAL_SERVICE_MESSAGE)
-    return scraped_data_list[:200]
+    marketplace = YahooMarketplaceProvider.marketplace
+
+    def search_closed(self, keyword: str) -> list[MarketListingObservation]:
+        return [
+            MarketListingObservation(
+                marketplace=self.marketplace,
+                external_id="",
+                name=str(item.get("name") or ""),
+                price=int(item.get("price") or 0),
+                start_price=int(item.get("startPrice") or 0),
+                bidding=int(item.get("bidding") or 0),
+                time=str(item.get("time") or ""),
+                url=str(item.get("url") or ""),
+            )
+            for item in scrape_data(keyword)
+        ]
+
+    def search_current(self, keyword: str) -> list[MarketListingObservation]:
+        return [
+            MarketListingObservation(
+                marketplace=self.marketplace,
+                external_id="",
+                name=str(item.get("name") or ""),
+                price=int(item.get("currentPrice") or 0),
+                start_price=int(item.get("currentPrice") or 0),
+                bidding=int(item.get("bidding") or 0),
+                time=str(item.get("remainingTime") or ""),
+                url=str(item.get("url") or ""),
+            )
+            for item in scrape_current_listings(keyword)
+        ]
 
 
 def record_search_run(
@@ -474,10 +420,7 @@ def delete_market_data_logic(request):
 
 
 def complex_market_data_logic(request, criteria=None):
-    """
-    指定キーワードの落札履歴と現在出品中データから、価格リスト・商品名リスト・中央値・おすすめ出品リストを返す。
-    また、落札履歴データはデータベースにも保存・更新する。
-    """
+    """終了商品と出品中商品を検索し、target分析の既存JSON契約を返す。"""
     if request.method != "GET" and criteria is None:
         return JsonResponse({"error": "Invalid request method"}, status=400)
 
@@ -486,175 +429,59 @@ def complex_market_data_logic(request, criteria=None):
             criteria = SearchCriteria.from_query(request.GET, SearchRun.TARGET)
         except Exception as error:
             return JsonResponse({"error": str(error), "code": "invalid_keyword"}, status=400)
-    searchname = criteria.keyword
-    active_search_type = SearchRun.CLOSED
-    active_timer = SearchTimer.start()
-    active_run = None
 
     try:
-        # 落札履歴データ取得＆DB更新
-        closed_data = criteria.apply(scrape_data(searchname), search_type=SearchRun.CLOSED)
-        closed_run = persist_search_results(
-            request,
-            searchname,
-            SearchRun.CLOSED,
-            closed_data,
-            criteria_snapshot=criteria.snapshot(),
-            duration_ms=active_timer.elapsed_ms(),
+        result = execute_target_search(
+            criteria=criteria,
+            owner=get_request_owner(request),
+            provider=_YahooSearchProvider(),
+            repository=DjangoSearchRepository(),
+            refresh_watch=refresh_watched_item,
+            trigger=getattr(request, "search_trigger", "manual"),
+            saved_search=getattr(request, "saved_search", None),
         )
-        active_run = closed_run
-        update_search_run_observability(closed_run, duration_ms=active_timer.elapsed_ms())
-        closed_prices = [
-            item["price"]
-            for item in closed_data
-            if "price" in item and isinstance(item["price"], (int, float))
-        ]
-        closed_names = [item["name"] for item in closed_data if "name" in item]
-
-        # 現在出品中データ
-        active_search_type = SearchRun.CURRENT
-        active_timer = SearchTimer.start()
-        active_run = None
-        now_data = criteria.apply(
-            scrape_current_listings(searchname), search_type=SearchRun.CURRENT
+        request.recorded_search_runs = list(result.runs)
+        return JsonResponse(result.payload)
+    except TargetSearchFailure as failure:
+        request.recorded_search_runs = list(failure.completed_runs)
+        error = failure.cause
+        failure_code = (
+            external_failure_code(error)
+            if isinstance(error, ExternalServiceError)
+            else FAILURE_UNEXPECTED
         )
-        current_run = persist_search_results(
-            request,
-            searchname,
-            SearchRun.CURRENT,
-            now_data,
-            record_word=False,
-            criteria_snapshot=criteria.snapshot(),
-            duration_ms=active_timer.elapsed_ms(),
-        )
-        active_run = current_run
-
-        now_items = []
-        for item in now_data:
-            price = item.get("currentPrice")
-            name = item.get("name")
-            url = item.get("url")
-            remaining_time_str = item.get("remainingTime")
-            bidding = item.get("bidding", 0)
-            remaining_seconds = parse_duration_seconds(remaining_time_str)
-            now_items.append(
-                {
-                    "price": price,
-                    "name": name,
-                    "url": url,
-                    "remainingTime": remaining_time_str,
-                    "remainingSeconds": remaining_seconds,
-                    "bidding": bidding,
-                }
-            )
-
-        if closed_prices:
-            import numpy as np
-
-            median_price = float(np.median(closed_prices))
-        else:
-            median_price = 0
-
-        enriched_now_items = enrich_market_items(now_items)
-        enriched_now_items = enrich_items_with_market_comparison(enriched_now_items, median_price)
-        for item in enriched_now_items:
-            item["marketMedian"] = median_price
-            item["buyDecision"] = evaluate_buying_opportunity(
-                item["price"],
-                median_price,
-                item["condition"],
-                item["remainingSeconds"],
-            )
-            refresh_watched_item(item, get_request_owner(request))
-
-        now_items_sorted = sorted(
-            enriched_now_items,
-            key=lambda item: (
-                -item["buyDecision"]["score"],
-                item["remainingSeconds"],
-            ),
-        )[:30]
-
-        response_items = [
-            {
-                "price": item["price"],
-                "name": item["name"],
-                "url": item["url"],
-                "remainingTime": item["remainingTime"],
-                "remainingSeconds": (
-                    item["remainingSeconds"] if math.isfinite(item["remainingSeconds"]) else None
-                ),
-                "bidding": item["bidding"],
-                "marketMedian": median_price,
-                "condition": item["condition"],
-                "conditionLabel": item["conditionLabel"],
-                "attributes": item["attributes"],
-                "attributeLabels": item["attributeLabels"],
-                "buyDecision": item["buyDecision"],
-                "marketComparison": item["marketComparison"],
-            }
-            for item in now_items_sorted
-        ]
-
-        response_data = {
-            "closed_prices": closed_prices,
-            "closed_names": closed_names,
-            "medianPrice": median_price,
-            "marketStatistics": analyze_market_prices(
-                [{"price": price} for price in closed_prices]
-            ),
-            "recommend_items": response_items,
-        }
-        current_run.result_snapshot = response_data
-        current_run.save(update_fields=("result_snapshot",))
-        update_search_run_observability(current_run, duration_ms=active_timer.elapsed_ms())
-        return JsonResponse(response_data)
-    except ExternalServiceError as error:
-        logger.exception("Complex market search failed")
-        if active_run is None:
+        if failure.active_run is None:
             record_search_run(
                 request,
-                searchname,
-                active_search_type,
+                criteria.keyword,
+                failure.search_type,
                 0,
                 succeeded=False,
-                record_word=active_search_type == SearchRun.CLOSED,
+                record_word=failure.search_type == SearchRun.CLOSED,
                 criteria_snapshot=criteria.snapshot(),
-                duration_ms=active_timer.elapsed_ms(),
-                failure_code=external_failure_code(error),
+                duration_ms=failure.duration_ms,
+                failure_code=failure_code,
             )
         else:
             update_search_run_observability(
-                active_run,
-                duration_ms=active_timer.elapsed_ms(),
+                failure.active_run,
+                duration_ms=failure.duration_ms,
                 succeeded=False,
-                failure_code=external_failure_code(error),
+                failure_code=failure_code,
             )
-        return JsonResponse(
-            {"error": EXTERNAL_SERVICE_MESSAGE, "code": "external_service_unavailable"},
-            status=503,
+        if isinstance(error, ExternalServiceError):
+            logger.error(
+                "Complex market search failed",
+                exc_info=(type(error), error, error.__traceback__),
+            )
+            return JsonResponse(
+                {"error": EXTERNAL_SERVICE_MESSAGE, "code": "external_service_unavailable"},
+                status=503,
+            )
+        logger.error(
+            "Unexpected complex market search error",
+            exc_info=(type(error), error, error.__traceback__),
         )
-    except Exception:
-        logger.exception("Unexpected complex market search error")
-        if active_run is None:
-            record_search_run(
-                request,
-                searchname,
-                active_search_type,
-                0,
-                succeeded=False,
-                record_word=active_search_type == SearchRun.CLOSED,
-                criteria_snapshot=criteria.snapshot(),
-                duration_ms=active_timer.elapsed_ms(),
-                failure_code=FAILURE_UNEXPECTED,
-            )
-        else:
-            update_search_run_observability(
-                active_run,
-                duration_ms=active_timer.elapsed_ms(),
-                succeeded=False,
-                failure_code=FAILURE_UNEXPECTED,
-            )
         return JsonResponse({"error": "市場分析を実行できませんでした"}, status=500)
 
 
