@@ -2,11 +2,13 @@
 
 ## 1. Purpose and Status
 
-本書は現行DBの実態と、リリースロードマップに必要な将来スキーマを定義する。Phase 2の`WatchItem`拡張と`WatchPriceSnapshot`はmigration `0015_watchlist_phase2`で実装済み。その他の将来テーブル・カラムは設計であり、未実装。SQLite開発環境とPostgreSQL本番環境の両方でDjango migrationを使用する。
+本書は現行DBの実態と、リリースロードマップに必要な将来スキーマを定義する。2026-09-12のソースにはMain migration `0022_sale_record_category_phase7`まで存在し、在庫・出品・購入判断・販売実績・通知・アラートのモデルも存在する。各DBへの適用状態は別途確認が必要。PostgreSQLを標準、SQLiteを明示的な互換環境としDjango migrationを使用する。下記の古いbaseline表や将来案は実装済み一覧とは区別する。
 
 ## 2. Current Schema Baseline
 
-現行Main migration headは`0009_search_ownership`。
+以下の表は`0009_search_ownership`時点を中心とする歴史的baseline。現在のSearchRunにはcriteria_snapshot/result_snapshot/trigger/duration_ms/failure_codeが追加済みであり、表の不足項目を現在も未実装と解釈しない。ソース上のheadは0022、実DB適用は本改訂で未検証。
+
+A0計画（未実装）: [越境ロードマップ](../plans/cross-border-research-roadmap.md)にCore/Commerce/CrossBorderと既存モデルの対応、原子保存、追加→backfill→検算→読取切替の契約を定義する。Mainのapp label/既存PK・FK・JPY列は維持し、scrapingの即時改名/削除は行わない。Product未照合、SearchDayの時刻不明、ownerless行を推測で補完しない。新物理スキーマはA0のADRとX1で確定し、既存PurchaseDecisionのversion=1を新algorithm_versionと同一視しない。rollbackは読取窓口の切戻しを基本とし、新データをDROPしない。
 
 | Model/table | Main fields | Ownership/relations | Current issue |
 |---|---|---|---|

@@ -8,6 +8,8 @@
 
 ## User workflow and boundaries
 
+2026-09-12: 国内仕入れ→海外販売の追加計画は[越境ECリサーチロードマップ](../plans/cross-border-research-roadmap.md)のX0〜X7で扱う。本書のM3は海外仕入れ→国内販売として維持する。取得調査・市場識別・金額/観測の制約は共有し、費用と配送方向は分ける。越境領域はSystema内に独立して設ける方針で、別Djangoアプリを含む具体配置はX1のADRで確定する。以下の既存Main内配置案を越境新領域に無条件適用しない。両計画とも機能実装済みを意味しない。
+
 - 既存の市場検索で取得元を選択し、ターゲット分析で国内販売相場と購入候補を比較する。各行へ取得元・通貨・出品状態・更新日時・出典リンクを表示する。
 - メルカリは出品中の購入候補と販売済みの相場根拠を分ける。販売済み表示だけで実際の決済価格や販売日時が確認できるとは扱わない。取得できない値は不明とする。
 - 保存条件に取得市場・販売想定市場を含め、同じキーワードの別市場条件を意図せず上書きしない。既存条件はYahooを既定として維持する。
@@ -58,6 +60,8 @@
 - ライブ接続、本番利用資格、商用再利用、DB移行と運用は独立して検証し、fixture成功をライブ提供可能の根拠にしない。
 
 ## Related Files
+
+- `docs/plans/cross-border-research-roadmap.md` — 国内仕入れ→海外販売、段階別開始/完了条件と独立判断
 
 - `docs/plans/release-feature-roadmap.md` — Phase 3C、M0〜M4と依存関係
 - `docs/features/market-search.md`, `docs/features/target-analysis.md`, `docs/features/seller-management.md` — 現行の統合先

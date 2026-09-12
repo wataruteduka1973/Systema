@@ -35,6 +35,8 @@
 
 ## 3. Compatibility Strategy
 
+A0計画（未実装）: [越境ロードマップ](../plans/cross-border-research-roadmap.md)に従い、legacy endpoint→HTTP互換adapter→検索UseCaseの順へ移す。v1とCLIも同じUseCaseを呼ぶ。旧status/JSON/所有者/副作用は契約テストで維持し、保存失敗を成功として記録する問題は修正契約を明記する。API削除・一括envelope変更はしない。既存APIのJPY整数契約は維持し、外貨用amount/currencyの追加契約はA0のMoney ADRとX1で別定義する。
+
 - 現行エンドポイントは既存画面の互換層として当面維持する。
 - 新機能は`/taskle/api/v1/`へ追加する。
 - 既存レスポンスを一括変更しない。画面移行後に非推奨化し、アクセスログで未使用を確認してから削除する。

@@ -2,7 +2,7 @@
 
 ## System overview
 
-This project is a Django-based Yahoo! Auction market analysis tool. It fetches auction data, stores search results in SQLite, and exposes JSON endpoints for search, market analysis, and pricing insights.
+This project is a Django-based Yahoo! Auction market analysis tool. It fetches auction data, stores search results in PostgreSQL (SQLite is an explicit fallback), and exposes JSON endpoints for search, market analysis, and pricing insights.
 
 ## Main components
 
@@ -13,6 +13,8 @@ This project is a Django-based Yahoo! Auction market analysis tool. It fetches a
 - `System_Config/settings.py`: project configuration and logging
 
 ## Responsibility layers
+
+計画追加（未実装）: [越境ロードマップのA0](plans/cross-border-research-roadmap.md)で、既存Main app labelとAPIを維持したままYahoo Provider・検索Repository・HTTP非依存UseCaseへ段階移行する。Web/CLIが同じUseCaseを呼び、legacy viewsは互換adapterとして残す。CoreのProduct/Listing/Observation/Moneyはまず契約をADR化し、全モデル移行やマイクロサービス化は前提にしない。A0-Required完了後にX1へ進む。以下の現行構造と計画上の目標を区別する。
 
 - `Main/domain/`: 外部I/Oに依存しない値変換・判定ロジック
 - `Main/services/`: ユースケースとアプリケーション固有例外
