@@ -5,9 +5,9 @@ from __future__ import annotations
 from typing import Any
 
 from django.core.management.base import BaseCommand, CommandError
-from django.test import RequestFactory
 from django.utils import timezone
 
+from Main.infrastructure.marketplaces.yahoo import YahooMarketplaceProvider
 from Main.models.savedsearch import SavedSearch
 from Main.models.sellerlisting import SellerListing
 from Main.models.watchitem import WatchItem
@@ -16,9 +16,16 @@ from Main.services.alert_rules import (
     evaluate_seller_alert_rules,
     evaluate_watch_alert_rules,
 )
+from Main.services.market_search import (
+    TargetSearchFailure,
+    execute_target_search,
+    record_target_search_failure,
+)
 from Main.services.notifications import notify_saved_search_run
+from Main.services.ownership import RequestOwner
 from Main.services.saved_searches import criteria_from_saved_search
-from Main.views.utils import complex_market_data_logic
+from Main.services.search_persistence import DjangoSearchRepository
+from Main.services.watchlist import refresh_watched_item
 
 
 class Command(BaseCommand):
@@ -34,7 +41,9 @@ class Command(BaseCommand):
         )
 
     def handle(self, *args: Any, **options: Any) -> None:
-        searches = SavedSearch.objects.filter(is_active=True).select_related("user")
+        searches = SavedSearch.objects.filter(is_active=True, user__is_active=True).select_related(
+            "user"
+        )
         if options["user_id"]:
             searches = searches.filter(user_id=options["user_id"])
         if options["saved_search_id"]:
@@ -44,19 +53,21 @@ class Command(BaseCommand):
 
         refreshed = failed = notifications = 0
         if not options["evaluate_only"]:
-            factory = RequestFactory()
             for saved_search in searches.iterator():
-                request = factory.get("/taskle/complex_market_data")
-                request.user = saved_search.user
-                request.saved_search = saved_search
-                request.search_trigger = "scheduled"
+                criteria = criteria_from_saved_search(saved_search)
+                owner = RequestOwner(user=saved_search.user, session_key="")
+                repository = DjangoSearchRepository()
                 try:
-                    response = complex_market_data_logic(
-                        request, criteria_from_saved_search(saved_search)
+                    result = execute_target_search(
+                        criteria=criteria,
+                        owner=owner,
+                        provider=YahooMarketplaceProvider(),
+                        repository=repository,
+                        refresh_watch=refresh_watched_item,
+                        trigger="scheduled",
+                        saved_search=saved_search,
                     )
-                    runs = getattr(request, "recorded_search_runs", [])
-                    if runs:
-                        notify_saved_search_run(runs[-1])
+                    runs = result.runs
                     current_run = next(
                         (
                             run
@@ -65,11 +76,23 @@ class Command(BaseCommand):
                         ),
                         None,
                     )
-                    if response.status_code < 400 and current_run is not None:
+                    if current_run is not None:
+                        notify_saved_search_run(current_run)
                         notifications += evaluate_saved_search_alert_rules(current_run)
                         refreshed += 1
                     else:
                         failed += 1
+                except TargetSearchFailure as failure:
+                    runs = record_target_search_failure(
+                        failure,
+                        criteria=criteria,
+                        owner=owner,
+                        repository=repository,
+                        trigger="scheduled",
+                        saved_search=saved_search,
+                    )
+                    notify_saved_search_run(runs[-1])
+                    failed += 1
                 except Exception as error:
                     failed += 1
                     self.stderr.write(f"saved search {saved_search.pk}: {error.__class__.__name__}")

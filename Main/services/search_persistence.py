@@ -40,6 +40,9 @@ class DjangoSearchRepository:
         run.result_snapshot = dict(snapshot)
         run.save(update_fields=("result_snapshot",))
 
+    def save_failed(self, **values: Any) -> SearchRun:
+        return persist_failed_search(**values)
+
 
 def _legacy_row(keyword: str, item: Mapping[str, Any], observed_at: str) -> scraping:
     """既存scraping列へ保存する値をDB書込み前に組み立てる。"""
@@ -124,6 +127,37 @@ def persist_successful_search(
         searchwordlog.objects.create(**owner.model_values, word=keyword)
 
     _prune_runs(owner, keyword, search_type)
+    return run
+
+
+@transaction.atomic
+def persist_failed_search(
+    *,
+    owner: RequestOwner,
+    keyword: str,
+    search_type: str,
+    criteria_snapshot: Mapping[str, Any] | None = None,
+    trigger: str = "manual",
+    duration_ms: int | None = None,
+    failure_code: str,
+    saved_search: Any | None = None,
+    record_word: bool = True,
+) -> SearchRun:
+    """失敗runと従来の検索語副作用をHTTPに依存せず保存する。"""
+    run = SearchRun.objects.create(
+        **owner.model_values,
+        saved_search=saved_search,
+        keyword=keyword,
+        search_type=search_type,
+        item_count=0,
+        succeeded=False,
+        criteria_snapshot=dict(criteria_snapshot or {}),
+        trigger=trigger,
+        duration_ms=duration_ms,
+        failure_code=failure_code,
+    )
+    if record_word:
+        searchwordlog.objects.create(**owner.model_values, word=keyword)
     return run
 
 

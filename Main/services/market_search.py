@@ -13,6 +13,7 @@ from Main.domain.auction_time import format_remaining_time, parse_duration_secon
 from Main.domain.buying_opportunity import evaluate_buying_opportunity
 from Main.domain.product_condition import enrich_market_items
 from Main.models.searchrun import SearchRun
+from Main.services.exceptions import ExternalServiceError
 from Main.services.market_statistics import (
     analyze_market_prices,
     enrich_items_with_market_comparison,
@@ -20,7 +21,11 @@ from Main.services.market_statistics import (
 from Main.services.marketplace import MarketplaceProvider
 from Main.services.ownership import RequestOwner
 from Main.services.search_criteria import SearchCriteria
-from Main.services.search_observability import SearchTimer
+from Main.services.search_observability import (
+    FAILURE_UNEXPECTED,
+    SearchTimer,
+    external_failure_code,
+)
 
 
 class SearchRepository(Protocol):
@@ -36,6 +41,8 @@ class SearchRepository(Protocol):
     ) -> None: ...
 
     def save_result_snapshot(self, run: Any, snapshot: Mapping[str, Any]) -> None: ...
+
+    def save_failed(self, **values: Any) -> Any: ...
 
 
 WatchRefresher = Callable[[Mapping[str, Any], RequestOwner], Any]
@@ -63,6 +70,45 @@ class TargetSearchFailure(Exception):
         self.active_run = active_run
         self.completed_runs = completed_runs
         self.duration_ms = duration_ms
+
+
+def record_target_search_failure(
+    failure: TargetSearchFailure,
+    *,
+    criteria: SearchCriteria,
+    owner: RequestOwner,
+    repository: SearchRepository,
+    trigger: str = "manual",
+    saved_search: Any | None = None,
+) -> tuple[Any, ...]:
+    """Web/CLI共通の安全な失敗分類で対象runを失敗として保存する。"""
+    code = (
+        external_failure_code(failure.cause)
+        if isinstance(failure.cause, ExternalServiceError)
+        else FAILURE_UNEXPECTED
+    )
+    runs = list(failure.completed_runs)
+    if failure.active_run is None:
+        run = repository.save_failed(
+            owner=owner,
+            keyword=criteria.keyword,
+            search_type=failure.search_type,
+            criteria_snapshot=criteria.snapshot(),
+            trigger=trigger,
+            duration_ms=failure.duration_ms,
+            failure_code=code,
+            saved_search=saved_search,
+            record_word=failure.search_type == SearchRun.CLOSED,
+        )
+        runs.append(run)
+    else:
+        repository.update_run(
+            failure.active_run,
+            duration_ms=failure.duration_ms,
+            succeeded=False,
+            failure_code=code,
+        )
+    return tuple(runs)
 
 
 def execute_target_search(

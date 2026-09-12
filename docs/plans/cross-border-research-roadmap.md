@@ -1,6 +1,6 @@
 # 越境EC価格差リサーチ ロードマップ
 
-更新日: 2026-09-12。状態: **A0追加の計画改訂済み・A0/CrossBorder機能未実装**。
+更新日: 2026-09-12。状態: **A0.0〜A0.4実装・SQLiteローカル検証済み、CrossBorder機能未実装**。
 
 ## 目的と採用方針
 
@@ -33,12 +33,12 @@ Yahooで実証できる最小の境界を整備し、2〜3市場へ拡張でき�
 
 | 問題 | 判定と根拠 | 優先度 |
 |---|---|---|
-| utilsの責務過多 | **部分解決**。HTTPは`Main/infrastructure/http.py`、パーサーは`Main/scraping/yahoo.py`、判定は`Main/domain/`、統計はservicesへ分離済み。一方`Main/views/utils.py`はURL生成、検索調整、run/行保存、watch更新、JsonResponseを維持 | Required: 利用する検索経路の移行 |
-| HTTP/バッチ結合 | **未解決**。`run_alerts.py`はRequestFactoryでrequestを作り`complex_market_data_logic`を呼ぶ。`record_search_run`はrequestへrecorded_search_runsを追記 | Required |
-| Marketplace境界 | **部分解決**。Yahooパーサーは独立しているが共通Provider/DTOなし。HTTP許可ホストはYahoo専用。単なるホスト追加で汎用化しない | Required |
+| utilsの責務過多 | **対象経路は解決済み**。target検索はProvider/UseCase/Repositoryへ分離し、utilsは既存HTTP応答と旧取得名の互換adapterを維持。予測等の残存経路はA0.8候補 | Required: 利用する検索経路の移行 |
+| HTTP/バッチ結合 | **解決済み**。Webと`run_alerts.py`は同じHTTP非依存target検索UseCaseを呼び、失敗run保存も明示ownerで共通化 | Required |
+| Marketplace境界 | **Yahooで解決済み**。共通Provider/DTOとYahoo adapterを実装。HTTP許可ホストはYahoo専用のまま維持し、他市場は個別の許可条件確認後に追加 | Required |
 | Product/Listing/Observation | **未解決**。既存Mainモデルには市場非依存の商品同定契約がない。Inventoryは商品マスターの代わりにならない | Required: 契約。全件移行は後続 |
 | 複数通貨 | **未解決**。価格は円整数が中心。手数料率のDecimal利用はMoney/FX対応を意味しない | Required: 保存/変換契約 |
-| legacy保存 | **未解決**。`scraping`は小文字class・大文字始まりのフィールド、SearchDay/BiddingはTextField、nullable SearchRun FK。`save_to_database`は1行ずつcreateして例外を捕捉し継続、明示的atomic/bulkなし | Required: 原子保存。改名/廃止は後続 |
+| legacy保存 | **書込境界は解決済み**。旧schemaは維持し、成功run・商品行・検索語をatomic/bulk保存。途中失敗は成功行を残さず別の失敗runを記録。改名/廃止は後続 | Required: 原子保存。改名/廃止は後続 |
 | 判断履歴 | **部分解決**。`PurchaseDecision.snapshot`にversion=1、assumptions/evidence/result/savedAtあり。SellerListingSnapshotにもcalculation_inputsあり。一方WatchItemのbuy_score/status/reason/medianは最新値で、WatchPriceSnapshotに判定版なし | Required: 版・履歴の契約。全watch履歴化はRecommended |
 | legacy/v1 API | **部分解決**。`Main/urls.py`に両方が存在。既存の在庫等はservicesを呼ぶが検索はutilsを経由 | Required: 移行経路の互換。全API統一はRecommended |
 | repository hygiene | **未解決**。trackedに__pycache__ 91件、staticfiles 555件、document/build 90件、tests/report.htmlとassets 1件ずつ。ignore指定だけでは追跡が外れない。root models.pyはmanaged=Falseの生成モデル | Cleanup: 利用確認後のみ |
@@ -58,7 +58,7 @@ A0はP0の作業ツリー/契約ベースライン確認後に着手可能。本
 | A0.1 Required: Yahoo取得窓口 | **実装済み・SQLiteローカル検証済み**。`MarketplaceProvider`、`MarketListingObservation`、Yahoo adapterへ分離し、既存Parserを再利用。utils旧名は委譲ラッパーで維持 | closed/currentをYahoo一実装で確認。Parserを再実装せず使う。utilsの旧名は委譲ラッパーで維持し、単位ごとに戻せる |
 | A0.2 Required: 保存境界 | **実装・SQLiteローカル検証済み（2026-09-12）**。`Main/services/search_persistence.py`へrun+行保存と保持処理を移した | 全行事前検証、最大200件のbulk_create、atomic、実保存件数で成功記録。途中エラー注入で成功run/部分行が残らず、別の失敗runになることを確認。旧行/カラムは未変更。PostgreSQL、CI、本番はNOT VERIFIED |
 | A0.3 Required: 検索UseCase | **実装済み・SQLiteローカル検証済み**。target検索を`Main/services/market_search.py`へ抽出し、Webは所有者・条件・trigger・saved searchを明示入力へ変換 | domainとUseCaseはHttpRequest/JsonResponse/RequestFactory不要。targetのclosed/current、watch更新の順序と回数が旧契約と一致。途中失敗は完了runと失敗対象を分離してWebへ返す |
-| A0.4 Required: Job/CLI共通化 | A0.3後。run_alertsを同じUseCaseへ接続。保存条件所有者・有効ユーザー・trigger・実行結果を明示渡し | 実運用コマンドにRequestFactory/View importなし。Web/CLI同条件の結果・記録・通知重複を照合。P0のlock/timeout統合とは差分を分け、互いの契約を検証 |
+| A0.4 Required: Job/CLI共通化 | **実装済み・SQLiteローカル検証済み**。`run_alerts`を共通UseCaseへ接続し、owner・条件・provider・repository・trigger・saved searchを明示渡し | RequestFactory/View importを除去。成功currentだけ通知・ルール評価し、途中失敗は共通分類で保存・失敗通知。P0のlock/timeout統合は別差分 |
 | A0.5 Required: Core概念ADR | X0の識別子・価格種別・保持情報を随時反映。下記モデル契約とlegacy対応を決定 | Productの照合未確定、Listing識別子、Observationの意味/所有者/削除方針が合意。未知の外部条件は未対応として表現。新DB全実装は不要 |
 | A0.6 Required: Money/評価ADR | A0.5と並行。既存JPY変換、Decimal精度、FX方向/版、履歴契約を決定 | 整数JPYの旧契約維持、元通貨非破壊、欠損と0、計算版とschema版の区別を例で確認。値オブジェクト実装はX2前まで |
 | A0.7 Required: 互換・移行ゲート | A0.2〜6後。API/DB設計と回帰試験を更新 | 下記X1ゲートを満たし対象revisionのCI成功を確認。失敗時は最後の通過単位まで戻す。既存API削除やDB逆migrationはしない |
@@ -113,14 +113,14 @@ A0はP0の作業ツリー/契約ベースライン確認後に着手可能。本
 
 全旧APIのv1統一、予測/履歴の残りの抽出、全件Product照合、JPY列の全面移行、全watchの評価履歴化、JS共通化、requirements分割、生成物削除は並行/後続でよい。移行対象経路に影響しない整理をゲートに含めない。JSはMain/static/JSにMarketComparison等の共有が既にあり、実際の重複・回帰コストを計測して限定する。
 
-**現在の判定: X1へはまだ進めない。** A0.0〜A0.3はSQLiteでローカル検証済み。A0.4のJob/CLI共通化、A0.5/6の具体契約、A0.7のPostgreSQL/CIを含むゲートが残っている。次はA0.4へ進む。X0は継続可能。
+**現在の判定: X1へはまだ進めない。** A0.0〜A0.4はSQLiteでローカル検証済み。A0.5/6の具体契約とA0.7のPostgreSQL/CIを含むゲートが残っている。次はA0.5/6へ進む。X0は継続可能。
 
 ## 実施順序と段階別ゲート
 
 | 段階 | 利用者に届けるもの・作業範囲 | 開始条件 | 完了条件 | 現在 |
 |---|---|---|---|---|
 | P0 既存版の公開準備 | Phase 9の未統合差分と資料を照合し、既存フローを安定させる | 現行差分・既存検証記録の確認 | ローカル適合性と本番証跡を別々に記録。公開にはHTTPS、DB、所有者分離、復元、静的配信、利用制限、必要なジョブ運用の確認が必要 | 差分あり・本計画では未検証 |
-| A0 Core安定化 | Web/CLI共通UseCase、Yahoo Provider、保存境界、Core/金額/移行契約 | P0のベースライン確認後。P0の本番完了は待たない | A0-RequiredとX1開始ゲートを通過。Recommended/Cleanupは後続可 | A0.0/A0.2を実装・SQLite検証済み。他は未実装 |
+| A0 Core安定化 | Web/CLI共通UseCase、Yahoo Provider、保存境界、Core/金額/移行契約 | P0のベースライン確認後。P0の本番完了は待たない | A0-RequiredとX1開始ゲートを通過。Recommended/Cleanupは後続可 | A0.0〜A0.4を実装・SQLite検証済み。A0.5以降は未実装 |
 | X0 取得と対象の選定 | 国内/海外の取得経路、用途、カテゴリ、配送先、必要データと原価を調査 | 今すぐ開始可能 | 証拠URL・確認日・条件を記録し、API利用/手入力で限定検証/保留のいずれかを決める。成約根拠の有無を明示 | 未着手 |
 | X1 境界・金額・根拠の設計 | A0の契約に沿うCrossBorder API/DB追加設計、所有者、商品照合、計算例、試験用データ | A0-Required完了かつX0で少なくとも手入力の入力範囲と利用条件が確定 | 既存互換、通貨精度、欠損、保存期限、移行/戻し方、在庫連携窓口を定義。代表例を手計算と照合 | A0待ち |
 | X2 手入力MVP | 候補URL・価格・根拠・為替・費用の入力、比較、利益/購入上限、保存 | X1完了 | ログイン所有の候補を作成・比較・修正できる。前提不足は判定不可。単体・所有者/DB・画面検証を通過 | 未着手 |
@@ -209,7 +209,7 @@ A0はP0の作業ツリー/契約ベースライン確認後に着手可能。本
 
 日付の約束は置かない。X0終了時に取得条件と試験データ、X1終了時に変更対象と受入例からX2/X3の工数を見積もる。API申請待ちと開発工数を分け、各段階を実装・検証・文書更新までの小さな単位に分割する。
 
-次の実作業は **A0.4のJob/CLI共通化と、並行するX0の取得・用途台帳の作成**。A0.2のPostgreSQL検証はDB認証情報を利用できる環境でA0.7までに実施する。P0では既存公開準備の未統合差分を別スコープで確認する。各段階の状態は「計画済み/実装済み/ローカル検証済み/CI検証済み/本番検証済み」を分け、対象revisionと証跡を記録する。
+次の実作業は **A0.5/6のCore・Money・評価契約ADRと、並行するX0の取得・用途台帳の作成**。A0.2のPostgreSQL検証はDB認証情報を利用できる環境でA0.7までに実施する。P0では既存公開準備の未統合差分を別スコープで確認する。各段階の状態は「計画済み/実装済み/ローカル検証済み/CI検証済み/本番検証済み」を分け、対象revisionと証跡を記録する。
 
 ## 関連資料
 

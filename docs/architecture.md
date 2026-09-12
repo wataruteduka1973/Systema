@@ -7,14 +7,16 @@ This project is a Django-based Yahoo! Auction market analysis tool. It fetches a
 ## Main components
 
 - `Main/views/api.py`: HTTP entrypoints for client requests
-- `Main/views/utils.py`: scraping, parsing, database write/read, and analysis logic
+- `Main/views/utils.py`: legacy HTTP adapters and remaining compatibility orchestration
+- `Main/services/market_search.py`: HTTP-independent target-search orchestration
+- `Main/infrastructure/marketplaces/yahoo.py`: Yahoo retrieval and parser coordination
 - `Main/models/`: persisted search history and scraped item records
 - `Main/templates/` and `Main/static/`: UI assets used by the Django views
 - `System_Config/settings.py`: project configuration and logging
 
 ## Responsibility layers
 
-計画追加（未実装）: [越境ロードマップのA0](plans/cross-border-research-roadmap.md)で、既存Main app labelとAPIを維持したままYahoo Provider・検索Repository・HTTP非依存UseCaseへ段階移行する。Web/CLIが同じUseCaseを呼び、legacy viewsは互換adapterとして残す。CoreのProduct/Listing/Observation/Moneyはまず契約をADR化し、全モデル移行やマイクロサービス化は前提にしない。A0-Required完了後にX1へ進む。以下の現行構造と計画上の目標を区別する。
+[越境ロードマップのA0](plans/cross-border-research-roadmap.md)では、既存Main app labelとAPIを維持したままYahoo Provider、検索Repository、HTTP非依存のtarget検索UseCaseへ段階移行している。Webと`run_alerts`は同じUseCaseを呼び、legacy viewsは互換adapterとして残す。失敗runの分類と保存もWeb/CLI共通サービスが担当する。CoreのProduct/Listing/Observation/Moneyは次に契約をADR化し、全モデル移行やマイクロサービス化は前提にしない。A0-Required完了後にX1へ進む。
 
 - `Main/domain/`: 外部I/Oに依存しない値変換・判定ロジック
 - `Main/services/`: ユースケースとアプリケーション固有例外
@@ -38,11 +40,11 @@ Django標準のユーザー、セッション、パスワード検証を認証�
 ## Data flow
 
 1. Client requests a search or market API.
-2. API view validates input and delegates to the utility layer.
-3. Scraper fetches Yahoo HTML or database data.
-4. Parser extracts normalized item data.
-5. Analysis code calculates rankings, trends, and predictions.
-6. Results are returned as JSON or saved to the database.
+2. API view or management command converts its input to criteria and an explicit owner.
+3. The target-search use case calls the configured marketplace provider.
+4. The Yahoo adapter fetches HTML and coordinates parser normalization.
+5. The use case applies criteria, persists each run through the repository, and calculates rankings.
+6. The entrypoint converts the result to JSON or evaluates notifications and alert rules.
 
 ## External dependencies
 

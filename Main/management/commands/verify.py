@@ -22,6 +22,7 @@ FEATURE_TESTS = {
         "tests/integration/test_error_logging.py",
     ),
     "alerts": (
+        "tests/integration/test_alert_command_usecase.py",
         "tests/integration/test_alert_rules.py",
         "tests/integration/test_notifications.py",
         "tests/unit/test_database_config.py",

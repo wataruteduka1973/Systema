@@ -32,6 +32,11 @@ class Repository:
     def save_result_snapshot(self, run, snapshot):
         self.snapshot = (run, snapshot)
 
+    def save_failed(self, **values):
+        run = Run(values["search_type"])
+        self.saved.append((run, values))
+        return run
+
 
 class Provider:
     marketplace = "test_market"

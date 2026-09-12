@@ -27,6 +27,13 @@ The page supports create, edit, stop/resume through `isEnabled`, and delete. All
 
 `python manage.py run_alerts` refreshes active saved searches, records their normal search results, evaluates saved-search rules, and evaluates persisted watch and seller observations. Use `--evaluate-only` when external access is not wanted. `--user-id` and `--saved-search-id` narrow the run.
 
+Scheduled refresh calls the same HTTP-independent target-search use case as the web flow. The
+command passes the authenticated owner, saved criteria, Yahoo provider, repository, `scheduled`
+trigger, and saved-search reference directly. It does not construct an `HttpRequest` or import a
+view. Only active searches owned by active users are refreshed. A successful current run produces
+one saved-search status notification and one alert-rule evaluation; a partial or complete failure
+records and notifies the failed run without evaluating saved-search alert rules.
+
 The command is the deployment boundary for a future scheduler. No scheduler or long-running process is started by Phase 6. Email delivery remains deferred until in-app notification behavior is stable and will use a separate outbox model.
 
 ## Related Files
@@ -37,7 +44,8 @@ The command is the deployment boundary for a future scheduler. No scheduler or l
 - `Main/templates/alert_rules.html`, `Main/static/JS/AlertRules.js`
 - `Main/templates/notifications.html`, `Main/static/JS/Notifications.js`
 - `Main/management/commands/run_alerts.py`, `Main/management/commands/verify.py`
-- `tests/integration/test_alert_rules.py`, `tests/e2e/test_alert_rules_browser.py`
+- `tests/integration/test_alert_command_usecase.py`, `tests/integration/test_alert_rules.py`
+- `tests/e2e/test_alert_rules_browser.py`
 
 ## Verification
 

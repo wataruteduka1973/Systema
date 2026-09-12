@@ -21,7 +21,11 @@ from Main.models.searchwordlog import searchwordlog
 from Main.scraping.yahoo import YahooAuctionParser
 from Main.services.exceptions import ExternalServiceError
 from Main.services.external_search import normalize_search_keyword
-from Main.services.market_search import TargetSearchFailure, execute_target_search
+from Main.services.market_search import (
+    TargetSearchFailure,
+    execute_target_search,
+    record_target_search_failure,
+)
 from Main.services.market_statistics import enrich_items_with_market_comparison
 from Main.services.ownership import get_request_owner, owner_query
 from Main.services.search_criteria import SearchCriteria
@@ -443,32 +447,19 @@ def complex_market_data_logic(request, criteria=None):
         request.recorded_search_runs = list(result.runs)
         return JsonResponse(result.payload)
     except TargetSearchFailure as failure:
-        request.recorded_search_runs = list(failure.completed_runs)
-        error = failure.cause
-        failure_code = (
-            external_failure_code(error)
-            if isinstance(error, ExternalServiceError)
-            else FAILURE_UNEXPECTED
+        owner = get_request_owner(request)
+        repository = DjangoSearchRepository()
+        request.recorded_search_runs = list(
+            record_target_search_failure(
+                failure,
+                criteria=criteria,
+                owner=owner,
+                repository=repository,
+                trigger=getattr(request, "search_trigger", "manual"),
+                saved_search=getattr(request, "saved_search", None),
+            )
         )
-        if failure.active_run is None:
-            record_search_run(
-                request,
-                criteria.keyword,
-                failure.search_type,
-                0,
-                succeeded=False,
-                record_word=failure.search_type == SearchRun.CLOSED,
-                criteria_snapshot=criteria.snapshot(),
-                duration_ms=failure.duration_ms,
-                failure_code=failure_code,
-            )
-        else:
-            update_search_run_observability(
-                failure.active_run,
-                duration_ms=failure.duration_ms,
-                succeeded=False,
-                failure_code=failure_code,
-            )
+        error = failure.cause
         if isinstance(error, ExternalServiceError):
             logger.error(
                 "Complex market search failed",
