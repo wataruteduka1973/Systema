@@ -61,7 +61,7 @@ A0はP0の作業ツリー/契約ベースライン確認後に着手可能。本
 | A0.4 Required: Job/CLI共通化 | **実装済み・SQLiteローカル検証済み**。`run_alerts`を共通UseCaseへ接続し、owner・条件・provider・repository・trigger・saved searchを明示渡し | RequestFactory/View importを除去。成功currentだけ通知・ルール評価し、途中失敗は共通分類で保存・失敗通知。P0のlock/timeout統合は別差分 |
 | A0.5 Required: Core概念ADR | **設計契約策定済み**。[ADR 0003](../decisions/0003-market-identity-and-observation-contract.md)に識別・価格種別・所有者・保持・移行を固定。物理モデルは未実装 | Productの照合未確定、Listing識別子、Observationの意味/所有者/削除方針が合意。未知の外部条件は未対応として表現。新DB全実装は不要 |
 | A0.6 Required: Money/評価ADR | **設計契約策定済み**。[ADR 0004](../decisions/0004-money-fx-and-evaluation-contract.md)にJPY互換・精度・FX・丸め・評価版を固定。値オブジェクトは未実装 | 整数JPYの旧契約維持、元通貨非破壊、欠損と0、計算版とschema版の区別を例で確認。値オブジェクト実装はX2前まで |
-| A0.7 Required: 互換・移行ゲート | A0.2〜6後。API/DB設計と回帰試験を更新 | 下記X1ゲートを満たし対象revisionのCI成功を確認。失敗時は最後の通過単位まで戻す。既存API削除やDB逆migrationはしない |
+| A0.7 Required: 互換・移行ゲート | **一部検証済み（2026-09-13）**。SQLite/PostgreSQLのcore-contracts通過。[検証記録](a0-verification.md)。再送・ブラウザ・CI/full証跡は残る | 下記X1ゲートを満たし対象revisionのCI成功を確認。失敗時は最後の通過単位まで戻す。既存API削除やDB逆migrationはしない |
 | A0.8 Recommended: 残りの整理 | 必須経路確立後。予測/保存履歴等の残るutils経路を1本ずつ移行。requirementsをruntime/devへ分離。新境界のmypy・意味のあるテストを拡張 | 各変更で対応API/画面、runtimeのみの起動、devでの検査を確認。依存バージョン変更は別作業。MVPを一律に止めない |
 | A0.9 Cleanup: 生成物 | A0.0後に独立可能。参照/生成/配信経路を確認して追跡除外を計画 | Main/static原本とcollectstaticを確認。root models.pyの参照は限定検索では見つからないが削除確定ではない。必要ファイルを再生成/復元できること |
 

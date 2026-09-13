@@ -34,6 +34,11 @@ view. Only active searches owned by active users are refreshed. A successful cur
 one saved-search status notification and one alert-rule evaluation; a partial or complete failure
 records and notifies the failed run without evaluating saved-search alert rules.
 
+Invalid stored criteria fail only that saved search: the command reports the exception class,
+updates its last attempt time, and continues with later searches. It does not expose the invalid
+value or create a successful run. This validation failure occurs before acquisition and does not
+create a search run or status notification.
+
 The command is the deployment boundary for a future scheduler. No scheduler or long-running process is started by Phase 6. Email delivery remains deferred until in-app notification behavior is stable and will use a separate outbox model.
 
 ## Related Files

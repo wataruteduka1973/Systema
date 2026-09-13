@@ -54,10 +54,10 @@ class Command(BaseCommand):
         refreshed = failed = notifications = 0
         if not options["evaluate_only"]:
             for saved_search in searches.iterator():
-                criteria = criteria_from_saved_search(saved_search)
                 owner = RequestOwner(user=saved_search.user, session_key="")
                 repository = DjangoSearchRepository()
                 try:
+                    criteria = criteria_from_saved_search(saved_search)
                     result = execute_target_search(
                         criteria=criteria,
                         owner=owner,

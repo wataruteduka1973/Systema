@@ -20,7 +20,13 @@ ADRの存在を試験成功とみなさない。A0.7では既存JPY、所有者�
 ```bash
 python manage.py verify
 python manage.py verify --feature market-search
+python manage.py verify --feature core-contracts
 ```
+
+`core-contracts`はA0境界のWeb/CLI保存結果一致、所有者、失敗run、保存原子性、
+保存条件、Yahoo Provider、JPY計算をまとめる。PostgreSQLでは既存の
+`scripts/Invoke-Systema.ps1 verify --feature core-contracts`を使い、pytest用DBで実行する。
+本番DBに障害を注入しない。スイート通過は同時再送・ブラウザ・CI全体の成功を意味しない。
 
 Phase 8: `python manage.py verify --feature admin-monitoring` includes the staff
 dashboard browser workflow. If Windows/OneDrive denies reuse of the default temp

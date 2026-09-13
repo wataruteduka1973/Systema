@@ -8,6 +8,16 @@ from pathlib import Path
 from django.core.management.base import BaseCommand, CommandError
 
 FEATURE_TESTS = {
+    "core-contracts": (
+        "tests/integration/test_alert_command_usecase.py",
+        "tests/integration/test_search_persistence.py",
+        "tests/integration/test_external_search_api.py",
+        "tests/integration/test_saved_searches.py",
+        "tests/unit/test_market_search_usecase.py",
+        "tests/unit/test_yahoo_marketplace.py",
+        "tests/unit/test_profitability.py",
+        "tests/unit/test_purchase_budget.py",
+    ),
     "admin-monitoring": (
         "tests/integration/test_admin_monitoring.py",
         "tests/integration/test_external_search_api.py",
