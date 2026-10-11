@@ -20,6 +20,8 @@ The `/accounts/admin-setup/` web endpoint is development-only and returns 404 in
 
 Claude Codeのクラウドセッションでは`.claude/hooks/session-start.sh`が依存関係をインストールし、`pytest`などのコマンドがDjango導入済みのPythonを使うよう`PATH`を調整します。PostgreSQLがないため、未指定時は`DB_ENGINE=sqlite`を設定します。イメージ同梱の単独インストール版`pytest`は別のPythonで動きDjangoを読み込めないため、フック適用前のセッションでは`python -m pytest`を使用してください。
 
+クラウドイメージは`/opt/pw-browsers`にChromium（revision 1194）を同梱し、`playwright install`を禁止しています。フックは対応する`playwright==1.56.0`を導入してE2Eのブラウザ起動を可能にします。E2E画面はBootstrapを`cdn.jsdelivr.net`から読み込み、テストはコンソールエラーなしを検証するため、環境のネットワーク許可に`cdn.jsdelivr.net`が必要です。許可がない場合、読み込み失敗と`d-none`未適用によりE2Eが失敗します。
+
 `__pycache__/`と`*.pyc`はGitで追跡しません（`.gitignore`済み）。
 
 ## Common commands
