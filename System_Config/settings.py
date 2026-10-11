@@ -4,6 +4,7 @@ from pathlib import Path
 import django
 
 from System_Config.database import build_database_config
+from System_Config.static_storage import build_storages
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -214,11 +215,8 @@ STATICFILES_DIRS = [
     BASE_DIR / "Main/static",
 ]
 
-if DEBUG:
-    STATICFILES_STORAGE = "django.contrib.staticfiles.storage.StaticFilesStorage"
-else:
-    # STATICFILES_STORAGE = 'django.contrib.staticfiles.storage.ManifestStaticFilesStorage'
-    STATICFILES_STORAGE = "whitenoise.storage.CompressedManifestStaticFilesStorage"
+# Production (DEBUG=false) requires `collectstatic` before serving pages.
+STORAGES = build_storages(DEBUG)
 
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
