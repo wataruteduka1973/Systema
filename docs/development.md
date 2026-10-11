@@ -18,6 +18,10 @@ The `/accounts/admin-setup/` web endpoint is development-only and returns 404 in
 
 開発とテストの標準データベースはPostgreSQLです。`DB_NAME`、`DB_USER`、`DB_PASSWORD`を設定し、`docs/postgresql-bootstrap.md`の接続確認と構築順を使用してください。SQLiteは一時的なローカル確認に限り、`DB_ENGINE=sqlite`を明示した場合だけ使用します。
 
+Claude Codeのクラウドセッションでは`.claude/hooks/session-start.sh`が依存関係をインストールし、`pytest`などのコマンドがDjango導入済みのPythonを使うよう`PATH`を調整します。PostgreSQLがないため、未指定時は`DB_ENGINE=sqlite`を設定します。イメージ同梱の単独インストール版`pytest`は別のPythonで動きDjangoを読み込めないため、フック適用前のセッションでは`python -m pytest`を使用してください。
+
+`__pycache__/`と`*.pyc`はGitで追跡しません（`.gitignore`済み）。
+
 ## Common commands
 
 ```bash
