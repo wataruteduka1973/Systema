@@ -78,18 +78,19 @@ def _validated_rows(
 
 
 def _prune_runs(owner: RequestOwner, keyword: str, search_type: str) -> None:
-    retained_ids = list(
+    # Delete only runs this transaction saw beyond the limit. Excluding a retained list
+    # instead would also delete a run another transaction committed in between.
+    stale_ids = list(
         SearchRun.objects.filter(
             **owner.model_values,
             keyword=keyword,
             search_type=search_type,
-        ).values_list("id", flat=True)[:MAX_RETAINED_RUNS]
+        )
+        .order_by("-created_at", "-pk")
+        .values_list("id", flat=True)[MAX_RETAINED_RUNS:]
     )
-    SearchRun.objects.filter(
-        **owner.model_values,
-        keyword=keyword,
-        search_type=search_type,
-    ).exclude(pk__in=retained_ids).delete()
+    if stale_ids:
+        SearchRun.objects.filter(pk__in=stale_ids).delete()
 
 
 @transaction.atomic

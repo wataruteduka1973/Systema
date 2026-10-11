@@ -17,6 +17,15 @@ Search closed auctions, current listings, or saved snapshots through one screen.
   history retention in one transaction. Item rows are validated before the write and inserted in
   one bounded batch. If item persistence fails, no successful run or partial item rows remain; the
   existing API error contract records a separate failed run.
+- History retention keeps the newest 50 runs per owner, keyword and search type. Pruning deletes
+  only the run IDs the saving transaction itself saw beyond the limit; it must never delete by
+  "everything except a retained list", because on PostgreSQL READ COMMITTED that also deletes a run
+  another transaction committed in between (a returned success would vanish). Concurrent saves can
+  briefly exceed the limit by the number of concurrent saves; the next save converges it.
+- Until X1 introduces `acquisition_id` (ADR 0003), every execution, including a resend of the same
+  criteria, is a new observation with its own `SearchRun` and rows. Notifications are deduplicated
+  per run. `tests/integration/test_search_resend_contract.py` fixes this contract, with PostgreSQL
+  concurrency cases.
 - Marketplace acquisition uses `MarketplaceProvider` and normalized
   `MarketListingObservation` values. Yahoo URL construction, HTTP retrieval, parser coordination,
   and source validation live in `Main/infrastructure/marketplaces/yahoo.py`; the old
