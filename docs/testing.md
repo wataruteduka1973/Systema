@@ -26,7 +26,11 @@ python manage.py verify --feature core-contracts
 `core-contracts`はA0境界のWeb/CLI保存結果一致、所有者、失敗run、保存原子性、
 保存条件、Yahoo Provider、JPY計算をまとめる。PostgreSQLでは既存の
 `scripts/Invoke-Systema.ps1 verify --feature core-contracts`を使い、pytest用DBで実行する。
-本番DBに障害を注入しない。スイート通過は同時再送・ブラウザ・CI全体の成功を意味しない。
+本番DBに障害を注入しない。2026-10-11から再送・同時実行契約
+（`test_search_resend_contract.py`、PostgreSQLの同時実行ケースはSQLiteではskip）と
+検索・ウォッチのブラウザ動線（`tests/e2e/test_target_search_watch_browser.py`）を含む。
+SQLiteのテストDBはプロセスごとの一時ファイルを使う。in-memoryではlive serverが
+1接続を共有し、並行リクエストでE2Eが不安定になるため。
 
 Phase 8: `python manage.py verify --feature admin-monitoring` includes the staff
 dashboard browser workflow. If Windows/OneDrive denies reuse of the default temp
