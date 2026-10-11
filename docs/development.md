@@ -20,7 +20,7 @@ The `/accounts/admin-setup/` web endpoint is development-only and returns 404 in
 
 Claude Codeのクラウドセッションでは`.claude/hooks/session-start.sh`が依存関係をインストールし、`pytest`などのコマンドがDjango導入済みのPythonを使うよう`PATH`を調整します。PostgreSQLがないため、未指定時は`DB_ENGINE=sqlite`を設定します。イメージ同梱の単独インストール版`pytest`は別のPythonで動きDjangoを読み込めないため、フック適用前のセッションでは`python -m pytest`を使用してください。
 
-クラウドイメージは`/opt/pw-browsers`にChromium（revision 1194）を同梱し、`playwright install`を禁止しています。フックは対応する`playwright==1.56.0`を導入してE2Eのブラウザ起動を可能にします。E2E画面はBootstrapを`cdn.jsdelivr.net`から読み込み、テストはコンソールエラーなしを検証するため、環境のネットワーク許可に`cdn.jsdelivr.net`が必要です。許可がない場合、読み込み失敗と`d-none`未適用によりE2Eが失敗します。
+クラウドイメージは`/opt/pw-browsers`にChromium（revision 1194）を同梱し、`playwright install`を禁止しています。フックは対応する`playwright==1.56.0`を導入してE2Eのブラウザ起動を可能にします。フロントエンドライブラリ（Bootstrap 5.1.3/5.3.0、Bootstrap Icons 1.10.5、Popper 2.9.2、Chart.js 4.4.7、jQuery 3.5.1 slim）はCDNを使わず`Main/static/vendor/<名前>-<版>/`に同梱し、`{% static %}`で参照します。npm配布物から`.map`とLICENSEを含めて複製しており、本番の`CompressedManifestStaticFilesStorage`が`sourceMappingURL`を解決できるよう`.map`を削除しないでください。版を更新するときはディレクトリ名とテンプレート参照を同時に変更します。Google Fontsだけは外部読み込みのままです。
 
 `__pycache__/`と`*.pyc`はGitで追跡しません（`.gitignore`済み）。
 

@@ -50,7 +50,7 @@ All 8 tests verify:
 4. Mark all as read action
 5. Responsive layout at 390px (mobile viewport)
 6. Ownership isolation across multiple users
-7. No external requests to Yahoo! Auctions (allowlist: localhost, 127.0.0.1, cdn.jsdelivr.net, fonts.googleapis.com, fonts.gstatic.com)
+7. No external requests to Yahoo! Auctions (allowlist: localhost, 127.0.0.1, fonts.googleapis.com, fonts.gstatic.com)
 8. Empty notification list and empty state display
 
 **Test database**: SQLite only (no production DB connection, no saved credentials, no Yahoo! Auctions connection)

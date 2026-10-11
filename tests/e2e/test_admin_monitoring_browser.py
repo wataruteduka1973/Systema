@@ -52,7 +52,6 @@ def test_staff_monitoring_browser(db_for_e2e, live_server, client):
             if host in {
                 "localhost",
                 "127.0.0.1",
-                "cdn.jsdelivr.net",
                 "fonts.googleapis.com",
                 "fonts.gstatic.com",
             }:

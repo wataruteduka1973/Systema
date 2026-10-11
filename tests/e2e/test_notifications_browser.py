@@ -527,7 +527,6 @@ class TestNotificationsBrowser:
 
         Allowlist:
         - localhost, 127.0.0.1 (test server)
-        - cdn.jsdelivr.net (Bootstrap CDN - required)
         - fonts.googleapis.com, fonts.gstatic.com (Google Fonts - required for UI)
         - data: URLs (inline resources)
 
@@ -548,7 +547,6 @@ class TestNotificationsBrowser:
                 allowed_hosts = [
                     "localhost",
                     "127.0.0.1",
-                    "cdn.jsdelivr.net",  # Bootstrap CDN
                     "fonts.googleapis.com",  # Google Fonts CSS
                     "fonts.gstatic.com",  # Google Fonts assets
                 ]
@@ -596,7 +594,7 @@ class TestNotificationsBrowser:
                 assert not blocked_requests, (
                     "Blocked external requests detected:\n"
                     + "\n".join([f"  {req['hostname']}: {req['url']}" for req in blocked_requests])
-                    + "\nAllowed hosts: localhost, 127.0.0.1, cdn.jsdelivr.net, "
+                    + "\nAllowed hosts: localhost, 127.0.0.1, "
                     + "fonts.googleapis.com, fonts.gstatic.com"
                 )
             finally:
