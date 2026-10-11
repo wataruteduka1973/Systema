@@ -183,6 +183,15 @@ def select_tests(changed_files: Sequence[str]) -> tuple[str, ...]:
     return tuple(sorted(selected))
 
 
+def full_quality_commands(python: str) -> list[tuple[str, list[str]]]:
+    """Repository-wide checks matching the CI "Lint and type check" job."""
+    return [
+        ("ruff", [python, "-m", "ruff", "check", "."]),
+        ("format", [python, "-m", "black", "--check", "Main", "System_Config", "tests"]),
+        ("mypy", [python, "-m", "mypy"]),
+    ]
+
+
 class Command(BaseCommand):
     help = "Run concise, scope-aware project verification."
 
@@ -208,7 +217,9 @@ class Command(BaseCommand):
 
         python_files = self._changed_python_files()
         commands: list[tuple[str, list[str]]] = []
-        if python_files:
+        if options["full"]:
+            commands.extend(full_quality_commands(sys.executable))
+        elif python_files:
             commands.append(("ruff", [sys.executable, "-m", "ruff", "check", *python_files]))
             commands.append(("format", [sys.executable, "-m", "black", "--check", *python_files]))
         if tests:

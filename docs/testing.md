@@ -42,12 +42,27 @@ test directory). This option changes only pytest's temporary directory.
 python manage.py verify --full
 ```
 
-Coverageを含むCI相当の実行:
+`--full`はCIの「Lint and type check」ジョブと同じく、リポジトリ全体の`ruff check .`、
+`black --check Main System_Config tests`、`mypy`を実行してから全テストを実行する。
+通常実行と機能単位実行のruff/blackは変更ファイルだけを対象にし、mypyは実行しない。
+過去にローカルの`verify --full`が通ってもCIのmypyで失敗した原因はこの差だったため、
+CIの検査を増やすときは`full_quality_commands`も同時に更新する。
+
+Coverageを含むCI相当の実行（E2EはCIの別ジョブで実行する）:
 
 ```bash
-coverage run -m pytest
+coverage run -m pytest -m "not e2e"
 coverage report
 ```
+
+### CI構成（`.github/workflows/ci.yml`）
+
+- 実行契機: `main`へのpush、すべてのPull Request、手動実行。PRブランチへのpushで
+  push/pull_requestの二重実行をしない。同じrefの古い実行は新しいpushで取り消す。
+- Tests: PostgreSQL 18で`-m "not e2e"`を実行する。ブラウザーを持たないため、E2Eを含めない。
+- E2E Tests: Playwrightのchromium headless shellを取得して`-m e2e`だけを実行する。
+- PlaywrightはCI・ローカル・クラウドセッションで同じ版になるよう`requirements-dev.txt`で固定する。
+  1.56.0はクラウドイメージ同梱のChromium（revision 1194）に対応する。
 
 ## E2E browser testing (pytest-playwright)
 
@@ -91,7 +106,7 @@ pytest -m e2e -v
 Phase 6の絞り込み検証は`python manage.py verify --feature alerts`、保存済みデータだけの手動評価は`python manage.py run_alerts --evaluate-only`を使用する。
 
 GitHub Actionsではヘッドレス実行だけを行うため、E2Eジョブは
-`python -m playwright install --with-deps --only-shell` でPlaywrightの
+`python -m playwright install --with-deps --only-shell chromium` でPlaywrightの
 chromium headless shellとOS依存パッケージを取得する。
 
 ### 設定ファイル
