@@ -25,7 +25,9 @@ The page supports create, edit, stop/resume through `isEnabled`, and delete. All
 
 ## Manual execution
 
-`python manage.py run_alerts` refreshes active saved searches, records their normal search results, evaluates saved-search rules, and evaluates persisted watch and seller observations. Use `--evaluate-only` when external access is not wanted. `--user-id` and `--saved-search-id` narrow the run.
+`python manage.py run_alerts` refreshes active saved searches, records their normal search results, evaluates saved-search rules, and evaluates persisted watch and seller observations. `--evaluate-only` never calls Yahoo and evaluates each saved search's latest current-listing run only when it succeeded (a newer failed run suppresses evaluation). `--user-id` and `--saved-search-id` (positive IDs) narrow the run; a `--saved-search-id` run does not evaluate watches or sellers.
+
+Only one job runs at a time (PostgreSQL advisory lock; local SQLite uses `.local/run-alerts.lock`). An overlapping invocation exits 1 with "Alert job is already running" before doing any work. `--max-runtime-seconds` (default 1800) is a cooperative budget: no new saved search, watch or seller starts after it, and the command prints the summary and exits 1. When any saved search fails, the command prints the summary and exits 1 with `N failed searches`; per-search stderr shows only the exception class. See `release-readiness.md` for scheduler requirements.
 
 Scheduled refresh calls the same HTTP-independent target-search use case as the web flow. The
 command passes the authenticated owner, saved criteria, Yahoo provider, repository, `scheduled`
@@ -48,8 +50,8 @@ The command is the deployment boundary for a future scheduler. No scheduler or l
 - `Main/views/api.py`, `Main/views/urls.py`, `Main/urls.py`
 - `Main/templates/alert_rules.html`, `Main/static/JS/AlertRules.js`
 - `Main/templates/notifications.html`, `Main/static/JS/Notifications.js`
-- `Main/management/commands/run_alerts.py`, `Main/management/commands/verify.py`
-- `tests/integration/test_alert_command_usecase.py`, `tests/integration/test_alert_rules.py`
+- `Main/management/commands/run_alerts.py`, `Main/services/job_lock.py`, `Main/management/commands/verify.py`
+- `tests/integration/test_alert_command_usecase.py`, `tests/integration/test_alert_job.py`, `tests/integration/test_alert_rules.py`
 - `tests/e2e/test_alert_rules_browser.py`
 
 ## Verification

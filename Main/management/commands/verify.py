@@ -38,6 +38,7 @@ FEATURE_TESTS = {
     ),
     "alerts": (
         "tests/integration/test_alert_command_usecase.py",
+        "tests/integration/test_alert_job.py",
         "tests/integration/test_alert_rules.py",
         "tests/integration/test_notifications.py",
         "tests/unit/test_database_config.py",
@@ -118,6 +119,14 @@ FEATURE_TESTS = {
         "tests/unit/test_profitability.py",
         "tests/integration/test_inventory.py",
     ),
+    "release": (
+        "tests/integration/test_release_gate.py",
+        "tests/integration/test_alert_job.py",
+        "tests/integration/test_alert_command_usecase.py",
+        "tests/unit/test_http_retry.py",
+        "tests/unit/test_external_search.py",
+        "tests/unit/test_seller_listing.py",
+    ),
     "database": (
         "tests/unit/test_database_config.py",
         "tests/integration/test_database_command.py",
@@ -154,6 +163,9 @@ PATH_FEATURES = {
     "Main/static/JS/AlertRules.js": "alerts",
     "Main/templates/alert_rules.html": "alerts",
     "Main/management/commands/run_alerts.py": "alerts",
+    "Main/services/job_lock.py": "alerts",
+    "Main/infrastructure/http.py": "release",
+    "Main/management/commands/check_release.py": "release",
     "Main/models/notification.py": "notifications",
     "Main/services/notifications.py": "notifications",
     "Main/static/JS/Notifications.js": "notifications",

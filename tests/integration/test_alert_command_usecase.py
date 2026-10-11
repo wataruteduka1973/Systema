@@ -80,7 +80,8 @@ def test_run_alerts_records_and_notifies_current_failure_after_closed_success(mo
     monkeypatch.setattr(run_alerts, "YahooMarketplaceProvider", CurrentFailureProvider)
     monkeypatch.setattr(run_alerts, "evaluate_saved_search_alert_rules", evaluate)
 
-    call_command("run_alerts", stdout=StringIO())
+    with pytest.raises(CommandError, match="1 failed searches"):
+        call_command("run_alerts", stdout=StringIO())
 
     runs = {run.search_type: run for run in SearchRun.objects.filter(saved_search=saved_search)}
     assert runs[SearchRun.CLOSED].succeeded is True
@@ -174,7 +175,8 @@ def test_invalid_saved_criteria_does_not_abort_later_searches(monkeypatch):
     valid = _saved_search("valid-criteria")
     monkeypatch.setattr(run_alerts, "YahooMarketplaceProvider", SuccessfulProvider)
     output, errors = StringIO(), StringIO()
-    call_command("run_alerts", stdout=output, stderr=errors)
+    with pytest.raises(CommandError, match="1 failed searches"):
+        call_command("run_alerts", stdout=output, stderr=errors)
     assert "failed=1" in output.getvalue()
     assert SearchRun.objects.filter(saved_search=valid, succeeded=True).count() == 2
     invalid.refresh_from_db()
@@ -189,7 +191,8 @@ def test_snapshot_failure_marks_existing_current_run_failed(monkeypatch):
         raise ValueError("private snapshot detail")
 
     monkeypatch.setattr(DjangoSearchRepository, "save_result_snapshot", fail)
-    call_command("run_alerts", stdout=StringIO())
+    with pytest.raises(CommandError, match="failed searches"):
+        call_command("run_alerts", stdout=StringIO())
     assert SearchRun.objects.filter(saved_search=saved).count() == 2
     current = SearchRun.objects.get(saved_search=saved, search_type="current")
     assert current.succeeded is False

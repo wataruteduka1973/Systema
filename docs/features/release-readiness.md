@@ -118,12 +118,16 @@ browser tests. `verify --full` remains the Phase-boundary local suite.
 ## Integration Status (2026-10-11)
 
 Merged into `main`: `check_release`, `test_release_gate.py`, `test_release_workflow_browser.py`, and the
-core-contracts browser test. **Not merged yet**: the alert-job lock and runtime budget
-(`Main/services/job_lock.py`, `tests/integration/test_alert_job.py`) and the HTTP retry policy
-(`tests/unit/test_http_retry.py`). Their tests expect `run_alerts`/`http.py` code that was never
-written; `test_alert_job.py` also targets the pre-A0.4 `complex_market_data_logic` path that
-`run_alerts` no longer uses. The files remain on the `local-wip` branch and must be reimplemented
-against the shared target-search use case before the items above are treated as done.
+core-contracts browser test. The alert-job lock, time budget and failure exit
+(`Main/services/job_lock.py`, `run_alerts`) and the HTTP retry policy (`Main/infrastructure/http.py`)
+are implemented against the shared target-search use case. `test_alert_job.py` replaces the
+`local-wip` version, which targeted the removed `complex_market_data_logic` path. The PostgreSQL
+advisory lock was verified locally on PostgreSQL 16, including a second OS process exiting 1 while the
+lock was held. The scheduler itself is still not connected.
+
+HTTP retry constants: retryable statuses 429/500/502/503/504; backoff 1s, 2s, 4s, or `Retry-After`
+capped at 10s; total deadline 60s across attempts and backoff. A retry whose backoff would pass the
+deadline is not started. Seller-page refresh passes `max_retries=1` and is never retried.
 
 ## Related Files
 
@@ -136,5 +140,6 @@ against the shared target-search use case before the items above are treated as 
 - `tests/integration/test_release_gate.py`
 - `tests/integration/test_alert_job.py`
 - `tests/unit/test_http_retry.py`
+- `Main/management/commands/verify.py` (`release` suite)
 - `tests/e2e/test_release_workflow_browser.py`
 - `docs/deployment-security.md`
