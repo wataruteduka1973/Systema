@@ -1,97 +1,96 @@
-<!DOCTYPE html>
-<html lang="ja">
+{% extends 'base_with_footer.html' %}
+{% load static %}
 
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>情報分析ツール システマ</title>
-    {% load static %}
-    <link href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@400;600&display=swap" rel="stylesheet">
-    <link href="{% static 'vendor/bootstrap-5.3.8/css/bootstrap.min.css' %}" rel="stylesheet">
-    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;700&display=swap" rel="stylesheet">
-</head>
-<style>
-    body {
-        font-family: 'Poppins', sans-serif;
-        background: #f4f6f8;
-        color: #172033;
-        min-height: 100vh;
-        display: flex;
-        flex-direction: column;
-    }
+{% block title %}情報分析ツール システマ{% endblock %}
 
-    main {
-        flex: 1 0 auto;
-    }
+{% block extra_head %}
+        <link href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@400;600&display=swap" rel="stylesheet">
+        <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;700&display=swap" rel="stylesheet">
 
-    .hero-section {
-        background: radial-gradient(circle at 75% 20%, rgba(255,255,255,.18), transparent 28%), linear-gradient(135deg, #7f1d1d, #dc2626);
-        color: #ffffff;
-        padding: 4rem 1.5rem;
-        text-align: center;
-        margin-bottom: 3rem;
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
-    }
-
-    .hero-section h1 {
-        font-size: 2.5rem;
-        font-weight: 600;
-        margin-bottom: 1rem;
-    }
-
-    .hero-section p {
-        font-size: 1.1rem;
-        max-width: 600px;
-        margin: 0 auto;
-    }
-
-    .btn-custom {
-        background-color: #000000;
-        border: 1px solid #ced4da;
-        color: #ffffff;
-        padding: 0.5rem 1rem;
-        font-size: 1.1rem;
-    }
-
-    .btn-custom:hover {
-        background-color: #343a40;
-        color: #ffffff;
-    }
-
-    .btn-custom .bi-search- {
-        color: #ffffff;
-    }
-
-
-    .search-container {
-        max-width: 100%;
-        padding: 0 1rem;
-    }
-
-    #medianPriceBox {
-        font-size: 1.2rem;
-        font-weight: bold;
-        margin-bottom: 1rem;
-        background-color: #f3f3f3;
-    }
-
-    .target-card { background:#fff; border:1px solid #e7e9ee; border-radius:1rem; box-shadow:0 8px 28px rgba(23,32,51,.07); padding:1.25rem; }
-
-    @media (max-width: 768px) {
-
-        .input-group {
-            min-width: 150px;
-
+    <style>
+        body {
+            font-family: 'Poppins', sans-serif;
+            background: #f4f6f8;
+            color: #172033;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
         }
 
-        #dataTableContainer {
-            overflow-x: auto;
+        main {
+            flex: 1 0 auto;
         }
-    }
-</style>
 
-<body data-authenticated="{{ request.user.is_authenticated|yesno:'true,false' }}">
-    {% include 'header.html' %}
+        .hero-section {
+            background: radial-gradient(circle at 75% 20%, rgba(255,255,255,.18), transparent 28%), linear-gradient(135deg, #7f1d1d, #dc2626);
+            color: #ffffff;
+            padding: 4rem 1.5rem;
+            text-align: center;
+            margin-bottom: 3rem;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+        }
+
+        .hero-section h1 {
+            font-size: 2.5rem;
+            font-weight: 600;
+            margin-bottom: 1rem;
+        }
+
+        .hero-section p {
+            font-size: 1.1rem;
+            max-width: 600px;
+            margin: 0 auto;
+        }
+
+        .btn-custom {
+            background-color: #000000;
+            border: 1px solid #ced4da;
+            color: #ffffff;
+            padding: 0.5rem 1rem;
+            font-size: 1.1rem;
+        }
+
+        .btn-custom:hover {
+            background-color: #343a40;
+            color: #ffffff;
+        }
+
+        .btn-custom .bi-search- {
+            color: #ffffff;
+        }
+
+
+        .search-container {
+            max-width: 100%;
+            padding: 0 1rem;
+        }
+
+        #medianPriceBox {
+            font-size: 1.2rem;
+            font-weight: bold;
+            margin-bottom: 1rem;
+            background-color: #f3f3f3;
+        }
+
+        .target-card { background:#fff; border:1px solid #e7e9ee; border-radius:1rem; box-shadow:0 8px 28px rgba(23,32,51,.07); padding:1.25rem; }
+
+        @media (max-width: 768px) {
+
+            .input-group {
+                min-width: 150px;
+
+            }
+
+            #dataTableContainer {
+                overflow-x: auto;
+            }
+        }
+    </style>
+{% endblock %}
+
+{% block body_attrs %} data-authenticated="{{ request.user.is_authenticated|yesno:'true,false' }}"{% endblock %}
+
+{% block content %}
     <main role="main">
         <section class="hero-section">
             <div class="container">
@@ -259,13 +258,12 @@
             </div>
         </section>
     </main>
-    {% include 'footer.html' %}
+{% endblock %}
+
+{% block scripts %}
     <script src="{% static 'JS/csrf.js' %}?v=20260821-security"></script>
     <script src="{% static 'JS/MarketComparison.js' %}?v=20260821-target"></script>
     <script src="{% static 'JS/PurchaseBudget.js' %}?v=20260905-budget"></script>
     <script src="{% static 'JS/Deep_Analysis_now.js' %}?v=20260902-watch-history"></script>
     <script src="{% static 'JS/SavedSearches.js' %}?v=20260825-target-integrated"></script>
-    <script src="{% static 'vendor/bootstrap-5.3.8/js/bootstrap.bundle.min.js' %}"></script>
-</body>
-
-</html>
+{% endblock %}

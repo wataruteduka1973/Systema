@@ -1,13 +1,11 @@
-<!DOCTYPE html>
-<html lang="ja">
+{% extends 'base_with_footer.html' %}
+{% load static %}
 
-<head>
-    <meta charset="UTF-8">
-    {% load static %}
+{% block title %}情報分析ツール システマ{% endblock %}
+
+{% block extra_head %}
     <link href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@400;600&display=swap" rel="stylesheet">
-    <link href="{% static 'vendor/bootstrap-5.3.8/css/bootstrap.min.css' %}" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;700&display=swap" rel="stylesheet">
-    <title>情報分析ツール システマ</title>
     <style>
         body {
             font-family: 'Poppins', sans-serif;
@@ -116,10 +114,9 @@
             }
         }
     </style>
-</head>
+{% endblock %}
 
-<body>
-    {% include 'header.html' %}
+{% block content %}
     <main role="main">
         <section class="hero-section">
             <div class="container">
@@ -191,10 +188,9 @@
             </section>
         </div>
     </main>
-    {% include 'footer.html' %}
+{% endblock %}
+
+{% block scripts %}
     <script src="{% static 'vendor/chart.js-4.4.7/chart.umd.js' %}"></script>
     <script src="{% static 'JS/Yahuoku_prediction.js' %}?v=20260821-backtest"></script>
-    <script src="{% static 'vendor/bootstrap-5.3.8/js/bootstrap.bundle.min.js' %}"></script>
-</body>
-
-</html>
+{% endblock %}

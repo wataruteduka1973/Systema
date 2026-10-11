@@ -1,13 +1,11 @@
-<!DOCTYPE html>
-<html lang="ja">
+{% extends 'base_with_footer.html' %}
+{% load static %}
 
-<head>
-    <meta charset="UTF-8">
-    {% load static %}
+{% block title %}情報分析ツール システマ{% endblock %}
+
+{% block extra_head %}
     <link href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@400;600&display=swap" rel="stylesheet">
-    <link href="{% static 'vendor/bootstrap-5.3.8/css/bootstrap.min.css' %}" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;700&display=swap" rel="stylesheet">
-    <title>情報分析ツール システマ</title>
     <style>
         body {
             font-family: 'Poppins', sans-serif;
@@ -177,10 +175,9 @@
             }
         }
     </style>
-</head>
+{% endblock %}
 
-<body>
-    {% if not embedded %}{% include 'header.html' %}{% endif %}
+{% block content %}
     <main role="main">
         <section class="hero-section">
             <div class="container">
@@ -368,10 +365,9 @@
             </div>
         </div>
     </main>
-    {% if not embedded %}{% include 'footer.html' %}{% endif %}
+{% endblock %}
+
+{% block scripts %}
     <script src="{% static 'JS/MarketComparison.js' %}?v=20260814-phase3a"></script>
     <script src="{% static 'JS/YahuokuSetting.js' %}?v=20260814-phase3a"></script>
-    <script src="{% static 'vendor/bootstrap-5.3.8/js/bootstrap.bundle.min.js' %}"></script>
-</body>
-
-</html>
+{% endblock %}

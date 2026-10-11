@@ -53,7 +53,7 @@ document.addEventListener("DOMContentLoaded", function () {
 function TargetSearch() {
     const searchKeyword = document.getElementById("search").value.trim();
     if (!searchKeyword) {
-        alert('検索キーワードを入力してください');
+        window.SystemaFeedback.warning('検索キーワードを入力してください');
         return;
     }
     const params = new URLSearchParams({
@@ -88,15 +88,8 @@ function TargetSearch() {
         ))
         .then(response => {
             if (!response.ok) {
-                if (response.status === 400 || response.status === 500) {
-                    return response.text().then(text => {
-                        document.open();
-                        document.write(text);
-                        document.close();
-                        throw new Error(`Error page rendered: ${response.status}`);
-                    });
-                }
-                throw new Error(`HTTP error! status: ${response.status}`);
+                // Keep the form and current results; show the server's message in the page.
+                return window.SystemaFeedback.responseError(response, '検索に失敗しました').then(error => { throw error; });
             }
             return response.json();
         })
@@ -104,9 +97,9 @@ function TargetSearch() {
         .catch(error => {
             console.error('検索エラー:', error);
             if (error.message === 'SERVER_RESTART_REQUIRED') {
-                alert('更新前のサーバーが動作しています。Systemaを停止し、run_systema.batから再起動してください。');
+                window.SystemaFeedback.error('更新前のサーバーが動作しています。Systemaを停止し、run_systema.batから再起動してください。');
             } else {
-                alert('検索に失敗しました');
+                window.SystemaFeedback.errorFrom(error, '検索に失敗しました');
             }
         })
         .finally(() => {
@@ -257,7 +250,7 @@ async function addWatchItem(item) {
         await loadWatchlist();
     } catch (error) {
         console.error('ウォッチ登録エラー:', error);
-        alert(`ウォッチリストへ追加できませんでした: ${error.message}`);
+        window.SystemaFeedback.error(`ウォッチリストへ追加できませんでした: ${error.message}`);
     }
 }
 
@@ -272,7 +265,7 @@ async function removeWatchItem(itemId) {
         await loadWatchlist();
     } catch (error) {
         console.error('ウォッチ解除エラー:', error);
-        alert(`ウォッチを解除できませんでした: ${error.message}`);
+        window.SystemaFeedback.error(`ウォッチを解除できませんでした: ${error.message}`);
     }
 }
 
@@ -404,7 +397,7 @@ async function updateWatchItem(itemId, payload) {
         await loadWatchlist();
     } catch (error) {
         console.error('ウォッチ判断更新エラー:', error);
-        alert(`判断結果を保存できませんでした: ${error.message}`);
+        window.SystemaFeedback.error(`判断結果を保存できませんでした: ${error.message}`);
     }
 }
 
@@ -435,7 +428,7 @@ async function toggleWatchHistory(itemId, sourceRow) {
         cell.appendChild(list);
     } catch (error) {
         console.error('ウォッチ履歴取得エラー:', error);
-        alert(`価格履歴を取得できませんでした: ${error.message}`);
+        window.SystemaFeedback.error(`価格履歴を取得できませんでした: ${error.message}`);
     }
 }
 

@@ -37,11 +37,14 @@ document.addEventListener('DOMContentLoaded', () => {
     SearchDBButton.addEventListener('click', () => {
         const searchWord = dropdown.value;
         if (!searchWord) {
-            alert('検索ワードを選択してください');
+            window.SystemaFeedback.warning('検索ワードを選択してください');
             return;
         }
         fetch(`/taskle/get_market_data?keyword=${encodeURIComponent(searchWord)}`)
-            .then(response => response.json())
+            .then(async response => {
+                if (!response.ok) throw await window.SystemaFeedback.responseError(response, '検索に失敗しました');
+                return response.json();
+            })
             .then(result => {
                 marketData = result.data || [];
                 filteredData = [...marketData];
@@ -70,14 +73,14 @@ document.addEventListener('DOMContentLoaded', () => {
             })
             .catch(error => {
                 console.error('検索エラー:', error);
-                alert('検索に失敗しました');
+                window.SystemaFeedback.errorFrom(error, '検索に失敗しました');
             })
     });
 
     updateMarketDataButton.addEventListener('click', () => {
         const searchWord = dropdown.value;
         if (!searchWord) {
-            alert('検索ワードを選択してください');
+            window.SystemaFeedback.warning('検索ワードを選択してください');
             return;
         }
         spinner.style.display = 'inline-block';
@@ -86,13 +89,16 @@ document.addEventListener('DOMContentLoaded', () => {
             method: 'POST',
             headers: window.systemaCsrfHeaders(),
         })
-            .then(response => response.json())
+            .then(async response => {
+                if (!response.ok) throw await window.SystemaFeedback.responseError(response, '更新に失敗しました');
+                return response.json();
+            })
             .then(data => {
-                alert(data.message || '相場データを更新しました');
+                window.SystemaFeedback.success(data.message || '相場データを更新しました');
                 refreshSearchWordDropdown(searchWord);
                 SearchDBButton.click();
             })
-            .catch(error => alert('更新に失敗しました: ' + error))
+            .catch(error => window.SystemaFeedback.errorFrom(error, '更新に失敗しました'))
             .finally(() => {
                 spinner.style.display = 'none';
                 updateMarketDataButton.disabled = false;
@@ -102,7 +108,7 @@ document.addEventListener('DOMContentLoaded', () => {
     deleteMarketDataButton.addEventListener('click', () => {
         const searchWord = dropdown.value;
         if (!searchWord) {
-            alert('検索ワードを選択してください');
+            window.SystemaFeedback.warning('検索ワードを選択してください');
             return;
         }
         if (!confirm('本当に削除しますか？')) return;
@@ -110,16 +116,19 @@ document.addEventListener('DOMContentLoaded', () => {
             method: 'DELETE',
             headers: window.systemaCsrfHeaders(),
         })
-            .then(response => response.json())
+            .then(async response => {
+                if (!response.ok) throw await window.SystemaFeedback.responseError(response, '削除に失敗しました');
+                return response.json();
+            })
             .then(data => {
-                alert(data.message || '相場データを削除しました');
+                window.SystemaFeedback.success(data.message || '相場データを削除しました');
                 refreshSearchWordDropdown();
                 marketData = [];
                 filteredData = [];
                 updateTable([]);
                 updatePagination();
             })
-            .catch(error => alert('削除に失敗しました: ' + error));
+            .catch(error => window.SystemaFeedback.errorFrom(error, '削除に失敗しました'));
     });
 });
 // ページ読み込み時にテーブルを初期化
@@ -262,11 +271,11 @@ function filterData() {
 
 
     if (minPrice < 0 || (maxPriceInput && maxPrice < 0)) {
-        alert('価格は0以上の値を入力してください');
+        window.SystemaFeedback.warning('価格は0以上の値を入力してください');
         return;
     }
     if (maxPriceInput && minPrice > maxPrice) {
-        alert('最低価格は最高価格以下にしてください');
+        window.SystemaFeedback.warning('最低価格は最高価格以下にしてください');
         return;
     }
 
@@ -320,11 +329,11 @@ function validateAndFilterData() {
     const maxPrice = maxText ? parseInt(maxText, 10) : null;
 
     if (maxPrice !== null && minPrice > maxPrice) {
-        alert('最低価格は最高価格以下である必要があります。');
+        window.SystemaFeedback.warning('最低価格は最高価格以下である必要があります。');
         return;
     }
     if (isNaN(minPrice) || (maxPrice !== null && isNaN(maxPrice))) {
-        alert('価格は数値で入力してください。');
+        window.SystemaFeedback.warning('価格は数値で入力してください。');
         return;
     }
     filterData();

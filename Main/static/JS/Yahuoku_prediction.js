@@ -42,7 +42,7 @@ document.addEventListener('DOMContentLoaded', () => {
 function Prediction_Search() {
     const searchKeyword = document.getElementById('search').value.trim();
     if (!searchKeyword) {
-        alert('検索キーワードを入力してください');
+        window.SystemaFeedback.warning('検索キーワードを入力してください');
         return;
     }
 
@@ -56,19 +56,14 @@ function Prediction_Search() {
     fetch(`/taskle/prediction_market?${params.toString()}`)
         .then(response => {
             if (!response.ok) {
-                if (response.status === 400 || response.status === 500) {
-                    return response.text().then(text => {
-                        throw new Error(`Error page rendered: ${text}`);
-                    });
-                }
-                throw new Error(`HTTP error! status: ${response.status}`);
+                return window.SystemaFeedback.responseError(response, '検索に失敗しました').then(error => { throw error; });
             }
             return response.json();
         })
         .then(result => {
             currentData = result;
             if (currentData.error) {
-                alert(`エラー: ${currentData.error}`);
+                window.SystemaFeedback.error(`検索に失敗しました: ${currentData.error}`);
                 return;
             }
 
@@ -87,7 +82,7 @@ function Prediction_Search() {
         })
         .catch(error => {
             console.error('検索エラー:', error);
-            alert('検索に失敗しました: ' + error.message);
+            window.SystemaFeedback.errorFrom(error, '検索に失敗しました');
         })
         .finally(() => {
             spinner.style.display = 'none';

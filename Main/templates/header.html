@@ -1,144 +1,59 @@
-{% load static %}
-<script src="{% static 'JS/ClientErrors.js' %}" defer></script>
-<!DOCTYPE html>
-<html lang="ja">
-
-<head>
-    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600&display=swap" rel="stylesheet">
-    <style>
-        .navbar-custom {
-            background: linear-gradient(180deg, rgba(0, 0, 0, 0.9), rgba(0, 0, 0, 0.8));
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
-            padding: 0.5rem 1.5rem;
-            font-family: 'Poppins', sans-serif;
-        }
-
-        .navbar-custom .navbar-brand {
-            color: #ffffff;
-            font-size: 1.3rem;
-            font-weight: 600;
-            display: flex;
-            align-items: center;
-            transition: color 0.3s ease;
-        }
-
-        .navbar-custom .navbar-brand:hover {
-            color: #e0e0e0;
-        }
-
-        .navbar-custom .nav-link {
-            color: #ffffff;
-            font-size: 1rem;
-            font-weight: 500;
-            padding: 0.75rem 1.25rem;
-            position: relative;
-            transition: color 0.3s ease;
-        }
-
-        .navbar-custom .nav-link:hover::after {
-            content: '';
-            position: absolute;
-            width: 100%;
-            height: 2px;
-            bottom: 0;
-            left: 0;
-            background-color: #ffffff;
-            transform: scaleX(0);
-            transform-origin: bottom right;
-            animation: underline 0.3s ease forwards;
-        }
-
-        @keyframes underline {
-            to {
-                transform: scaleX(1);
-            }
-        }
-
-        .navbar-nav .nav-item {
-            margin-right: 0.5rem;
-        }
-
-        .navbar-toggler {
-            border: none;
-        }
-
-        .navbar-toggler-icon {
-            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 30 30'%3E%3Cpath stroke='rgba(255, 255, 255, 0.8)' stroke-width='2' d='M4 7h22M4 15h22M4 23h22'/%3E%3C/svg%3E");
-        }
-
-        .navbar-custom .nav-logout {
-            background: none;
-            border: 0;
-        }
-
-        @media (max-width: 768px) {
-            .navbar-custom .nav-link {
-                padding: 0.5rem;
-                font-size: 0.9rem;
-            }
-        }
-    </style>
-</head>
-
-<body>
-    <nav class="navbar navbar-expand-lg navbar-custom">
-        <div class="container-fluid">
-            <a class="navbar-brand" href="{% url 'index' %}">
-                <svg xmlns="http://www.w3.org/2000/svg" width="30" height="30" fill="currentColor" viewBox="0 0 16 16">
-                    <path
-                        d="M0 1.5A.5.5 0 0 1 .5 1H2a.5.5 0 0 1 .485.379L2.89 3H14.5a.5.5 0 0 1 .491.592l-1.5 8A.5.5 0 0 1 13 12H4a.5.5 0 0 1-.491-.408L2.01 3.607 1.61 2H.5a.5.5 0 0 1-.5-.5zM3.102 4l1.313 7h8.17l1.313-7H3.102zM5 12a2 2 0 1 0 0 4 2 2 0 0 0 0-4zm7 0a2 2 0 1 0 0 4 2 2 0 0 0 0-4zm-7 1a1 1 0 1 1 0 2 1 1 0 0 1 0-2zm7 0a1 1 0 1 1 0 2 1 1 0 0 1 0-2z" />
-                </svg>
-                <span class="ms-2">情報分析ツール システマ</span>
-            </a>
-            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav"
-                aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
-                <span class="navbar-toggler-icon"></span>
-            </button>
-            <div class="collapse navbar-collapse" id="navbarNav">
-                <ul class="navbar-nav ms-auto">
-                    <li class="nav-item">
-                        <a class="nav-link" href="{% url 'market_search' %}">市場検索</a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="{% url 'Deep_Analysis' %}">情報分析</a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="{% url 'Deep_Analysis_now' %}">ターゲット分析</a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="{% url 'Yahuoku_prediction' %}">相場予想</a>
-                    </li>
-                    {% if request.user.is_authenticated %}
-                    <li class="nav-item">
-                        <a class="nav-link" href="{% url 'seller_management' %}">出品・在庫管理</a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="{% url 'seller_outcomes_page' %}">販売実績分析</a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="{% url 'alert_rules_page' %}">アラート</a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="{% url 'profile' %}">{% if monitoring_privacy %}プロフィール{% else %}{{ request.user.username }}{% endif %}</a>
-                    </li>
-                    <li class="nav-item">
-                        <form method="post" action="{% url 'logout' %}">
-                            {% csrf_token %}
-                            <button class="nav-link nav-logout" type="submit">ログアウト</button>
-                        </form>
-                    </li>
-                    {% else %}
-                    <li class="nav-item">
-                        <a class="nav-link" href="{% url 'login' %}">ログイン</a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="{% url 'signup' %}">新規登録</a>
-                    </li>
-                    {% endif %}
-                </ul>
-            </div>
+{# Markup only: styles live in static/CSS/header.css and are loaded by base.html. #}
+<nav class="navbar navbar-expand-lg navbar-custom">
+    <div class="container-fluid">
+        <a class="navbar-brand" href="{% url 'index' %}">
+            <svg xmlns="http://www.w3.org/2000/svg" width="30" height="30" fill="currentColor" viewBox="0 0 16 16">
+                <path
+                    d="M0 1.5A.5.5 0 0 1 .5 1H2a.5.5 0 0 1 .485.379L2.89 3H14.5a.5.5 0 0 1 .491.592l-1.5 8A.5.5 0 0 1 13 12H4a.5.5 0 0 1-.491-.408L2.01 3.607 1.61 2H.5a.5.5 0 0 1-.5-.5zM3.102 4l1.313 7h8.17l1.313-7H3.102zM5 12a2 2 0 1 0 0 4 2 2 0 0 0 0-4zm7 0a2 2 0 1 0 0 4 2 2 0 0 0 0-4zm-7 1a1 1 0 1 1 0 2 1 1 0 0 1 0-2zm7 0a1 1 0 1 1 0 2 1 1 0 0 1 0-2z" />
+            </svg>
+            <span class="ms-2">情報分析ツール システマ</span>
+        </a>
+        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav"
+            aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+        <div class="collapse navbar-collapse" id="navbarNav">
+            <ul class="navbar-nav ms-auto">
+                <li class="nav-item">
+                    <a class="nav-link" href="{% url 'market_search' %}">市場検索</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="{% url 'Deep_Analysis' %}">情報分析</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="{% url 'Deep_Analysis_now' %}">ターゲット分析</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="{% url 'Yahuoku_prediction' %}">相場予想</a>
+                </li>
+                {% if request.user.is_authenticated %}
+                <li class="nav-item">
+                    <a class="nav-link" href="{% url 'seller_management' %}">出品・在庫管理</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="{% url 'seller_outcomes_page' %}">販売実績分析</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="{% url 'alert_rules_page' %}">アラート</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="{% url 'profile' %}">{% if monitoring_privacy %}プロフィール{% else %}{{ request.user.username }}{% endif %}</a>
+                </li>
+                <li class="nav-item">
+                    <form method="post" action="{% url 'logout' %}">
+                        {% csrf_token %}
+                        <button class="nav-link nav-logout" type="submit">ログアウト</button>
+                    </form>
+                </li>
+                {% else %}
+                <li class="nav-item">
+                    <a class="nav-link" href="{% url 'login' %}">ログイン</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="{% url 'signup' %}">新規登録</a>
+                </li>
+                {% endif %}
+            </ul>
         </div>
-    </nav>
-</body>
-
-</html>
+    </div>
+</nav>

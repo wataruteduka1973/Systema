@@ -1,19 +1,19 @@
+{% extends 'base.html' %}
 {% load static %}
-<!DOCTYPE html>
-<html lang="ja">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>通知 | Systema</title>
-    <link href="{% static 'vendor/bootstrap-5.3.8/css/bootstrap.min.css' %}" rel="stylesheet">
+
+{% block title %}通知 | Systema{% endblock %}
+
+{% block extra_head %}
     <style>
         .notification-card { border-left: .3rem solid transparent; }
         .notification-card.is-unread { border-left-color: #0d6efd; background: #f7faff; }
         .notification-message { overflow-wrap: anywhere; }
     </style>
-</head>
-<body class="bg-light">
-    {% include 'header.html' %}
+{% endblock %}
+
+{% block body_attrs %} class="bg-light"{% endblock %}
+
+{% block content %}
     <main class="container py-4" style="max-width: 900px">
         <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-4">
             <div>
@@ -34,7 +34,8 @@
             <button id="nextPage" class="btn btn-outline-secondary" type="button">次へ</button>
         </nav>
     </main>
-    <script src="{% static 'vendor/bootstrap-5.3.8/js/bootstrap.bundle.min.js' %}"></script>
+{% endblock %}
+
+{% block scripts %}
     <script src="{% static 'JS/Notifications.js' %}?v=20260910-phase6"></script>
-</body>
-</html>
+{% endblock %}

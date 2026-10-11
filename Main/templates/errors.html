@@ -1,13 +1,10 @@
-<!DOCTYPE html>
-<html lang="ja">
+{% extends 'base_with_footer.html' %}
+{% load static %}
 
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>エラー {{ status_code }}</title>
-    {% load static %}
+{% block title %}エラー {{ status_code }}{% endblock %}
+
+{% block extra_head %}
     <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;700&display=swap" rel="stylesheet">
-    <link href="{% static 'vendor/bootstrap-5.3.8/css/bootstrap.min.css' %}" rel="stylesheet">
     <style>
         body {
             font-family: 'Roboto', sans-serif;
@@ -64,10 +61,9 @@
             display: block;
         }
     </style>
-</head>
+{% endblock %}
 
-<body>
-    {% include 'header.html' %}
+{% block content %}
     <section class="error-section">
         <div class="container">
             <h1>{{ status_code }}</h1>
@@ -105,8 +101,4 @@
             <img src="{% static 'jpg/error.jpg' %}" alt="エラーイラスト" class="error-illustration">
         </div>
     </section>
-    {% include 'footer.html' %}
-    <script src="{% static 'vendor/bootstrap-5.3.8/js/bootstrap.bundle.min.js' %}"></script>
-</body>
-
-</html>
+{% endblock %}

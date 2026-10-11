@@ -1,14 +1,11 @@
+{% extends 'base.html' %}
 {% load static %}
-<!DOCTYPE html>
-<html lang="ja">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>{{ page_title }} | Systema</title>
-    <link href="{% static 'vendor/bootstrap-5.3.8/css/bootstrap.min.css' %}" rel="stylesheet">
-</head>
-<body class="bg-light">
-    {% include 'header.html' %}
+
+{% block title %}{{ page_title }} | Systema{% endblock %}
+
+{% block body_attrs %} class="bg-light"{% endblock %}
+
+{% block content %}
     <main class="container py-5" style="max-width: 680px;">
         {% for message in messages %}
         <div class="alert alert-info">{{ message }}</div>
@@ -50,6 +47,4 @@
             </div>
         </div>
     </main>
-    <script src="{% static 'vendor/bootstrap-5.3.8/js/bootstrap.bundle.min.js' %}"></script>
-</body>
-</html>
+{% endblock %}

@@ -1,0 +1,26 @@
+{% load static %}<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{% block title %}情報分析ツール システマ{% endblock %}</title>
+    <link href="{% static 'vendor/bootstrap-5.3.8/css/bootstrap.min.css' %}" rel="stylesheet">
+    {% block extra_head %}{% endblock %}
+    {% if not embedded %}
+    {# Loaded after page styles to keep the cascade order the inline header/footer styles had. #}
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600&display=swap" rel="stylesheet">
+    <link href="{% static 'CSS/header.css' %}" rel="stylesheet">
+    {% block footer_head %}{% endblock %}
+    {% endif %}
+    <link href="{% static 'CSS/feedback.css' %}" rel="stylesheet">
+    <script src="{% static 'JS/ClientErrors.js' %}" defer></script>
+</head>
+<body{% block body_attrs %}{% endblock %}>
+    {% if not embedded %}{% include 'header.html' %}{% endif %}
+    {% block content %}{% endblock %}
+    {% if not embedded %}{% block footer %}{% endblock %}{% endif %}
+    <script src="{% static 'vendor/bootstrap-5.3.8/js/bootstrap.bundle.min.js' %}"></script>
+    <script src="{% static 'JS/Feedback.js' %}"></script>
+    {% block scripts %}{% endblock %}
+</body>
+</html>

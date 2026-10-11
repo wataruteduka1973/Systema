@@ -1,73 +1,70 @@
-<!DOCTYPE html>
-<html lang="ja">
+{% extends 'base_with_footer.html' %}
+{% load static %}
 
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>情報分析ツール システマ</title>
-    {% load static %}
-    <link href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@400;600&display=swap" rel="stylesheet">
-    <link href="{% static 'vendor/bootstrap-5.3.8/css/bootstrap.min.css' %}" rel="stylesheet">
-    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;700&display=swap" rel="stylesheet">
-</head>
-<style>
-    body {
-        font-family: 'Poppins', sans-serif;
-        background: #f8f9fa;
-        color: #333;
-        min-height: 100vh;
-        display: flex;
-        flex-direction: column;
-    }
+{% block title %}情報分析ツール システマ{% endblock %}
 
-    main {
-        flex: 1 0 auto;
-    }
+{% block extra_head %}
+        <link href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@400;600&display=swap" rel="stylesheet">
+        <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;700&display=swap" rel="stylesheet">
 
-    .hero-section {
-        background: radial-gradient(circle at 75% 20%, rgba(255,255,255,.18), transparent 28%), linear-gradient(135deg, #7f1d1d, #dc2626);
-        color: #ffffff;
-        padding: 4rem 1.5rem;
-        text-align: center;
-        margin-bottom: 3rem;
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
-    }
+    <style>
+        body {
+            font-family: 'Poppins', sans-serif;
+            background: #f8f9fa;
+            color: #333;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
 
-    .hero-section h1 {
-        font-size: 2.5rem;
-        font-weight: 600;
-        margin-bottom: 1rem;
-    }
+        main {
+            flex: 1 0 auto;
+        }
 
-    .hero-section p {
-        font-size: 1.1rem;
-        max-width: 600px;
-        margin: 0 auto;
-    }
+        .hero-section {
+            background: radial-gradient(circle at 75% 20%, rgba(255,255,255,.18), transparent 28%), linear-gradient(135deg, #7f1d1d, #dc2626);
+            color: #ffffff;
+            padding: 4rem 1.5rem;
+            text-align: center;
+            margin-bottom: 3rem;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+        }
 
-    .search-day {
-        margin-top: 20px;
-        font-size: 1rem;
-        color: #333;
-    }
+        .hero-section h1 {
+            font-size: 2.5rem;
+            font-weight: 600;
+            margin-bottom: 1rem;
+        }
 
-    .analysis-card,
-    .analysis-panel {
-        background: #fff;
-        border: 1px solid #e5e7eb;
-        border-radius: 12px;
-        box-shadow: 0 3px 10px rgba(0, 0, 0, 0.06);
-    }
+        .hero-section p {
+            font-size: 1.1rem;
+            max-width: 600px;
+            margin: 0 auto;
+        }
 
-    .analysis-card { padding: 1rem; height: 100%; }
-    .analysis-card .value { font-size: 1.45rem; font-weight: 700; color: #b91c1c; }
-    .analysis-panel { padding: 1.25rem; margin-top: 2rem; overflow-x: auto; }
-    #priceTrendChart svg { min-width: 720px; width: 100%; height: 360px; }
+        .search-day {
+            margin-top: 20px;
+            font-size: 1rem;
+            color: #333;
+        }
 
-</style>
+        .analysis-card,
+        .analysis-panel {
+            background: #fff;
+            border: 1px solid #e5e7eb;
+            border-radius: 12px;
+            box-shadow: 0 3px 10px rgba(0, 0, 0, 0.06);
+        }
 
-<body>
-    {% include 'header.html' %}
+        .analysis-card { padding: 1rem; height: 100%; }
+        .analysis-card .value { font-size: 1.45rem; font-weight: 700; color: #b91c1c; }
+        .analysis-panel { padding: 1.25rem; margin-top: 2rem; overflow-x: auto; }
+        #priceTrendChart svg { min-width: 720px; width: 100%; height: 360px; }
+
+    </style>
+{% endblock %}
+
+{% block content %}
     <main role="main">
         <section class="hero-section">
             <div class="container">
@@ -113,11 +110,10 @@
             </div>
         </div>
     </main>
-    {% include 'footer.html' %}
-    <script src="{% static 'vendor/bootstrap-5.3.8/js/bootstrap.bundle.min.js' %}"></script>
+{% endblock %}
+
+{% block scripts %}
     <script src="{% static 'vendor/d3-6.7.0/d3.min.js' %}"></script>
     <script src="{% static 'JS/csrf.js' %}?v=20260821-security"></script>
     <script src="{% static 'JS/Deep_Analysis.js' %}?v=20260821-security"></script>
-</body>
-
-</html>
+{% endblock %}

@@ -85,6 +85,10 @@ FEATURE_TESTS = {
         "tests/integration/test_market_search.py",
         "tests/integration/test_search_resend_contract.py",
     ),
+    "ui-layout": (
+        "tests/integration/test_page_layout.py",
+        "tests/e2e/test_feedback_browser.py",
+    ),
     "accounts": (
         "tests/integration/test_auth.py",
         "tests/integration/test_saved_searches.py",
@@ -115,6 +119,14 @@ FEATURE_TESTS = {
 PATH_FEATURES = {
     "Main/services/admin_monitoring.py": "admin-monitoring",
     "Main/views/developer.py": "admin-monitoring",
+    "Main/templates/base.html": "ui-layout",
+    "Main/templates/base_with_footer.html": "ui-layout",
+    "Main/templates/header.html": "ui-layout",
+    "Main/templates/footer.html": "ui-layout",
+    "Main/static/JS/Feedback.js": "ui-layout",
+    "Main/static/CSS/header.css": "ui-layout",
+    "Main/static/CSS/footer.css": "ui-layout",
+    "Main/static/CSS/feedback.css": "ui-layout",
     "Main/templates/developer/dashboard.html": "admin-monitoring",
     "Main/logging_filters.py": "error-logging",
     "Main/middleware/error_logging_middleware.py": "error-logging",

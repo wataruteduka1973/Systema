@@ -1,0 +1,9 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block footer_head %}
+    <link rel="stylesheet" href="{% static 'vendor/bootstrap-icons-1.10.5/font/bootstrap-icons.css' %}">
+    <link href="{% static 'CSS/footer.css' %}" rel="stylesheet">
+{% endblock %}
+
+{% block footer %}{% include 'footer.html' %}{% endblock %}
