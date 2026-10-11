@@ -67,3 +67,14 @@ def test_all_templates_use_a_single_bootstrap_version() -> None:
     }
 
     assert len(versions) == 1
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize(
+    "template", TEMPLATES, ids=lambda path: str(path.relative_to(TEMPLATE_DIR))
+)
+def test_templates_do_not_load_standalone_popper_or_jquery(template: Path) -> None:
+    # bootstrap.bundle.min.js already includes Popper, and no page code uses jQuery.
+    source = template.read_text(encoding="utf-8")
+
+    assert not re.search(r"<script\b[^>]*(popper|jquery)", source, re.IGNORECASE)
