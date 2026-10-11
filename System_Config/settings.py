@@ -102,6 +102,10 @@ INSTALLED_APPS = [
     "django.contrib.contenttypes",
     "django.contrib.sessions",
     "django.contrib.messages",
+    # Keep runserver (including run_systema.bat's --insecure) from serving static files
+    # itself: it only knows unhashed names, so with manifest storage every asset was a 404.
+    # WhiteNoise serves STATIC_ROOT (DEBUG=false) or the finders (DEBUG=true) instead.
+    "whitenoise.runserver_nostatic",
     "django.contrib.staticfiles",
 ]
 
