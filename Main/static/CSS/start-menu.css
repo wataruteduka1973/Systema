@@ -1,0 +1,203 @@
+/* Top page (StartMenu.html). Loaded in extra_head, before the shared header/footer styles. */
+body {
+  font-family: 'Zen Kaku Gothic New', sans-serif;
+  background: #f7f2ea;
+  color: #362f28;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+main {
+  flex: 1 0 auto;
+}
+
+.serif {
+  font-family: 'Shippori Mincho', serif;
+}
+
+.hero-section {
+  text-align: center;
+  padding: 6rem 1.5rem 3.5rem;
+  max-width: 900px;
+  margin: 0 auto;
+}
+
+.hero-section h1 {
+  font-size: 3rem;
+  font-weight: 800;
+  line-height: 1.3;
+  margin-bottom: 1rem;
+}
+
+.hero-section .tagline {
+  font-size: 1.35rem;
+  font-weight: 600;
+  color: #d9633a;
+  margin-bottom: 1.25rem;
+}
+
+.hero-section .rule {
+  width: 64px;
+  height: 1px;
+  background: #a9823f;
+  margin: 0 auto 1.5rem;
+}
+
+.hero-section p.lead {
+  font-size: 1rem;
+  line-height: 2;
+  color: #6b6158;
+  max-width: 44ch;
+  margin: 0 auto 2.25rem;
+}
+
+.hero-section .btn-primary-warm {
+  background: #d9633a;
+  border-color: #d9633a;
+  color: #fdf8f3;
+  font-weight: 700;
+  padding: 0.85rem 2rem;
+}
+
+.hero-section .btn-primary-warm:hover {
+  background: #c2532c;
+  border-color: #c2532c;
+  color: #fdf8f3;
+}
+
+.hero-section .btn-outline-warm {
+  border: 1px solid #ddd3c5;
+  color: #362f28;
+  font-weight: 500;
+  padding: 0.85rem 2rem;
+}
+
+.hero-section .btn-outline-warm:hover {
+  background: #ede4d6;
+  color: #362f28;
+}
+
+.hot-picks {
+  max-width: 1040px;
+  margin: 0 auto;
+  padding: 0 1.5rem 3.5rem;
+}
+
+.hot-picks .hot-picks-label {
+  text-align: center;
+  font-size: 0.72rem;
+  letter-spacing: 0.16em;
+  color: #6b6158;
+  margin-bottom: 1rem;
+}
+
+.hot-pick-card {
+  background: #fdfaf6;
+  border: 1px solid #ddd3c5;
+  border-radius: 10px;
+  padding: 1.1rem 1.25rem;
+  height: 100%;
+}
+
+.hot-pick-card .tag {
+  display: inline-block;
+  font-size: 0.68rem;
+  font-weight: 700;
+  padding: 0.2rem 0.6rem;
+  border-radius: 999px;
+  margin-bottom: 0.6rem;
+}
+
+.hot-pick-card .tag-rising {
+  background: #f6dccb;
+  color: #8a3c22;
+}
+
+.hot-pick-card .tag-deal {
+  background: #cdeee2;
+  color: #1f6d57;
+}
+
+.hot-pick-card .tag-notable {
+  background: #f0e0bd;
+  color: #7a5a26;
+}
+
+.hot-pick-card .name {
+  display: block;
+  font-size: 0.9rem;
+  font-weight: 600;
+  margin-bottom: 0.4rem;
+}
+
+.hot-pick-card .price {
+  font-size: 1.2rem;
+  font-weight: 700;
+}
+
+.feature-section {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0.5rem 1.5rem 5rem;
+}
+
+.feature-card {
+  background: #fdfaf6;
+  border: 1px solid #ddd3c5;
+  border-radius: 14px;
+  padding: 1.75rem 1.4rem;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.feature-card .icon-badge {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.feature-card .icon-coral { background: #f6dccb; }
+.feature-card .icon-coral svg { stroke: #8a3c22; }
+.feature-card .icon-teal { background: #cdeee2; }
+.feature-card .icon-teal svg { stroke: #1f6d57; }
+.feature-card .icon-gold { background: #f0e0bd; }
+.feature-card .icon-gold svg { stroke: #7a5a26; }
+
+.feature-card h3 {
+  font-size: 1.15rem;
+  font-weight: 600;
+  margin-bottom: 0.5rem;
+}
+
+.feature-card p {
+  font-size: 0.82rem;
+  line-height: 1.75;
+  color: #6b6158;
+  flex: 1;
+}
+
+.feature-card .btn-feature {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  padding: 0.7rem;
+  border-radius: 8px;
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: #fdf8f3;
+  border: none;
+}
+
+.btn-feature-coral { background: #d9633a; }
+.btn-feature-coral:hover { background: #c2532c; color: #fdf8f3; }
+.btn-feature-teal { background: #2f9e82; }
+.btn-feature-teal:hover { background: #268069; color: #fdf8f3; }
+.btn-feature-gold { background: #a9823f; }
+.btn-feature-gold:hover { background: #8f6d34; color: #fdf8f3; }

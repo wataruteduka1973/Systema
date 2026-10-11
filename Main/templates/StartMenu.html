@@ -4,180 +4,88 @@
 {% block title %}情報分析ツール システマ{% endblock %}
 
 {% block extra_head %}
-    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600&display=swap" rel="stylesheet">
-    <style>
-      body {
-        font-family: 'Poppins', sans-serif;
-        background: #f8f9fa;
-        color: #333;
-        min-height: 100vh;
-        display: flex;
-        flex-direction: column;
-      }
-
-      main {
-        flex: 1 0 auto;
-      }
-
-      .hero-section {
-        background: linear-gradient(135deg, rgba(255, 77, 77, 0.8), rgba(255, 140, 140, 0.6));
-        color: #ffffff;
-        padding: 4rem 1.5rem;
-        text-align: center;
-        margin-bottom: 3rem;
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
-      }
-
-      .hero-section h1 {
-        font-size: 2.5rem;
-        font-weight: 600;
-        margin-bottom: 1rem;
-      }
-
-      .hero-section p {
-        font-size: 1.1rem;
-        max-width: 600px;
-        margin: 0 auto;
-      }
-
-      .card-deck {
-        margin-top: 2rem;
-      }
-
-      .card {
-        background: #ffffff;
-        border: none;
-        border-radius: 10px;
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-        transition: transform 0.3s ease, box-shadow 0.3s ease;
-        height: 100%;
-        display: flex;
-        flex-direction: column;
-      }
-
-      .card:hover {
-        transform: translateY(-5px);
-        box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
-      }
-
-      .card-img-top {
-        height: 180px;
-        object-fit: cover;
-        border-top-left-radius: 10px;
-        border-top-right-radius: 10px;
-      }
-
-      .card-body {
-        flex-grow: 1;
-        padding: 1.5rem;
-        display: flex;
-        flex-direction: column;
-      }
-
-      .card-title {
-        font-size: 1.25rem;
-        font-weight: 600;
-        color: #1a1a1a;
-      }
-
-      .card-text {
-        font-size: 0.95rem;
-        color: #555;
-        flex-grow: 1;
-      }
-
-      .btn-secondary {
-        background-color: #343a40;
-        border-color: #343a40;
-        font-size: 0.9rem;
-        padding: 0.5rem 1rem;
-        transition: background-color 0.3s ease;
-      }
-
-      .btn-secondary:hover {
-        background-color: #1a1a1a;
-        border-color: #1a1a1a;
-      }
-
-      .btn-secondary:disabled {
-        background-color: #6c757d;
-        border-color: #6c757d;
-        opacity: 0.7;
-      }
-
-      @media (max-width: 768px) {
-        .hero-section {
-          padding: 3rem 1rem;
-        }
-
-        .hero-section h1 {
-          font-size: 2rem;
-        }
-
-        .hero-section p {
-          font-size: 1rem;
-        }
-
-        .card {
-          margin-bottom: 1.5rem;
-        }
-      }
-    </style>
+    <link href="https://fonts.googleapis.com/css2?family=Shippori+Mincho:wght@500;600;700;800&family=Zen+Kaku+Gothic+New:wght@400;500;700;900&display=swap" rel="stylesheet">
+    <link href="{% static 'CSS/start-menu.css' %}" rel="stylesheet">
 {% endblock %}
 
 {% block content %}
     <main>
-      <section class="hero-section">
-        <div class="container">
-          <h1>情報分析ツール システマ</h1>
-          <p class="lead">現在の価格、過去の価格などを参考にあなたの購買活動、相場の視覚化といったサポートをします</p>
-        </div>
-      </section>
-      <div class="card-deck py-5">
-        <div class="container">
-          <div class="row row-cols-1 row-cols-md-3 g-4">
-            <div class="col">
-              <div class="card h-100">
-                <img src="{% static 'jpg/yahuoku.jpg' %}" class="card-img-top" alt="相場検索">
-                <div class="card-body">
-                  <h5 class="card-title">相場検索</h5>
-                  <p class="card-text">検索名から直近で落札された商品の金額やよく用いられるワード、落札金額の中央値などを可視化します。</p>
-                  <a href="{% url 'market_search' %}?mode=closed" class="btn btn-secondary mt-auto">統合画面で見る</a>
-                </div>
-              </div>
+        <section class="hero-section">
+            <h1 class="serif">情報分析ツール<br>システマ</h1>
+            <p class="serif tagline">見つける。狙う。楽しむ。</p>
+            <div class="rule"></div>
+            <p class="lead">現在の価格、過去の価格などを参考にあなたの購買活動、相場の視覚化といったサポートをします</p>
+            <div class="d-flex gap-3 justify-content-center flex-wrap">
+                <a href="{% url 'market_search' %}?mode=closed" class="btn btn-primary-warm">統合画面で見る</a>
+                <a href="{% url 'introduction' %}" class="btn btn-outline-warm">このツールについて</a>
             </div>
-            <div class="col">
-              <div class="card h-100">
-                <img src="{% static 'jpg/yahuoku_analysis.jpg' %}" class="card-img-top" alt="価格分析">
-                <div class="card-body">
-                  <h5 class="card-title">価格分析</h5>
-                  <p class="card-text">今まで取得したデータを分析し、売れ行きの傾向を分析します</p>
-                  <a href="{% url 'Deep_Analysis' %}" class="btn btn-secondary mt-auto" disabled>詳細を見る</a>
+        </section>
+
+        {% include 'partials/recommendations.html' %}
+
+        <section class="feature-section">
+            <div class="row row-cols-1 row-cols-sm-2 row-cols-lg-4 g-3">
+                <div class="col">
+                    <div class="feature-card">
+                        <div class="icon-badge icon-coral">
+                            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7" /><path d="M21 21l-4.3-4.3" /></svg>
+                        </div>
+                        <div>
+                            <h3 class="serif">相場検索</h3>
+                            <p>検索名から直近で落札された商品の金額やよく用いられるワード、落札金額の中央値などを可視化します。</p>
+                        </div>
+                        <a href="{% url 'market_search' %}?mode=closed" class="btn-feature btn-feature-coral">
+                            統合画面で見る
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6" /></svg>
+                        </a>
+                    </div>
                 </div>
-              </div>
-            </div>
-            <div class="col">
-              <div class="card h-100">
-                <img src="{% static 'jpg/yahuoku_analysis_now.jpg' %}" class="card-img-top" alt="ターゲット分析">
-                <div class="card-body">
-                  <h5 class="card-title">ターゲット分析</h5>
-                  <p class="card-text">出品中の商品を統計的に分析して狙い目の商品をピックアップして表示します</p>
-                  <a href="{% url 'Deep_Analysis_now' %}" class="btn btn-secondary mt-auto" disabled>詳細を見る</a>
+                <div class="col">
+                    <div class="feature-card">
+                        <div class="icon-badge icon-teal">
+                            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20V10M12 20V4M20 20v-7" /></svg>
+                        </div>
+                        <div>
+                            <h3 class="serif">価格分析</h3>
+                            <p>今まで取得したデータを分析し、売れ行きの傾向を分析します。</p>
+                        </div>
+                        <a href="{% url 'Deep_Analysis' %}" class="btn-feature btn-feature-teal">
+                            詳細を見る
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6" /></svg>
+                        </a>
+                    </div>
                 </div>
-              </div>
-            </div>
-            <div class="col">
-              <div class="card h-100">
-                <img src="{% static 'jpg/Yahuoku_prediction.jpg' %}" class="card-img-top" alt="相場予想">
-                <div class="card-body">
-                  <h5 class="card-title">相場予想</h5>
-                  <p class="card-text">既存の相場情報を参照して今後の商品価格を予想します</p>
-                  <a href="{% url 'Yahuoku_prediction' %}" class="btn btn-secondary mt-auto" disabled>詳細を見る</a>
+                <div class="col">
+                    <div class="feature-card">
+                        <div class="icon-badge icon-gold">
+                            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8" /><circle cx="12" cy="12" r="4" /><circle cx="12" cy="12" r="0.5" /></svg>
+                        </div>
+                        <div>
+                            <h3 class="serif">ターゲット分析</h3>
+                            <p>出品中の商品を統計的に分析して狙い目の商品をピックアップして表示します。</p>
+                        </div>
+                        <a href="{% url 'Deep_Analysis_now' %}" class="btn-feature btn-feature-gold">
+                            詳細を見る
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6" /></svg>
+                        </a>
+                    </div>
                 </div>
-              </div>
+                <div class="col">
+                    <div class="feature-card">
+                        <div class="icon-badge icon-coral">
+                            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 17l6-6 4 4 8-9" /><path d="M15 6h6v6" /></svg>
+                        </div>
+                        <div>
+                            <h3 class="serif">相場予想</h3>
+                            <p>既存の相場情報を参照して今後の商品価格を予想します。</p>
+                        </div>
+                        <a href="{% url 'Yahuoku_prediction' %}" class="btn-feature btn-feature-coral">
+                            詳細を見る
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6" /></svg>
+                        </a>
+                    </div>
+                </div>
             </div>
-          </div>
-        </div>
-      </div>
+        </section>
     </main>
 {% endblock %}
