@@ -20,7 +20,7 @@ The `/accounts/admin-setup/` web endpoint is development-only and returns 404 in
 
 Claude Codeのクラウドセッションでは`.claude/hooks/session-start.sh`が依存関係をインストールし、`pytest`などのコマンドがDjango導入済みのPythonを使うよう`PATH`を調整します。PostgreSQLがないため、未指定時は`DB_ENGINE=sqlite`を設定します。イメージ同梱の単独インストール版`pytest`は別のPythonで動きDjangoを読み込めないため、フック適用前のセッションでは`python -m pytest`を使用してください。
 
-クラウドイメージは`/opt/pw-browsers`にChromium（revision 1194）を同梱し、`playwright install`を禁止しています。フックは対応する`playwright==1.56.0`を導入してE2Eのブラウザ起動を可能にします。フロントエンドライブラリ（Bootstrap 5.1.3/5.3.0、Bootstrap Icons 1.10.5、Popper 2.9.2、Chart.js 4.4.7、jQuery 3.5.1 slim）はCDNを使わず`Main/static/vendor/<名前>-<版>/`に同梱し、`{% static %}`で参照します。npm配布物から`.map`とLICENSEを含めて複製しており、本番の`CompressedManifestStaticFilesStorage`が`sourceMappingURL`を解決できるよう`.map`を削除しないでください。版を更新するときはディレクトリ名とテンプレート参照を同時に変更します。Google Fontsだけは外部読み込みのままです。
+クラウドイメージは`/opt/pw-browsers`にChromium（revision 1194）を同梱し、`playwright install`を禁止しています。フックは対応する`playwright==1.56.0`を導入してE2Eのブラウザ起動を可能にします。フロントエンドライブラリ（Bootstrap 5.3.8（全画面で統一）、Bootstrap Icons 1.10.5、Popper 2.9.2、Chart.js 4.4.7、D3.js 6.7.0、jQuery 3.5.1 slim）はCDNを使わず`Main/static/vendor/<名前>-<版>/`に同梱し、`{% static %}`で参照します。npm配布物から`.map`とLICENSEを含めて複製しており、本番の`CompressedManifestStaticFilesStorage`が`sourceMappingURL`を解決できるよう`.map`を削除しないでください。版を更新するときはディレクトリ名とテンプレート参照を同時に変更します。Google Fontsだけは外部読み込みのままです。Bootstrap 5.2以降、`.card-body`の余白は`.card`が定義する`--bs-card-spacer-*`変数を参照するため、`.card`を付けずに`.card-body`を使う場合は変数を自前で定義します（例: `introduction.html`の`.feature-card`）。
 
 `__pycache__/`と`*.pyc`はGitで追跡しません（`.gitignore`済み）。
 

@@ -7,7 +7,7 @@
     <title>情報分析ツール システマ ガイド</title>
     {% load static %}
     <link href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@400;600&display=swap" rel="stylesheet">
-    <link href="{% static 'vendor/bootstrap-5.1.3/css/bootstrap.min.css' %}" rel="stylesheet">
+    <link href="{% static 'vendor/bootstrap-5.3.8/css/bootstrap.min.css' %}" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;700&display=swap" rel="stylesheet">
     <style>
         body {
@@ -59,6 +59,9 @@
             box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
             transition: transform 0.3s ease, box-shadow 0.3s ease;
             height: 100%;
+            /* .card-body reads its padding from variables Bootstrap 5.2+ defines only on .card. */
+            --bs-card-spacer-y: 1rem;
+            --bs-card-spacer-x: 1rem;
         }
 
         .feature-card:hover {
@@ -364,7 +367,7 @@
     {% include 'footer.html' %}
     <script src="{% static 'vendor/jquery-3.5.1/jquery.slim.min.js' %}"></script>
     <script src="{% static 'vendor/popper-2.9.2/popper.min.js' %}"></script>
-    <script src="{% static 'vendor/bootstrap-5.1.3/js/bootstrap.bundle.min.js' %}"></script>
+    <script src="{% static 'vendor/bootstrap-5.3.8/js/bootstrap.bundle.min.js' %}"></script>
 </body>
 
 </html>
