@@ -2,7 +2,7 @@
 
 import pytest
 from django.contrib.auth import get_user_model
-from playwright.sync_api import sync_playwright
+from playwright.sync_api import expect, sync_playwright
 
 from Main.models.savedsearch import SavedSearch
 
@@ -43,7 +43,8 @@ def test_alert_rule_create_edit_delete_at_mobile_width(db_for_e2e, live_server):
             page.fill("#alertThreshold", "3500")
             page.get_by_role("button", name="変更を保存").click()
             page.get_by_text("アラート条件を更新しました。").wait_for()
-            assert "3500" in page.locator("#alertRuleList").inner_text()
+            # The list reloads asynchronously after the success message is shown.
+            expect(page.locator("#alertRuleList")).to_contain_text("3500")
 
             page.get_by_role("button", name="削除").click()
             page.get_by_text("アラート条件はまだありません。").wait_for()

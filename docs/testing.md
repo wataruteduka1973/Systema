@@ -68,7 +68,7 @@ E2Eテストは、起動済みのDjangoアプリケーションに対してPlayw
 
 1. **SQLiteテストDB**: E2Eテストは本番DB接続なし。環境変数 `DB_ENGINE=sqlite` で隔離。
 2. **Chromiumブラウザー**: Playwright経由でインストール・管理。
-3. **外部通信allowlist**: 許可ホストに `localhost`、`127.0.0.1`、`cdn.jsdelivr.net`（Bootstrap CDN）、`fonts.googleapis.com`、`fonts.gstatic.com`（Google Fonts）のみ。
+3. **外部通信allowlist**: 許可ホストに `localhost`、`127.0.0.1`、`fonts.googleapis.com`、`fonts.gstatic.com`（Google Fonts）のみ。
    - その他のホストへのリクエストはテスト失敗。
    - URLとホスト名をエラー出力に含める。
 4. **ユーザー・通知フィクスチャ**: 各テストメソッドで独立したテストユーザーと通知を作成。

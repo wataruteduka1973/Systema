@@ -1,0 +1,80 @@
+"""Frontend libraries are served from Main/static/vendor, not from CDNs."""
+
+import re
+from pathlib import Path
+
+import pytest
+
+TEMPLATE_DIR = Path(__file__).resolve().parents[2] / "Main" / "templates"
+STATIC_DIR = TEMPLATE_DIR.parent / "static"
+# Google Fonts is the only external stylesheet source intentionally kept.
+ALLOWED_EXTERNAL_ASSET_HOSTS = {"fonts.googleapis.com"}
+EXTERNAL_ASSET = re.compile(
+    r"""<(?:script|link)\b[^>]*\b(?:src|href)=["'](?:https?:)?//([^/"']+)""", re.IGNORECASE
+)
+VENDOR_REFERENCE = re.compile(r"""\{%\s*static\s+['"](vendor/[^'"]+)['"]\s*%\}""")
+
+TEMPLATES = sorted(TEMPLATE_DIR.rglob("*.html"))
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize(
+    "template", TEMPLATES, ids=lambda path: str(path.relative_to(TEMPLATE_DIR))
+)
+def test_templates_do_not_load_libraries_from_cdns(template: Path) -> None:
+    source = template.read_text(encoding="utf-8")
+
+    external_hosts = set(EXTERNAL_ASSET.findall(source)) - ALLOWED_EXTERNAL_ASSET_HOSTS
+
+    assert external_hosts == set()
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize(
+    "template", TEMPLATES, ids=lambda path: str(path.relative_to(TEMPLATE_DIR))
+)
+def test_vendor_references_exist_and_load_static_tag(template: Path) -> None:
+    source = template.read_text(encoding="utf-8")
+    references = VENDOR_REFERENCE.findall(source)
+    if not references:
+        return
+
+    assert "{% load static %}" in source
+    assert [ref for ref in references if not (STATIC_DIR / ref).is_file()] == []
+
+
+@pytest.mark.unit
+def test_vendored_assets_keep_source_maps_for_manifest_storage() -> None:
+    vendor_dir = STATIC_DIR / "vendor"
+    pattern = re.compile(r"sourceMappingURL=(\S+?)\s*(?:\*/)?$", re.MULTILINE)
+    missing = []
+    for asset in [*vendor_dir.rglob("*.js"), *vendor_dir.rglob("*.css")]:
+        for target in pattern.findall(asset.read_text(encoding="utf-8")):
+            if not (asset.parent / target).is_file():
+                missing.append(f"{asset.relative_to(vendor_dir)} -> {target}")
+
+    assert missing == []
+
+
+@pytest.mark.unit
+def test_all_templates_use_a_single_bootstrap_version() -> None:
+    versions = {
+        version
+        for template in TEMPLATES
+        for version in re.findall(
+            r"vendor/bootstrap-(\d+\.\d+\.\d+)/", template.read_text(encoding="utf-8")
+        )
+    }
+
+    assert len(versions) == 1
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize(
+    "template", TEMPLATES, ids=lambda path: str(path.relative_to(TEMPLATE_DIR))
+)
+def test_templates_do_not_load_standalone_popper_or_jquery(template: Path) -> None:
+    # bootstrap.bundle.min.js already includes Popper, and no page code uses jQuery.
+    source = template.read_text(encoding="utf-8")
+
+    assert not re.search(r"<script\b[^>]*(popper|jquery)", source, re.IGNORECASE)
