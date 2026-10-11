@@ -2,11 +2,16 @@ name: Continuous integration
 
 on:
   push:
+    branches: [main]
   pull_request:
   workflow_dispatch:
 
 permissions:
   contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   quality:
@@ -58,7 +63,8 @@ jobs:
           python-version: "3.13"
           cache: pip
       - run: python -m pip install --upgrade pip && python -m pip install -r requirements-dev.txt
-      - run: coverage run -m pytest && coverage report
+      # Browser tests need Playwright browsers and run in the E2E job.
+      - run: coverage run -m pytest -m "not e2e" && coverage report
 
   e2e:
     name: E2E Tests
@@ -72,13 +78,7 @@ jobs:
           python-version: "3.13"
           cache: pip
       - run: python -m pip install --upgrade pip && python -m pip install -r requirements-dev.txt
-      - run: python -m pip show pytest-playwright playwright
-      - run: python -c "import sys; print(sys.executable)"
-      - run: python -m playwright install --with-deps --only-shell
-      - run: python -m playwright install --list
-      - name: Verify Chromium headless shell launch
-        run: >-
-          python -c "from playwright.sync_api import sync_playwright; p = sync_playwright().start(); browser = p.chromium.launch(); browser.close(); p.stop(); print('Chromium headless shell launch: OK')"
+      - run: python -m playwright install --with-deps --only-shell chromium
       - run: python -m pytest -m e2e -v
 
   docs:

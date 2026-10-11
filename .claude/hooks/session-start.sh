@@ -11,12 +11,8 @@ cd "$CLAUDE_PROJECT_DIR"
 
 python -m pip install -q -r requirements.txt -r requirements-dev.txt
 
-# The image preinstalls Playwright browsers under /opt/pw-browsers and forbids
-# `playwright install`. Pin the Playwright driver that matches that revision
-# (chromium 1194 = Playwright 1.56.0) so E2E tests can launch Chromium.
-if [ -d /opt/pw-browsers/chromium_headless_shell-1194 ]; then
-  python -m pip install -q "playwright==1.56.0"
-fi
+# requirements-dev.txt pins Playwright 1.56.0, which matches the Chromium
+# revision (1194) preinstalled under /opt/pw-browsers; do not run `playwright install`.
 
 # The image may ship standalone tool installs (e.g. ~/.local/bin/pytest) that run
 # on an isolated interpreter without project dependencies. Prefer the scripts
