@@ -15,6 +15,7 @@ class MarketListingObservation:
     bidding: int
     time: str
     url: str
+    image_url: str = ""
 
     def as_closed_item(self) -> dict[str, object]:
         return {
@@ -33,4 +34,5 @@ class MarketListingObservation:
             "bidding": self.bidding,
             "remainingTime": remaining_time,
             "url": self.url,
+            "imageUrl": self.image_url,
         }

@@ -115,3 +115,31 @@ def test_target_search_reports_current_failure_after_closed_success():
     assert failure.active_run is None
     assert len(failure.completed_runs) == 1
     assert len(repository.saved) == 1
+
+
+def test_target_search_carries_listing_image_into_the_saved_snapshot():
+    class ImageProvider(Provider):
+        def search_current(self, keyword):
+            item = _item("中古カメラ", 10000, "30分")
+            return [
+                MarketListingObservation(
+                    **{
+                        **item.__dict__,
+                        "image_url": "https://auctions.c.yimg.jp/images/a/item-1.jpg",
+                    }
+                )
+            ]
+
+    repository = Repository()
+
+    result = execute_target_search(
+        criteria=SearchCriteria(keyword="カメラ", search_type=SearchRun.TARGET),
+        owner=RequestOwner(user=None, session_key="owner-1"),
+        provider=ImageProvider(),
+        repository=repository,
+        refresh_watch=lambda item, owner: None,
+    )
+
+    [recommended] = result.payload["recommend_items"]
+    assert recommended["imageUrl"] == "https://auctions.c.yimg.jp/images/a/item-1.jpg"
+    assert repository.snapshot[1]["recommend_items"][0]["imageUrl"] == recommended["imageUrl"]

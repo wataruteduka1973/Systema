@@ -187,6 +187,7 @@ def execute_target_search(
                     "price": item.get("currentPrice"),
                     "name": item.get("name"),
                     "url": item.get("url"),
+                    "imageUrl": item.get("imageUrl", ""),
                     "remainingTime": remaining_time,
                     "remainingSeconds": parse_duration_seconds(remaining_time),
                     "bidding": item.get("bidding", 0),
@@ -210,6 +211,7 @@ def execute_target_search(
                 "price": item["price"],
                 "name": item["name"],
                 "url": item["url"],
+                "imageUrl": item.get("imageUrl", ""),
                 "remainingTime": item["remainingTime"],
                 "remainingSeconds": (
                     item["remainingSeconds"] if math.isfinite(item["remainingSeconds"]) else None

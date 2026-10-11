@@ -31,6 +31,10 @@ Compare current listings with the closed-auction market and identify buying oppo
   closed success, the closed run remains successful and a distinct failed current run is recorded;
   watch refresh runs once per enriched current recommendation after both successful saves.
 
+- Current-listing items and `recommend_items` carry an optional `imageUrl` (an https `*.yimg.jp` URL or
+  ""). It is additive; existing keys are unchanged. The top page reuses `recommend_items` for its
+  recommendation cards (`docs/features/recommendations.md`).
+
 ## Related Files
 
 - `Main/templates/Deep_Analysis_now.html`

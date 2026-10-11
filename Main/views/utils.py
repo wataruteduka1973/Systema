@@ -7,6 +7,7 @@ from urllib.parse import urlencode
 from django.http import JsonResponse
 
 from Main.domain.auction_time import format_remaining_time
+from Main.domain.listing_image import safe_image_url
 from Main.domain.market_listing import MarketListingObservation
 from Main.domain.product_condition import enrich_market_items
 from Main.infrastructure.http import get_with_retry
@@ -177,6 +178,7 @@ class _YahooSearchProvider:
                 bidding=int(item.get("bidding") or 0),
                 time=str(item.get("remainingTime") or ""),
                 url=str(item.get("url") or ""),
+                image_url=safe_image_url(item.get("imageUrl")),
             )
             for item in scrape_current_listings(keyword)
         ]

@@ -6,6 +6,7 @@ from typing import Any
 from bs4 import BeautifulSoup
 from bs4.element import Tag
 
+from Main.domain.listing_image import safe_image_url
 from Main.services.exceptions import SearchParseError
 
 
@@ -96,6 +97,16 @@ class YahooAuctionParser:
         if fallback and YahooAuctionParser._is_valid_title_text(fallback.get_text(" ", strip=True)):
             return fallback
         return None
+
+    @staticmethod
+    def _card_image_url(card: Tag) -> str:
+        """First allowed image in a result card; lazy-loading attributes win over src."""
+        for image in card.select(".Product__imageData, img"):
+            for attribute in ("data-src", "data-original", "src"):
+                url = safe_image_url(image.get(attribute))
+                if url:
+                    return url
+        return ""
 
     @staticmethod
     def _find_item_list(node: object) -> list[dict[str, Any]] | None:
@@ -216,6 +227,7 @@ class YahooAuctionParser:
                     "bidding": cls._safe_int(bid_text),
                     "time": cls._normalize_time_value(time_text),
                     "auctionId": auction_id,
+                    "imageUrl": cls._card_image_url(card),
                     "url": cls.build_item_url(
                         href,
                         auction_id,
@@ -392,6 +404,12 @@ class YahooAuctionParser:
             or "N/A"
         )
 
+        image_url = ""
+        for key in ("imageUrl", "image", "thumbnail", "thumbnailUrl", "img", "imageSrc"):
+            image_url = safe_image_url(item.get(key))
+            if image_url:
+                break
+
         return {
             "title": title,
             "name": title,
@@ -401,4 +419,5 @@ class YahooAuctionParser:
             "time": cls._normalize_time_value(time_value),
             "url": normalized_url,
             "auctionId": auction_id,
+            "imageUrl": image_url,
         }
