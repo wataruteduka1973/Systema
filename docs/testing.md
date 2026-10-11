@@ -47,6 +47,8 @@ python manage.py verify --full
 通常実行と機能単位実行のruff/blackは変更ファイルだけを対象にし、mypyは実行しない。
 過去にローカルの`verify --full`が通ってもCIのmypyで失敗した原因はこの差だったため、
 CIの検査を増やすときは`full_quality_commands`も同時に更新する。
+`verify`の子プロセスからは`DJANGO_SETTINGS_MODULE`を除く。`manage.py`が設定する本番用設定が残ると、
+pytestが`pyproject.toml`の`System_Config.test_settings`ではなく本番設定でテストを実行してしまうため。
 
 Coverageを含むCI相当の実行（E2EはCIの別ジョブで実行する）:
 

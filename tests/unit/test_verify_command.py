@@ -1,4 +1,9 @@
-from Main.management.commands.verify import FEATURE_TESTS, full_quality_commands, select_tests
+from Main.management.commands.verify import (
+    FEATURE_TESTS,
+    check_environment,
+    full_quality_commands,
+    select_tests,
+)
 
 
 def test_select_tests_maps_market_search_changes_to_feature_suite():
@@ -22,3 +27,9 @@ def test_full_quality_commands_match_ci_lint_and_type_check_job():
     assert commands["ruff"] == ["python", "-m", "ruff", "check", "."]
     assert commands["format"][-3:] == ["Main", "System_Config", "tests"]
     assert commands["mypy"] == ["python", "-m", "mypy"]
+
+
+def test_check_environment_lets_pytest_use_its_configured_test_settings():
+    environ = {"DJANGO_SETTINGS_MODULE": "System_Config.settings", "DB_ENGINE": "sqlite"}
+
+    assert check_environment(environ) == {"DB_ENGINE": "sqlite"}

@@ -34,6 +34,8 @@ python manage.py collectstatic
 
 `run_systema.bat` preserves PostgreSQL variables from the current shell and prompts for a missing user or password without writing credentials to disk. Because local `DEBUG` defaults to false, it also runs `collectstatic --noinput` before `runserver --insecure`; restart the server after adding or changing static assets.
 
+Static storage is configured through `STORAGES` (`System_Config/static_storage.py`); Django 5.1+ ignores the old `STATICFILES_STORAGE` setting, which had silently left production on plain storage. With `DEBUG=false` the static backend is WhiteNoise `CompressedManifestStaticFilesStorage`: `collectstatic` writes hashed, gzip-compressed files and `staticfiles.json`, and WhiteNoise serves them with long-lived immutable cache headers. A page that references a static file missing from the manifest raises an error, so always run `collectstatic --noinput` before serving with `DEBUG=false` (including plain `runserver`) and again after changing static assets. `DEBUG=true` and the test settings use plain `StaticFilesStorage` and need no `collectstatic`. `tests/integration/test_static_manifest.py` builds the production manifest and checks that every template `{% static %}` reference resolves.
+
 ## Working approach
 
 - Keep feature changes small and close to the relevant module.

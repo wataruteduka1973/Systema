@@ -1,8 +1,9 @@
 from __future__ import annotations
 
+import os
 import subprocess
 import sys
-from collections.abc import Sequence
+from collections.abc import Mapping, Sequence
 from pathlib import Path
 
 from django.core.management.base import BaseCommand, CommandError
@@ -183,6 +184,15 @@ def select_tests(changed_files: Sequence[str]) -> tuple[str, ...]:
     return tuple(sorted(selected))
 
 
+def check_environment(environ: Mapping[str, str]) -> dict[str, str]:
+    """Environment for check subprocesses, as CI runs them.
+
+    manage.py sets DJANGO_SETTINGS_MODULE to the runtime settings, which would
+    override pytest's configured test settings in the child process.
+    """
+    return {key: value for key, value in environ.items() if key != "DJANGO_SETTINGS_MODULE"}
+
+
 def full_quality_commands(python: str) -> list[tuple[str, list[str]]]:
     """Repository-wide checks matching the CI "Lint and type check" job."""
     return [
@@ -254,6 +264,7 @@ class Command(BaseCommand):
         result = subprocess.run(
             command,
             cwd=Path.cwd(),
+            env=check_environment(os.environ),
             capture_output=True,
             text=True,
             encoding="utf-8",
