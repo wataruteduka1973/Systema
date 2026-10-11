@@ -1,160 +1,149 @@
-<!DOCTYPE html>
-<html lang="ja">
+<!-- Shippori Mincho / Zen Kaku Gothic New are loaded once by header.html, which every page including this footer also includes -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
+<style>
+    footer.site-footer {
+        background: #3b2a1f;
+        border-top: 1px solid #a67c3d;
+        color: #f5efe6;
+        font-family: 'Zen Kaku Gothic New', sans-serif;
+        padding: 3rem 0;
+    }
 
-<head>
-    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
-    <style>
-        body {
-            min-height: 100vh;
-            display: flex;
-            flex-direction: column;
+    footer.site-footer .container {
+        max-width: 1200px;
+    }
+
+    footer.site-footer h5 {
+        font-family: 'Shippori Mincho', serif;
+        font-size: 1.2rem;
+        font-weight: 600;
+        margin-bottom: 1.25rem;
+        position: relative;
+    }
+
+    footer.site-footer h5::after {
+        content: '';
+        position: absolute;
+        width: 40px;
+        height: 1px;
+        background-color: #c99a5b;
+        bottom: -8px;
+        left: 0;
+    }
+
+    footer.site-footer p,
+    footer.site-footer a {
+        font-size: 0.92rem;
+        color: #cdc2b4;
+        transition: color 0.3s ease;
+    }
+
+    footer.site-footer a:hover {
+        color: #d9633a;
+        text-decoration: none;
+    }
+
+    footer.site-footer .btn-outline-light {
+        border-color: #a67c3d;
+        color: #f5efe6;
+        font-size: 0.88rem;
+        padding: 0.5rem 1rem;
+        transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease;
+    }
+
+    footer.site-footer .btn-outline-light:hover {
+        background-color: #d9633a;
+        border-color: #d9633a;
+        color: #f5efe6;
+    }
+
+    footer.site-footer .social-icons a {
+        font-size: 1.15rem;
+        margin-right: 1rem;
+        color: #cdc2b4;
+    }
+
+    footer.site-footer .social-icons a:hover {
+        color: #d9633a;
+    }
+
+    footer.site-footer .tagline {
+        font-family: 'Shippori Mincho', serif;
+        font-size: 0.95rem;
+        color: #cdc2b4;
+    }
+
+    footer.site-footer .version-info {
+        font-size: 0.82rem;
+        color: #a89f96;
+    }
+
+    @media (max-width: 768px) {
+        footer.site-footer {
+            padding: 2rem 0;
         }
 
-        main {
-            flex: 1 0 auto;
+        footer.site-footer .container {
+            padding: 0 1rem;
         }
 
-        footer {
-            flex-shrink: 0;
-            background: linear-gradient(180deg, #1a1a1a, #343a40);
-            color: #ffffff;
-            font-family: 'Poppins', sans-serif;
-            padding: 3rem 0;
+        footer.site-footer h5 {
+            font-size: 1.05rem;
         }
 
-        footer .container {
-            max-width: 1200px;
-        }
-
-        footer h5 {
-            font-size: 1.25rem;
-            font-weight: 600;
-            margin-bottom: 1.5rem;
-            position: relative;
-        }
-
-        footer h5::after {
-            content: '';
-            position: absolute;
-            width: 50px;
-            height: 2px;
-            background-color: #ffffff;
-            bottom: -5px;
-            left: 0;
-        }
-
-        footer p,
-        footer a {
-            font-size: 0.95rem;
-            color: #d1d1d1;
-            transition: color 0.3s ease;
-        }
-
-        footer a:hover {
-            color: #ffffff;
-            text-decoration: none;
-        }
-
-        footer .btn-outline-light {
-            border-color: #ffffff;
-            color: #ffffff;
-            font-size: 0.9rem;
-            padding: 0.5rem 1rem;
-            transition: background-color 0.3s ease, color 0.3s ease;
-        }
-
-        footer .btn-outline-light:hover {
-            background-color: #ffffff;
-            color: #1a1a1a;
-        }
-
-        footer .social-icons a {
-            font-size: 1.2rem;
-            margin-right: 1rem;
-            color: #d1d1d1;
-            transition: color 0.3s ease;
-        }
-
-        footer .social-icons a:hover {
-            color: #ffffff;
-        }
-
-        footer .version-info {
+        footer.site-footer p,
+        footer.site-footer a {
             font-size: 0.85rem;
-            color: #a0a0a0;
         }
+    }
+</style>
 
-        @media (max-width: 768px) {
-            footer {
-                padding: 2rem 0;
-            }
-
-            footer .container {
-                padding: 0 1rem;
-            }
-
-            footer h5 {
-                font-size: 1.1rem;
-            }
-
-            footer p,
-            footer a {
-                font-size: 0.85rem;
-            }
-        }
-    </style>
-</head>
-
-<body>
-    <footer>
-        <div class="container">
-            <div class="row">
-                <div class="col-md-4 mb-4">
-                    <h5>情報分析ツール システマ</h5>
-                    <p>現在の価格、過去の価格などを参考にあなたの購買活動、相場の視覚化といったサポートをします</p>
-                </div>
-                <div class="col-md-4 mb-4">
-                    <h5>リンク</h5>
-                    <ul class="list-unstyled">
-                        <li><a href="{% url 'index' %}" class="text-white">ホーム</a></li>
-                        <li><a href="{% url 'introduction' %}" class="text-white">このツールについて</a></li>
-                        <li><a href="https://auctions.yahoo.co.jp/" target="_blank" class="text-white">ヤフオク公式</a></li>
-                    </ul>
-                </div>
-                <div class="col-md-4 mb-4">
-                    <h5>お問い合わせ</h5>
-                    <p>サポート: agtmpwd992@gmail.com</p>
-                    <div class="btn-group" role="group">
-                        <a href="https://mail.google.com/mail/?view=cm&to=agtmpwd992@gmail.com&su=ご連絡はこちらから"
-                            target="_blank" class="btn btn-outline-light me-2" title="ご連絡はこちらから">
-                            <i class="bi bi-envelope"></i> Gmail
-                        </a>
-                        <a href="https://outlook.live.com/mail/0/deeplink/compose?to=agtmpwd992@gmail.com&subject=ご連絡はこちらから"
-                            target="_blank" class="btn btn-outline-light me-2" title="ご連絡はこちらから">
-                            <i class="bi bi-envelope"></i> Outlook
-                        </a>
-                        <a href="mailto:agtmpwd992@gmail.com?subject=ご連絡はこちらから" class="btn btn-outline-light me-2"
-                            title="ご連絡はこちらから">
-                            <i class="bi bi-envelope"></i> メールアプリ
-                        </a>
-                    </div>
-                    <div class="social-icons mt-3">
-                        <a href="https://x.com/6f49bec27d72427" target="_blank" class="text-white me-2">
-                            <i class="bi bi-twitter"></i>
-                        </a>
-                        <a href="https://github.com/wataruteduka1973" target="_blank" class="text-white">
-                            <i class="bi bi-github"></i>
-                        </a>
-                    </div>
-                    <p class="version-info mt-2">バージョン: 1.0.0 | 最終更新: 2025年7月1日</p>
-                </div>
+<footer class="site-footer">
+    <div class="container">
+        <div class="row">
+            <div class="col-md-4 mb-4">
+                <h5>情報分析ツール システマ</h5>
+                <p>現在の価格、過去の価格などを参考にあなたの購買活動、相場の視覚化といったサポートをします</p>
+                <p class="tagline mb-0">今日も、いい掘り出し物を。</p>
             </div>
-            <div class="text-center mt-4">
-                <p class="version-info">© 2025 情報分析ツール システマ. All Rights Reserved.</p>
+            <div class="col-md-4 mb-4">
+                <h5>リンク</h5>
+                <ul class="list-unstyled">
+                    <li><a href="{% url 'index' %}">ホーム</a></li>
+                    <li><a href="{% url 'introduction' %}">このツールについて</a></li>
+                    <li><a href="https://auctions.yahoo.co.jp/" target="_blank" rel="noopener noreferrer">ヤフオク公式</a></li>
+                </ul>
+            </div>
+            <div class="col-md-4 mb-4">
+                <h5>お問い合わせ</h5>
+                <p>サポート: agtmpwd992@gmail.com</p>
+                <div class="btn-group" role="group">
+                    <a href="https://mail.google.com/mail/?view=cm&to=agtmpwd992@gmail.com&su=ご連絡はこちらから"
+                        target="_blank" rel="noopener noreferrer" class="btn btn-outline-light me-2" title="ご連絡はこちらから">
+                        <i class="bi bi-envelope"></i> Gmail
+                    </a>
+                    <a href="https://outlook.live.com/mail/0/deeplink/compose?to=agtmpwd992@gmail.com&subject=ご連絡はこちらから"
+                        target="_blank" rel="noopener noreferrer" class="btn btn-outline-light me-2" title="ご連絡はこちらから">
+                        <i class="bi bi-envelope"></i> Outlook
+                    </a>
+                    <a href="mailto:agtmpwd992@gmail.com?subject=ご連絡はこちらから" class="btn btn-outline-light me-2"
+                        title="ご連絡はこちらから">
+                        <i class="bi bi-envelope"></i> メールアプリ
+                    </a>
+                </div>
+                <div class="social-icons mt-3">
+                    <a href="https://x.com/6f49bec27d72427" target="_blank" rel="noopener noreferrer">
+                        <i class="bi bi-twitter"></i>
+                    </a>
+                    <a href="https://github.com/wataruteduka1973" target="_blank" rel="noopener noreferrer">
+                        <i class="bi bi-github"></i>
+                    </a>
+                </div>
+                <p class="version-info mt-2">バージョン: 1.0.0 | 最終更新: 2025年7月1日</p>
             </div>
         </div>
-    </footer>
-</body>
-
-</html>
+        <div class="text-center mt-4">
+            <p class="version-info">© 2025 情報分析ツール システマ. All Rights Reserved.</p>
+        </div>
+    </div>
+</footer>

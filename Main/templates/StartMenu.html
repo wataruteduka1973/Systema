@@ -1,3 +1,4 @@
+{% load static %}
 <!DOCTYPE html>
 <html lang="ja">
 
@@ -5,15 +6,12 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>情報分析ツール システマ</title>
-  {% load static %}
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
   <style>
     body {
-      font-family: 'Poppins', sans-serif;
-      background: #f8f9fa;
-      color: #333;
+      font-family: 'Zen Kaku Gothic New', sans-serif;
+      background: #f7f2ea;
+      color: #362f28;
       min-height: 100vh;
       display: flex;
       flex-direction: column;
@@ -23,109 +21,195 @@
       flex: 1 0 auto;
     }
 
+    .serif {
+      font-family: 'Shippori Mincho', serif;
+    }
+
     .hero-section {
-      background: linear-gradient(135deg, rgba(255, 77, 77, 0.8), rgba(255, 140, 140, 0.6));
-      color: #ffffff;
-      padding: 4rem 1.5rem;
       text-align: center;
-      margin-bottom: 3rem;
-      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
-    }
-
-    .hero-section h1 {
-      font-size: 2.5rem;
-      font-weight: 600;
-      margin-bottom: 1rem;
-    }
-
-    .hero-section p {
-      font-size: 1.1rem;
-      max-width: 600px;
+      padding: 6rem 1.5rem 3.5rem;
+      max-width: 900px;
       margin: 0 auto;
     }
 
-    .card-deck {
-      margin-top: 2rem;
+    .hero-section h1 {
+      font-size: 3rem;
+      font-weight: 800;
+      line-height: 1.3;
+      margin-bottom: 1rem;
     }
 
-    .card {
-      background: #ffffff;
-      border: none;
+    .hero-section .tagline {
+      font-size: 1.35rem;
+      font-weight: 600;
+      color: #d9633a;
+      margin-bottom: 1.25rem;
+    }
+
+    .hero-section .rule {
+      width: 64px;
+      height: 1px;
+      background: #a9823f;
+      margin: 0 auto 1.5rem;
+    }
+
+    .hero-section p.lead {
+      font-size: 1rem;
+      line-height: 2;
+      color: #6b6158;
+      max-width: 44ch;
+      margin: 0 auto 2.25rem;
+    }
+
+    .hero-section .btn-primary-warm {
+      background: #d9633a;
+      border-color: #d9633a;
+      color: #fdf8f3;
+      font-weight: 700;
+      padding: 0.85rem 2rem;
+    }
+
+    .hero-section .btn-primary-warm:hover {
+      background: #c2532c;
+      border-color: #c2532c;
+      color: #fdf8f3;
+    }
+
+    .hero-section .btn-outline-warm {
+      border: 1px solid #ddd3c5;
+      color: #362f28;
+      font-weight: 500;
+      padding: 0.85rem 2rem;
+    }
+
+    .hero-section .btn-outline-warm:hover {
+      background: #ede4d6;
+      color: #362f28;
+    }
+
+    .hot-picks {
+      max-width: 1040px;
+      margin: 0 auto;
+      padding: 0 1.5rem 3.5rem;
+    }
+
+    .hot-picks .hot-picks-label {
+      text-align: center;
+      font-size: 0.72rem;
+      letter-spacing: 0.16em;
+      color: #6b6158;
+      margin-bottom: 1rem;
+    }
+
+    .hot-pick-card {
+      background: #fdfaf6;
+      border: 1px solid #ddd3c5;
       border-radius: 10px;
-      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-      transition: transform 0.3s ease, box-shadow 0.3s ease;
+      padding: 1.1rem 1.25rem;
+      height: 100%;
+    }
+
+    .hot-pick-card .tag {
+      display: inline-block;
+      font-size: 0.68rem;
+      font-weight: 700;
+      padding: 0.2rem 0.6rem;
+      border-radius: 999px;
+      margin-bottom: 0.6rem;
+    }
+
+    .hot-pick-card .tag-rising {
+      background: #f6dccb;
+      color: #8a3c22;
+    }
+
+    .hot-pick-card .tag-deal {
+      background: #cdeee2;
+      color: #1f6d57;
+    }
+
+    .hot-pick-card .tag-notable {
+      background: #f0e0bd;
+      color: #7a5a26;
+    }
+
+    .hot-pick-card .name {
+      display: block;
+      font-size: 0.9rem;
+      font-weight: 600;
+      margin-bottom: 0.4rem;
+    }
+
+    .hot-pick-card .price {
+      font-size: 1.2rem;
+      font-weight: 700;
+    }
+
+    .feature-section {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 0.5rem 1.5rem 5rem;
+    }
+
+    .feature-card {
+      background: #fdfaf6;
+      border: 1px solid #ddd3c5;
+      border-radius: 14px;
+      padding: 1.75rem 1.4rem;
       height: 100%;
       display: flex;
       flex-direction: column;
+      gap: 1rem;
     }
 
-    .card:hover {
-      transform: translateY(-5px);
-      box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
-    }
-
-    .card-img-top {
-      height: 180px;
-      object-fit: cover;
-      border-top-left-radius: 10px;
-      border-top-right-radius: 10px;
-    }
-
-    .card-body {
-      flex-grow: 1;
-      padding: 1.5rem;
+    .feature-card .icon-badge {
+      width: 48px;
+      height: 48px;
+      border-radius: 50%;
       display: flex;
-      flex-direction: column;
+      align-items: center;
+      justify-content: center;
     }
 
-    .card-title {
-      font-size: 1.25rem;
+    .feature-card .icon-coral { background: #f6dccb; }
+    .feature-card .icon-coral svg { stroke: #8a3c22; }
+    .feature-card .icon-teal { background: #cdeee2; }
+    .feature-card .icon-teal svg { stroke: #1f6d57; }
+    .feature-card .icon-gold { background: #f0e0bd; }
+    .feature-card .icon-gold svg { stroke: #7a5a26; }
+
+    .feature-card h3 {
+      font-size: 1.15rem;
       font-weight: 600;
-      color: #1a1a1a;
+      margin-bottom: 0.5rem;
     }
 
-    .card-text {
-      font-size: 0.95rem;
-      color: #555;
-      flex-grow: 1;
+    .feature-card p {
+      font-size: 0.82rem;
+      line-height: 1.75;
+      color: #6b6158;
+      flex: 1;
     }
 
-    .btn-secondary {
-      background-color: #343a40;
-      border-color: #343a40;
-      font-size: 0.9rem;
-      padding: 0.5rem 1rem;
-      transition: background-color 0.3s ease;
+    .feature-card .btn-feature {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.4rem;
+      padding: 0.7rem;
+      border-radius: 8px;
+      font-size: 0.82rem;
+      font-weight: 700;
+      color: #fdf8f3;
+      border: none;
     }
 
-    .btn-secondary:hover {
-      background-color: #1a1a1a;
-      border-color: #1a1a1a;
-    }
-
-    .btn-secondary:disabled {
-      background-color: #6c757d;
-      border-color: #6c757d;
-      opacity: 0.7;
-    }
-
-    @media (max-width: 768px) {
-      .hero-section {
-        padding: 3rem 1rem;
-      }
-
-      .hero-section h1 {
-        font-size: 2rem;
-      }
-
-      .hero-section p {
-        font-size: 1rem;
-      }
-
-      .card {
-        margin-bottom: 1.5rem;
-      }
-    }
+    .btn-feature-coral { background: #d9633a; }
+    .btn-feature-coral:hover { background: #c2532c; color: #fdf8f3; }
+    .btn-feature-teal { background: #2f9e82; }
+    .btn-feature-teal:hover { background: #268069; color: #fdf8f3; }
+    .btn-feature-gold { background: #a9823f; }
+    .btn-feature-gold:hover { background: #8f6d34; color: #fdf8f3; }
   </style>
 </head>
 
@@ -133,57 +217,107 @@
   {% include 'header.html' %}
   <main>
     <section class="hero-section">
-      <div class="container">
-        <h1>情報分析ツール システマ</h1>
-        <p class="lead">現在の価格、過去の価格などを参考にあなたの購買活動、相場の視覚化といったサポートをします</p>
+      <h1 class="serif">情報分析ツール<br>システマ</h1>
+      <p class="serif tagline">見つける。狙う。楽しむ。</p>
+      <div class="rule"></div>
+      <p class="lead">現在の価格、過去の価格などを参考にあなたの購買活動、相場の視覚化といったサポートをします</p>
+      <div class="d-flex gap-3 justify-content-center flex-wrap">
+        <a href="{% url 'market_search' %}?mode=closed" class="btn btn-primary-warm">統合画面で見る</a>
+        <a href="{% url 'introduction' %}" class="btn btn-outline-warm">このツールについて</a>
       </div>
     </section>
-    <div class="card-deck py-5">
-      <div class="container">
-        <div class="row row-cols-1 row-cols-md-3 g-4">
-          <div class="col">
-            <div class="card h-100">
-              <img src="{% static 'jpg/yahuoku.jpg' %}" class="card-img-top" alt="相場検索">
-              <div class="card-body">
-                <h5 class="card-title">相場検索</h5>
-                <p class="card-text">検索名から直近で落札された商品の金額やよく用いられるワード、落札金額の中央値などを可視化します。</p>
-                <a href="{% url 'market_search' %}?mode=closed" class="btn btn-secondary mt-auto">統合画面で見る</a>
-              </div>
-            </div>
+
+    <section class="hot-picks">
+      <div class="hot-picks-label">いま気になる掘り出し物 — サンプル表示</div>
+      <div class="row row-cols-1 row-cols-md-3 g-3">
+        <div class="col">
+          <div class="hot-pick-card">
+            <span class="tag tag-rising">急上昇</span>
+            <span class="name">ヴィンテージ腕時計</span>
+            <span class="serif price">¥48,900</span>
           </div>
-          <div class="col">
-            <div class="card h-100">
-              <img src="{% static 'jpg/yahuoku_analysis.jpg' %}" class="card-img-top" alt="価格分析">
-              <div class="card-body">
-                <h5 class="card-title">価格分析</h5>
-                <p class="card-text">今まで取得したデータを分析し、売れ行きの傾向を分析します</p>
-                <a href="{% url 'Deep_Analysis' %}" class="btn btn-secondary mt-auto" disabled>詳細を見る</a>
-              </div>
-            </div>
+        </div>
+        <div class="col">
+          <div class="hot-pick-card">
+            <span class="tag tag-deal">掘り出し物</span>
+            <span class="name">レトロゲーム機</span>
+            <span class="serif price">¥21,000</span>
           </div>
-          <div class="col">
-            <div class="card h-100">
-              <img src="{% static 'jpg/yahuoku_analysis_now.jpg' %}" class="card-img-top" alt="ターゲット分析">
-              <div class="card-body">
-                <h5 class="card-title">ターゲット分析</h5>
-                <p class="card-text">出品中の商品を統計的に分析して狙い目の商品をピックアップして表示します</p>
-                <a href="{% url 'Deep_Analysis_now' %}" class="btn btn-secondary mt-auto" disabled>詳細を見る</a>
-              </div>
-            </div>
-          </div>
-          <div class="col">
-            <div class="card h-100">
-              <img src="{% static 'jpg/Yahuoku_prediction.jpg' %}" class="card-img-top" alt="相場予想">
-              <div class="card-body">
-                <h5 class="card-title">相場予想</h5>
-                <p class="card-text">既存の相場情報を参照して今後の商品価格を予想します</p>
-                <a href="{% url 'Yahuoku_prediction' %}" class="btn btn-secondary mt-auto" disabled>詳細を見る</a>
-              </div>
-            </div>
+        </div>
+        <div class="col">
+          <div class="hot-pick-card">
+            <span class="tag tag-notable">注目</span>
+            <span class="name">フィルムカメラ</span>
+            <span class="serif price">¥12,400</span>
           </div>
         </div>
       </div>
-    </div>
+    </section>
+
+    <section class="feature-section">
+      <div class="row row-cols-1 row-cols-sm-2 row-cols-lg-4 g-3">
+        <div class="col">
+          <div class="feature-card">
+            <div class="icon-badge icon-coral">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7" /><path d="M21 21l-4.3-4.3" /></svg>
+            </div>
+            <div>
+              <h3 class="serif">相場検索</h3>
+              <p>検索名から直近で落札された商品の金額やよく用いられるワード、落札金額の中央値などを可視化します。</p>
+            </div>
+            <a href="{% url 'market_search' %}?mode=closed" class="btn-feature btn-feature-coral">
+              統合画面で見る
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6" /></svg>
+            </a>
+          </div>
+        </div>
+        <div class="col">
+          <div class="feature-card">
+            <div class="icon-badge icon-teal">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20V10M12 20V4M20 20v-7" /></svg>
+            </div>
+            <div>
+              <h3 class="serif">価格分析</h3>
+              <p>今まで取得したデータを分析し、売れ行きの傾向を分析します。</p>
+            </div>
+            <a href="{% url 'Deep_Analysis' %}" class="btn-feature btn-feature-teal">
+              詳細を見る
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6" /></svg>
+            </a>
+          </div>
+        </div>
+        <div class="col">
+          <div class="feature-card">
+            <div class="icon-badge icon-gold">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8" /><circle cx="12" cy="12" r="4" /><circle cx="12" cy="12" r="0.5" /></svg>
+            </div>
+            <div>
+              <h3 class="serif">ターゲット分析</h3>
+              <p>出品中の商品を統計的に分析して狙い目の商品をピックアップして表示します。</p>
+            </div>
+            <a href="{% url 'Deep_Analysis_now' %}" class="btn-feature btn-feature-gold">
+              詳細を見る
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6" /></svg>
+            </a>
+          </div>
+        </div>
+        <div class="col">
+          <div class="feature-card">
+            <div class="icon-badge icon-coral">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 17l6-6 4 4 8-9" /><path d="M15 6h6v6" /></svg>
+            </div>
+            <div>
+              <h3 class="serif">相場予想</h3>
+              <p>既存の相場情報を参照して今後の商品価格を予想します。</p>
+            </div>
+            <a href="{% url 'Yahuoku_prediction' %}" class="btn-feature btn-feature-coral">
+              詳細を見る
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6" /></svg>
+            </a>
+          </div>
+        </div>
+      </div>
+    </section>
   </main>
   {% include 'footer.html' %}
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
