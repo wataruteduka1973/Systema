@@ -42,9 +42,14 @@ EMBEDDED_PAGES = ["yahuoku", "yahuoku_now", "yahuoku_history"]
 def _page_templates():
     for path in sorted(TEMPLATE_DIR.rglob("*.html")):
         relative = path.relative_to(TEMPLATE_DIR).as_posix()
-        if relative in FRAGMENTS | INCLUDE_ONLY or relative.startswith("base"):
+        if relative in FRAGMENTS | INCLUDE_ONLY or relative.startswith(("base", "partials/")):
             continue
         yield relative
+
+
+def _fragment_templates():
+    partials = (TEMPLATE_DIR / "partials").glob("*.html")
+    return sorted([*FRAGMENTS, *(f"partials/{path.name}" for path in partials)])
 
 
 @pytest.mark.parametrize("template", list(_page_templates()))
@@ -59,7 +64,7 @@ def test_page_templates_extend_the_shared_base(template):
     assert "alert(" not in source
 
 
-@pytest.mark.parametrize("fragment", sorted(FRAGMENTS))
+@pytest.mark.parametrize("fragment", _fragment_templates())
 def test_header_and_footer_are_markup_fragments(fragment):
     source = (TEMPLATE_DIR / fragment).read_text(encoding="utf-8")
 

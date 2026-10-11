@@ -120,6 +120,8 @@ PATH_FEATURES = {
     "Main/services/admin_monitoring.py": "admin-monitoring",
     "Main/views/developer.py": "admin-monitoring",
     "Main/templates/base.html": "ui-layout",
+    "Main/templates/StartMenu.html": "ui-layout",
+    "Main/static/CSS/start-menu.css": "ui-layout",
     "Main/templates/base_with_footer.html": "ui-layout",
     "Main/templates/header.html": "ui-layout",
     "Main/templates/footer.html": "ui-layout",

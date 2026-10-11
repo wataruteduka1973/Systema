@@ -3,6 +3,9 @@
 ## Direction
 
 - Use a consistent red-gradient hero, white content cards, restrained shadows, and Bootstrap controls.
+- The top page (`StartMenu.html`, `static/CSS/start-menu.css`) uses a warm palette instead: beige background
+  `#f7f2ea`, Shippori Mincho headings and prices, Zen Kaku Gothic New body text, coral/teal/gold accents.
+  Other pages keep the red-gradient hero until they are redesigned.
 - Prefer shared navigation and reusable class names over page-specific copies.
 - Tables must remain usable on narrow screens through responsive overflow or card presentation.
 - Use inline status regions for expected validation and network errors; reserve dialogs for destructive confirmation.
@@ -24,6 +27,8 @@
 - `header.html` and `footer.html` are markup-only fragments. Their styles are `static/CSS/header.css` and
   `static/CSS/footer.css`, loaded after `extra_head` so page styles keep the cascade order they had when
   the styles were inline. `footer.css` sets `body`/`main` flex rules, so it loads only with the footer.
+- Reusable page sections live in `templates/partials/` and are added with `{% include %}`; they are
+  markup-only like the header and footer.
 - `?embedded=1` pages (market search tabs) render without header and footer; the base handles this.
 - `tests/integration/test_page_layout.py` renders every page and fails on a second document, a missing
   shared asset, or a page script that uses `alert()` / `document.write()`.
