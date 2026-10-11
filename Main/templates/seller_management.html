@@ -1,19 +1,19 @@
+{% extends 'base_with_footer.html' %}
 {% load static %}
-<!DOCTYPE html>
-<html lang="ja">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>出品・在庫管理 | Systema</title>
-    <link href="{% static 'vendor/bootstrap-5.3.8/css/bootstrap.min.css' %}" rel="stylesheet">
+
+{% block title %}出品・在庫管理 | Systema{% endblock %}
+
+{% block extra_head %}
     <style>
         .hero-section { background: linear-gradient(135deg, #1f2937, #374151); color: white; padding: 2.5rem 0; }
         .inventory-card { border: 0; box-shadow: 0 .2rem .8rem rgba(0, 0, 0, .08); }
         .money-result { font-size: 1.1rem; }
     </style>
-</head>
-<body class="bg-light">
-    {% include 'header.html' %}
+{% endblock %}
+
+{% block body_attrs %} class="bg-light"{% endblock %}
+
+{% block content %}
     <main>
         <section class="hero-section mb-4">
             <div class="container">
@@ -86,11 +86,11 @@
             </section>
         </div>
     </main>
-    {% include 'footer.html' %}
+{% endblock %}
+
+{% block scripts %}
     <script src="{% static 'JS/csrf.js' %}?v=20260821-security"></script>
     <script src="{% static 'JS/PurchaseBudget.js' %}?v=20260905-budget"></script>
     <script src="{% static 'JS/InventoryManagement.js' %}?v=20260902-phase3a-2"></script>
     <script src="{% static 'JS/SellerListings.js' %}?v=20260909-phase4-complete"></script>
-    <script src="{% static 'vendor/bootstrap-5.3.8/js/bootstrap.bundle.min.js' %}"></script>
-</body>
-</html>
+{% endblock %}

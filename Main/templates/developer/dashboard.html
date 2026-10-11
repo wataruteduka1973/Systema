@@ -1,14 +1,11 @@
+{% extends 'base.html' %}
 {% load static %}
-<!DOCTYPE html>
-<html lang="ja">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>管理者モニタリング | Systema</title>
-    <link href="{% static 'vendor/bootstrap-5.3.8/css/bootstrap.min.css' %}" rel="stylesheet">
-</head>
-<body class="bg-light">
-    {% include 'header.html' %}
+
+{% block title %}管理者モニタリング | Systema{% endblock %}
+
+{% block body_attrs %} class="bg-light"{% endblock %}
+
+{% block content %}
     <main class="container py-4">
         <div class="d-flex flex-wrap justify-content-between gap-2 mb-4">
             <div><h1 class="h2">管理者モニタリング</h1><p class="text-muted">検索の稼働状況と、対応が必要なデータを確認できます。</p></div>
@@ -51,6 +48,4 @@
         <section class="card card-body"><h2 class="h5">DB保存件数（全期間）</h2><p class="small text-muted">Systemaのモデル別件数です。ディスク使用容量ではありません。</p><table class="table"><thead><tr><th scope="col">データ</th><th scope="col">件数</th></tr></thead><tbody>{% for row in inventory %}<tr><td>{{ row.label }}</td><td>{{ row.count }}</td></tr>{% endfor %}</tbody></table></section>
         {% endif %}
     </main>
-    <script src="{% static 'vendor/bootstrap-5.3.8/js/bootstrap.bundle.min.js' %}"></script>
-</body>
-</html>
+{% endblock %}

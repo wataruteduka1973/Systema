@@ -15,8 +15,36 @@
 - Secondary action: outline or neutral
 - Destructive action: explicit danger styling and confirmation
 
+## Page Layout
+
+- Every page extends `base.html`, or `base_with_footer.html` when it shows the footer. Do not write
+  `<html>`, `<head>`, `<body>`, the Bootstrap CSS/JS tags, or the viewport meta in a page template.
+- Blocks: `title`, `extra_head` (page fonts and styles), `body_attrs`, `content`, `scripts` (page scripts;
+  they run after the Bootstrap bundle and `Feedback.js`).
+- `header.html` and `footer.html` are markup-only fragments. Their styles are `static/CSS/header.css` and
+  `static/CSS/footer.css`, loaded after `extra_head` so page styles keep the cascade order they had when
+  the styles were inline. `footer.css` sets `body`/`main` flex rules, so it loads only with the footer.
+- `?embedded=1` pages (market search tabs) render without header and footer; the base handles this.
+- `tests/integration/test_page_layout.py` renders every page and fails on a second document, a missing
+  shared asset, or a page script that uses `alert()` / `document.write()`.
+
+## Feedback Messages
+
+- Use `window.SystemaFeedback` (`static/JS/Feedback.js`): `warning` for input problems, `error` for
+  failures (stays until closed), `success`/`info` for completion (closes after a few seconds).
+- Messages appear in a fixed region and never shift the layout or replace the page; form input and
+  results stay in place. Text is set with `textContent`.
+- For fetch calls, check `response.ok` before treating a response as success:
+  `if (!response.ok) throw await SystemaFeedback.responseError(response, '更新に失敗しました');`
+  and `.catch(error => SystemaFeedback.errorFrom(error, '更新に失敗しました'))` show the server's
+  JSON `error` message when there is one.
+- `confirm()` remains only for destructive confirmation.
+
 ## Related Files
 
+- `Main/templates/base.html`
+- `Main/templates/base_with_footer.html`
+- `Main/static/JS/Feedback.js`
 - `Main/templates/header.html`
 - `Main/templates/footer.html`
 - `Main/templates/market_search.html`

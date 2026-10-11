@@ -10,10 +10,7 @@ let marketStatistics = null;
 function fetchJsonWithRetry(url, options = {}, maxRetries = 3) {
     return fetch(url, options).then(async (response) => {
         if (!response.ok) {
-            if (response.status >= 500 || response.status === 429) {
-                throw new Error(`HTTP ${response.status}`);
-            }
-            throw new Error(`Request failed with status ${response.status}`);
+            throw await window.SystemaFeedback.responseError(response, '検索に失敗しました');
         }
         const text = await response.text();
         if (!text) {
@@ -103,7 +100,7 @@ document.addEventListener('DOMContentLoaded', function () {
 function RealtimeSearch() {
     const searchKeyword = document.getElementById("search").value.trim();
     if (!searchKeyword) {
-        alert('検索キーワードを入力してください');
+        window.SystemaFeedback.warning('検索キーワードを入力してください');
         return;
     }
     const params = new URLSearchParams({
@@ -167,7 +164,7 @@ function RealtimeSearch() {
         })
         .catch(error => {
             console.error('検索エラー:', error);
-            alert('検索に失敗しました。再試行しても取得できない場合は、しばらくしてから再度お試しください。');
+            window.SystemaFeedback.errorFrom(error, '検索に失敗しました。しばらくしてから再度お試しください');
         })
         .finally(() => {
             spinner.style.display = 'none';
@@ -336,11 +333,11 @@ function filterData() {
     const maxPrice = maxPriceInput ? parseFloat(maxPriceInput) : Infinity;
 
     if (minPrice < 0 || (maxPriceInput && maxPrice < 0)) {
-        alert('価格は0以上の値を入力してください');
+        window.SystemaFeedback.warning('価格は0以上の値を入力してください');
         return;
     }
     if (maxPriceInput && minPrice > maxPrice) {
-        alert('最低価格は最高価格以下にしてください');
+        window.SystemaFeedback.warning('最低価格は最高価格以下にしてください');
         return;
     }
 
@@ -397,11 +394,11 @@ function validateAndFilterData() {
     const maxPrice = parseInt(document.getElementById('maxPrice').value, 10);
 
     if (minPrice > maxPrice) {
-        alert('最低価格は最高価格以下である必要があります。');
+        window.SystemaFeedback.warning('最低価格は最高価格以下である必要があります。');
         return;
     }
     if (isNaN(minPrice) || isNaN(maxPrice)) {
-        alert('価格は数値で入力してください。');
+        window.SystemaFeedback.warning('価格は数値で入力してください。');
         return;
     }
     filterData();

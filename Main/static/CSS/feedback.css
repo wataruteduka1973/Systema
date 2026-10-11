@@ -1,0 +1,14 @@
+/* Fixed message region used by JS/Feedback.js. It overlays the page so showing a message
+   never shifts the layout. */
+.systema-feedback {
+    position: fixed;
+    top: 1rem;
+    right: 1rem;
+    z-index: 1090;
+    width: min(28rem, calc(100vw - 2rem));
+}
+
+.systema-feedback__text {
+    overflow-wrap: anywhere;
+    white-space: pre-line;
+}

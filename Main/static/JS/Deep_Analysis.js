@@ -19,11 +19,14 @@ document.addEventListener('DOMContentLoaded', () => {
     analyzeMarketPriceButton.addEventListener('click', () => {
         const searchWord = dropdown.value;
         if (!searchWord) {
-            alert('検索ワードを選択してください');
+            window.SystemaFeedback.warning('検索ワードを選択してください');
             return;
         }
         fetch(`/taskle/get_market_data?keyword=${encodeURIComponent(searchWord)}`)
-            .then(response => response.json())
+            .then(async response => {
+                if (!response.ok) throw await window.SystemaFeedback.responseError(response, '相場データを取得できませんでした');
+                return response.json();
+            })
             .then(data => {
                 const searchDay = data.searchDay;
 
@@ -34,13 +37,16 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 document.getElementById('searchDay').textContent = searchDay || '';
             })
-            .catch(error => console.error('Error fetching market data:', error));
+            .catch(error => {
+                console.error('Error fetching market data:', error);
+                window.SystemaFeedback.errorFrom(error, '相場データを取得できませんでした');
+            });
     });
 
     updateMarketDataButton.addEventListener('click', () => {
         const searchWord = dropdown.value;
         if (!searchWord) {
-            alert('検索ワードを選択してください');
+            window.SystemaFeedback.warning('検索ワードを選択してください');
             return;
         }
         spinner.style.display = 'inline-block';
@@ -49,13 +55,16 @@ document.addEventListener('DOMContentLoaded', () => {
             method: 'POST',
             headers: window.systemaCsrfHeaders(),
         })
-            .then(response => response.json())
+            .then(async response => {
+                if (!response.ok) throw await window.SystemaFeedback.responseError(response, '更新に失敗しました');
+                return response.json();
+            })
             .then(data => {
-                alert(data.message || '相場データを更新しました');
+                window.SystemaFeedback.success(data.message || '相場データを更新しました');
                 refreshSearchWordDropdown(searchWord);
                 analyzeMarketPriceButton.click();
             })
-            .catch(error => alert('更新に失敗しました: ' + error))
+            .catch(error => window.SystemaFeedback.errorFrom(error, '更新に失敗しました'))
             .finally(() => {
                 spinner.style.display = 'none';
                 updateMarketDataButton.disabled = false;
@@ -65,7 +74,7 @@ document.addEventListener('DOMContentLoaded', () => {
     deleteMarketDataButton.addEventListener('click', () => {
         const searchWord = dropdown.value;
         if (!searchWord) {
-            alert('検索ワードを選択してください');
+            window.SystemaFeedback.warning('検索ワードを選択してください');
             return;
         }
         if (!confirm('本当に削除しますか？')) return;
@@ -73,16 +82,19 @@ document.addEventListener('DOMContentLoaded', () => {
             method: 'DELETE',
             headers: window.systemaCsrfHeaders(),
         })
-            .then(response => response.json())
+            .then(async response => {
+                if (!response.ok) throw await window.SystemaFeedback.responseError(response, '削除に失敗しました');
+                return response.json();
+            })
             .then(data => {
-                alert(data.message || '相場データを削除しました');
+                window.SystemaFeedback.success(data.message || '相場データを削除しました');
                 refreshSearchWordDropdown();
                 document.getElementById('marketSummaryCards').innerHTML = '';
                 document.getElementById('priceTrendChart').innerHTML = '';
                 document.getElementById('conditionStats').innerHTML = '';
                 document.getElementById('searchDay').textContent = '';
             })
-            .catch(error => alert('削除に失敗しました: ' + error));
+            .catch(error => window.SystemaFeedback.errorFrom(error, '削除に失敗しました'));
     });
 });
 

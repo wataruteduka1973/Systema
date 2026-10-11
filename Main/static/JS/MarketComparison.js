@@ -23,7 +23,7 @@
         checkbox.addEventListener('change', () => {
             if (checkbox.checked && selectedItems.size >= MAX_ITEMS) {
                 checkbox.checked = false;
-                alert(`比較できる商品は${MAX_ITEMS}件までです。`);
+                window.SystemaFeedback.warning(`比較できる商品は${MAX_ITEMS}件までです。`);
                 return;
             }
             if (checkbox.checked) selectedItems.set(key, item);
@@ -117,7 +117,7 @@
 
     function openComparison() {
         if (selectedItems.size < 2) {
-            alert('比較する商品を2件以上選択してください。');
+            window.SystemaFeedback.warning('比較する商品を2件以上選択してください。');
             return;
         }
         renderComparison();

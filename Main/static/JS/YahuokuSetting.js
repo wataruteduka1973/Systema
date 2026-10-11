@@ -12,14 +12,14 @@ function sleep(ms) {
 }
 
 async function fetchJsonWithRetry(url, options = {}, retryConfig = {}) {
-    const { maxRetries = 3, delayMs = 1200, alertOnFailure = true } = retryConfig;
+    const { maxRetries = 3, delayMs = 1200 } = retryConfig;
     let lastError = null;
 
     for (let attempt = 1; attempt <= maxRetries; attempt += 1) {
         try {
             const response = await fetch(url, options);
             if (!response.ok) {
-                throw new Error(`HTTP ${response.status}`);
+                throw await window.SystemaFeedback.responseError(response, '検索に失敗しました');
             }
             return await response.json();
         } catch (error) {
@@ -28,9 +28,6 @@ async function fetchJsonWithRetry(url, options = {}, retryConfig = {}) {
                 console.warn(`[fetchJsonWithRetry] attempt ${attempt} failed, retrying:`, error);
                 await sleep(delayMs);
                 continue;
-            }
-            if (alertOnFailure) {
-                alert('データ取得に失敗しました。再試行しましたが取得できませんでした。\n時間をおいて再度お試しください。');
             }
             throw error;
         }
@@ -67,7 +64,7 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     }
 
-    fetchJsonWithRetry('/taskle/get_popular_words?top=10', {}, { maxRetries: 2, delayMs: 1000, alertOnFailure: false })
+    fetchJsonWithRetry('/taskle/get_popular_words?top=10', {}, { maxRetries: 2, delayMs: 1000 })
         .then(data => {
             const area = document.getElementById('popularWordsBtnGroup');
             if (!area) return;
@@ -97,7 +94,7 @@ document.addEventListener('DOMContentLoaded', function () {
 async function performSearch() {
     const searchKeyword = document.getElementById("search").value.trim();
     if (!searchKeyword) {
-        alert('検索キーワードを入力してください');
+        window.SystemaFeedback.warning('検索キーワードを入力してください');
         return;
     }
     const params = new URLSearchParams({
@@ -110,7 +107,7 @@ async function performSearch() {
     if (button) button.disabled = true;
 
     try {
-        const result = await fetchJsonWithRetry(`/taskle/perform_search?${params.toString()}`, {}, { maxRetries: 3, delayMs: 1500, alertOnFailure: true });
+        const result = await fetchJsonWithRetry(`/taskle/perform_search?${params.toString()}`, {}, { maxRetries: 3, delayMs: 1500 });
         currentData = result.data || [];
         conditionSummary = result.conditionSummary || null;
         marketStatistics = result.marketStatistics || null;
@@ -145,7 +142,7 @@ async function performSearch() {
         }
     } catch (error) {
         console.error('検索エラー:', error);
-        alert('検索に失敗しました。再試行を実行しましたが、データを取得できませんでした。');
+        window.SystemaFeedback.errorFrom(error, '検索に失敗しました。再試行しましたがデータを取得できませんでした');
     } finally {
         if (spinner) spinner.style.display = 'none';
         if (button) button.disabled = false;
@@ -442,11 +439,11 @@ function filterData() {
 
 
     if (minPrice < 0 || (maxPriceInput && maxPrice < 0)) {
-        alert('価格は0以上の値を入力してください');
+        window.SystemaFeedback.warning('価格は0以上の値を入力してください');
         return;
     }
     if (maxPriceInput && minPrice > maxPrice) {
-        alert('最低価格は最高価格以下にしてください');
+        window.SystemaFeedback.warning('最低価格は最高価格以下にしてください');
         return;
     }
 
@@ -490,11 +487,11 @@ function validateAndFilterData() {
     const maxPrice = parseInt(document.getElementById('maxPrice').value, 10);
 
     if (minPrice > maxPrice) {
-        alert('最低価格は最高価格以下である必要があります。');
+        window.SystemaFeedback.warning('最低価格は最高価格以下である必要があります。');
         return;
     }
     if (isNaN(minPrice) || isNaN(maxPrice)) {
-        alert('価格は数値で入力してください。');
+        window.SystemaFeedback.warning('価格は数値で入力してください。');
         return;
     }
     filterData();
