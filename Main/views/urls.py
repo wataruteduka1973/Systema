@@ -6,6 +6,7 @@ from django.views.decorators.csrf import ensure_csrf_cookie
 from Main.models.savedsearch import SavedSearch
 from Main.models.sellerlisting import SellerListing
 from Main.models.watchitem import WatchItem
+from Main.services.recommendations import recommendations_for
 
 MARKET_SEARCH_MODES = {
     "closed": ("落札相場", "yahuoku"),
@@ -14,8 +15,16 @@ MARKET_SEARCH_MODES = {
 }
 
 
+@ensure_csrf_cookie
 def index(request):
-    return render(request, "StartMenu.html")
+    context = {}
+    if request.user.is_authenticated:
+        section = recommendations_for(request.user)
+        context = {
+            "recommendations": section,
+            "recommendation_payloads": [item.watch_payload for item in section.items],
+        }
+    return render(request, "StartMenu.html", context)
 
 
 def Yahuoku(request):

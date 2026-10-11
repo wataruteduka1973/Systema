@@ -1,27 +1,47 @@
-{# Top-page pick cards. Replaced by saved-search recommendations in the next change. #}
-<section class="hot-picks">
-    <div class="hot-picks-label">いま気になる掘り出し物 — サンプル表示</div>
-    <div class="row row-cols-1 row-cols-md-3 g-3">
+{# Top-page recommendations from stored saved-search results (services/recommendations.py). #}
+<section class="hot-picks" aria-labelledby="recommendationsHeading">
+    <h2 id="recommendationsHeading" class="hot-picks-label">あなたへのおすすめ</h2>
+    {% if not request.user.is_authenticated %}
+    <p class="hot-picks-empty">
+        ログインして保存検索を作ると、新しく取得した出品の中から買い時の商品をここに表示します。
+        <a href="{% url 'login' %}">ログイン</a>
+    </p>
+    {% elif not recommendations.has_saved_searches %}
+    <p class="hot-picks-empty">
+        ターゲット分析で検索すると条件が保存され、その結果から買い時の商品をここに表示します。
+        <a href="{% url 'Deep_Analysis_now' %}">ターゲット分析を開く</a>
+    </p>
+    {% elif not recommendations.items %}
+    <p class="hot-picks-empty">
+        いまおすすめできる商品はありません{% if recommendations.last_observed_at %}（{{ recommendations.last_observed_at|date:"n/j H:i" }} の取得結果）{% endif %}。
+        保存検索を再実行すると更新されます。
+        <a href="{% url 'Deep_Analysis_now' %}">ターゲット分析を開く</a>
+    </p>
+    {% else %}
+    <div class="row row-cols-1 row-cols-sm-2 row-cols-lg-3 g-3">
+        {% for item in recommendations.items %}
         <div class="col">
-            <div class="hot-pick-card">
-                <span class="tag tag-rising">急上昇</span>
-                <span class="name">ヴィンテージ腕時計</span>
-                <span class="serif price">¥48,900</span>
-            </div>
+            <article class="hot-pick-card recommendation-card">
+                <a class="recommendation-image" href="{{ item.url }}" target="_blank" rel="noopener noreferrer" tabindex="-1" aria-hidden="true">
+                    <span class="recommendation-image-placeholder">画像なし</span>
+                    {% if item.image_url %}<img src="{{ item.image_url }}" alt="" loading="lazy" referrerpolicy="no-referrer">{% endif %}
+                </a>
+                <div class="recommendation-tags">
+                    {% if item.is_new %}<span class="tag tag-rising">新着</span>{% endif %}
+                    <span class="tag {% if item.decision_status == 'strong_buy' %}tag-deal{% else %}tag-notable{% endif %}">{{ item.decision_label }}</span>
+                </div>
+                <a class="name recommendation-name" href="{{ item.url }}" target="_blank" rel="noopener noreferrer">{{ item.name }}</a>
+                <span class="serif price">¥{{ item.price|floatformat:"0g" }}</span>
+                <ul class="recommendation-meta">
+                    {% if item.discount_percent %}<li class="recommendation-discount">相場より{{ item.discount_percent }}%安い</li>{% endif %}
+                    {% if item.ends_at %}<li>終了予定 {{ item.ends_at|date:"n/j H:i" }}</li>{% elif item.remaining_time %}<li>取得時 残り{{ item.remaining_time }}</li>{% endif %}
+                    <li>{{ item.saved_search_name }} · {{ item.observed_at|date:"n/j H:i" }} 取得</li>
+                </ul>
+                <button type="button" class="btn recommendation-watch" data-index="{{ forloop.counter0 }}">ウォッチに追加</button>
+            </article>
         </div>
-        <div class="col">
-            <div class="hot-pick-card">
-                <span class="tag tag-deal">掘り出し物</span>
-                <span class="name">レトロゲーム機</span>
-                <span class="serif price">¥21,000</span>
-            </div>
-        </div>
-        <div class="col">
-            <div class="hot-pick-card">
-                <span class="tag tag-notable">注目</span>
-                <span class="name">フィルムカメラ</span>
-                <span class="serif price">¥12,400</span>
-            </div>
-        </div>
+        {% endfor %}
     </div>
+    {{ recommendation_payloads|json_script:"recommendationPayloads" }}
+    {% endif %}
 </section>

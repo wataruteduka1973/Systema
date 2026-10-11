@@ -9,6 +9,7 @@ from typing import Any, Protocol
 from urllib.parse import urlencode
 
 from Main.domain.auction_time import format_remaining_time
+from Main.domain.listing_image import safe_image_url
 from Main.domain.market_listing import MarketListingObservation
 from Main.infrastructure.http import get_with_retry
 from Main.scraping.yahoo import YahooAuctionParser
@@ -132,6 +133,7 @@ class YahooMarketplaceProvider:
                             bidding=int(item["bidding"]),
                             time=str(item["time"]),
                             url=str(item["url"]),
+                            image_url=safe_image_url(item.get("imageUrl")),
                         )
                     )
             except SearchParseError:

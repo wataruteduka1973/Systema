@@ -49,7 +49,7 @@ def save_watch_item(payload: Mapping[str, Any], owner: RequestOwner) -> tuple[Wa
     url = str(payload.get("url") or "").strip()
     if not name:
         raise ValueError("商品名は必須です")
-    if not _is_allowed_url(url):
+    if not is_watchable_url(url):
         raise ValueError("Yahoo!オークションの商品URLを指定してください")
 
     price = _non_negative_int(payload.get("currentPrice", payload.get("price")))
@@ -265,7 +265,8 @@ def _record_snapshot(
     return None
 
 
-def _is_allowed_url(value: str) -> bool:
+def is_watchable_url(value: str) -> bool:
+    """Whether a listing URL points at an allowed Yahoo! Auctions / PayPay Flea Market host."""
     parsed = urlparse(value)
     return parsed.scheme in {"http", "https"} and parsed.hostname in ALLOWED_WATCH_HOSTS
 
