@@ -89,3 +89,10 @@
         </section>
     </main>
 {% endblock %}
+
+{% block scripts %}
+    {% if recommendations.items %}
+    <script src="{% static 'JS/csrf.js' %}?v=20260821-security"></script>
+    <script src="{% static 'JS/Recommendations.js' %}"></script>
+    {% endif %}
+{% endblock %}
