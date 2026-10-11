@@ -2,7 +2,7 @@
 
 ## Scope and acceptance
 
-The deployment provider, public URL and scheduler are not selected. Phase 9 first
+The deployment provider and public URL are not selected; the scheduler is in-app for local use (ADR 0006). Phase 9 first
 implements portable prerequisites and local verification. Production release is
 NOT complete until the external evidence checklist below is satisfied.
 
@@ -123,7 +123,14 @@ core-contracts browser test. The alert-job lock, time budget and failure exit
 are implemented against the shared target-search use case. `test_alert_job.py` replaces the
 `local-wip` version, which targeted the removed `complex_market_data_logic` path. The PostgreSQL
 advisory lock was verified locally on PostgreSQL 16, including a second OS process exiting 1 while the
-lock was held. The scheduler itself is still not connected.
+lock was held. An overlapping invocation exits 75 (`JOB_ALREADY_RUNNING_EXIT_CODE`).
+
+The in-app scheduler (ADR 0006) connects `run_alerts` hourly for local use. It runs the command
+as a child process and kills it 300s after `--max-runtime-seconds`, which provides the hard timeout
+required above. Failures and timeouts are recorded in `ErrorLog`. Production still needs a decision:
+enable it on exactly one process, or use the provider's scheduler with the same command. The
+checklist item for scheduler overlap, kill and retry stays unchecked until it is verified on the
+deployment.
 
 HTTP retry constants: retryable statuses 429/500/502/503/504; backoff 1s, 2s, 4s, or `Retry-After`
 capped at 10s; total deadline 60s across attempts and backoff. A retry whose backoff would pass the
@@ -134,6 +141,7 @@ deadline is not started. Seller-page refresh passes `max_retries=1` and is never
 - `Main/management/commands/check_release.py`
 - `Main/management/commands/run_alerts.py`
 - `Main/services/job_lock.py`
+- `Main/services/alert_scheduler.py`, `docs/decisions/0006-in-process-alert-scheduler.md`
 - `Main/infrastructure/http.py`
 - `System_Config/settings.py`
 - `.github/workflows/ci.yml`

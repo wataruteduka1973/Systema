@@ -14,3 +14,8 @@ from django.core.wsgi import get_wsgi_application
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "System_Config.settings")
 
 application = get_wsgi_application()
+
+# Only server processes import this module, so management commands and tests never start it.
+from Main.services.alert_scheduler import start_alert_scheduler  # noqa: E402
+
+start_alert_scheduler()

@@ -65,6 +65,15 @@ EXTERNAL_SEARCH_TRUST_X_FORWARDED_FOR = os.getenv(
 
 CLIENT_ERROR_RATE_LIMIT = int(os.getenv("CLIENT_ERROR_RATE_LIMIT", "20"))
 CLIENT_ERROR_RATE_WINDOW_SECONDS = int(os.getenv("CLIENT_ERROR_RATE_WINDOW_SECONDS", "60"))
+# In-process hourly run_alerts trigger; only the web server process starts it (wsgi/asgi).
+ALERT_SCHEDULER_ENABLED = os.getenv("SYSTEMA_ALERT_SCHEDULER", "false").strip().lower() in {
+    "1",
+    "true",
+    "yes",
+    "on",
+}
+ALERT_SCHEDULER_INTERVAL_SECONDS = int(os.getenv("SYSTEMA_ALERT_INTERVAL_SECONDS", "3600"))
+ALERT_SCHEDULER_MAX_RUNTIME_SECONDS = int(os.getenv("SYSTEMA_ALERT_MAX_RUNTIME_SECONDS", "1800"))
 ERROR_LOG_RETENTION_DAYS = int(os.getenv("ERROR_LOG_RETENTION_DAYS", "90"))
 LOG_MAX_BYTES = int(os.getenv("LOG_MAX_BYTES", "10485760"))
 LOG_BACKUP_COUNT = int(os.getenv("LOG_BACKUP_COUNT", "5"))

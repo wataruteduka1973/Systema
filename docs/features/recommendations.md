@@ -9,7 +9,8 @@ own saved-search results, as image cards they can add to the watchlist.
 
 - Source: the latest successful current-listing `SearchRun.result_snapshot` of each **active** saved
   search owned by the user. The top page never fetches from Yahoo; cards change only when a saved
-  search runs (manually today; the scheduler is not connected yet).
+  search runs (manually, or hourly through the in-app scheduler when `SYSTEMA_ALERT_SCHEDULER` is
+  enabled; see `alert-rules.md`).
 - Selection reuses the target-analysis buy decision stored in the snapshot: only `strong_buy` and
   `buy` items. Items already in the user's watchlist, items whose estimated end
   (`run.created_at + remainingSeconds`) has passed, items without a positive price, and items whose

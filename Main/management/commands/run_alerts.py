@@ -19,7 +19,11 @@ from Main.services.alert_rules import (
     evaluate_seller_alert_rules,
     evaluate_watch_alert_rules,
 )
-from Main.services.job_lock import JobAlreadyRunning, alert_job_lock
+from Main.services.job_lock import (
+    JOB_ALREADY_RUNNING_EXIT_CODE,
+    JobAlreadyRunning,
+    alert_job_lock,
+)
 from Main.services.market_search import (
     TargetSearchFailure,
     execute_target_search,
@@ -70,7 +74,10 @@ class Command(BaseCommand):
             with alert_job_lock() as check_lock:
                 self._run(options, budget, check_lock)
         except JobAlreadyRunning:
-            raise CommandError("Alert job is already running; skipped this run") from None
+            raise CommandError(
+                "Alert job is already running; skipped this run",
+                returncode=JOB_ALREADY_RUNNING_EXIT_CODE,
+            ) from None
 
     def _run(self, options: dict[str, Any], budget: int, check_lock: Callable[[], None]) -> None:
         started = monotonic()

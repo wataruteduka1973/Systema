@@ -323,7 +323,7 @@ classification additionally distinguishes `html_parse_error`.
 - 登録系の重複はDB unique constraintで防ぐ。
 - refresh、保存検索run、通知生成はidempotency keyまたは実行ロックを持つ。
 - `updatedAt`をPATCHに渡し、古い画面からの上書きは409にできる設計を推奨する。
-- 定期ジョブはAPI request内で常駐させない。管理コマンドから開始し、デプロイ時にschedulerへ接続する。
+- 定期ジョブはAPI request内で実行しない。管理コマンドを境界とし、Webサーバープロセス内のタイマーが子プロセスとして起動する（ADR 0006、`SYSTEMA_ALERT_SCHEDULER`で有効化）。
 - 外部取得失敗時も`SearchRun`/operation eventへfailure codeとdurationを残す。
 
 ## 8. Migration and Deprecation
