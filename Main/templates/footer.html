@@ -1,17 +1,18 @@
-{# Markup only: styles live in static/CSS/footer.css and are loaded by base.html. #}
-<footer>
+{# Markup only: styles live in static/CSS/footer.css and are loaded by base_with_footer.html. #}
+<footer class="site-footer">
     <div class="container">
         <div class="row">
             <div class="col-md-4 mb-4">
                 <h5>情報分析ツール システマ</h5>
                 <p>現在の価格、過去の価格などを参考にあなたの購買活動、相場の視覚化といったサポートをします</p>
+                <p class="tagline mb-0">今日も、いい掘り出し物を。</p>
             </div>
             <div class="col-md-4 mb-4">
                 <h5>リンク</h5>
                 <ul class="list-unstyled">
-                    <li><a href="{% url 'index' %}" class="text-white">ホーム</a></li>
-                    <li><a href="{% url 'introduction' %}" class="text-white">このツールについて</a></li>
-                    <li><a href="https://auctions.yahoo.co.jp/" target="_blank" class="text-white">ヤフオク公式</a></li>
+                    <li><a href="{% url 'index' %}">ホーム</a></li>
+                    <li><a href="{% url 'introduction' %}">このツールについて</a></li>
+                    <li><a href="https://auctions.yahoo.co.jp/" target="_blank" rel="noopener noreferrer">ヤフオク公式</a></li>
                 </ul>
             </div>
             <div class="col-md-4 mb-4">
@@ -19,11 +20,11 @@
                 <p>サポート: agtmpwd992@gmail.com</p>
                 <div class="btn-group" role="group">
                     <a href="https://mail.google.com/mail/?view=cm&to=agtmpwd992@gmail.com&su=ご連絡はこちらから"
-                        target="_blank" class="btn btn-outline-light me-2" title="ご連絡はこちらから">
+                        target="_blank" rel="noopener noreferrer" class="btn btn-outline-light me-2" title="ご連絡はこちらから">
                         <i class="bi bi-envelope"></i> Gmail
                     </a>
                     <a href="https://outlook.live.com/mail/0/deeplink/compose?to=agtmpwd992@gmail.com&subject=ご連絡はこちらから"
-                        target="_blank" class="btn btn-outline-light me-2" title="ご連絡はこちらから">
+                        target="_blank" rel="noopener noreferrer" class="btn btn-outline-light me-2" title="ご連絡はこちらから">
                         <i class="bi bi-envelope"></i> Outlook
                     </a>
                     <a href="mailto:agtmpwd992@gmail.com?subject=ご連絡はこちらから" class="btn btn-outline-light me-2"
@@ -32,10 +33,10 @@
                     </a>
                 </div>
                 <div class="social-icons mt-3">
-                    <a href="https://x.com/6f49bec27d72427" target="_blank" class="text-white me-2">
+                    <a href="https://x.com/6f49bec27d72427" target="_blank" rel="noopener noreferrer">
                         <i class="bi bi-twitter"></i>
                     </a>
-                    <a href="https://github.com/wataruteduka1973" target="_blank" class="text-white">
+                    <a href="https://github.com/wataruteduka1973" target="_blank" rel="noopener noreferrer">
                         <i class="bi bi-github"></i>
                     </a>
                 </div>

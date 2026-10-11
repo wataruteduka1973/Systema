@@ -29,7 +29,11 @@ Systema is a Django application that searches Yahoo! Auctions data, stores owner
 | Yahoo scraping | `docs/architecture.md` and parser tests |
 | Release feature roadmap | `docs/plans/release-feature-roadmap.md` |
 | Planned multi-market search and overseas sourcing | `docs/features/multi-market-sourcing.md` |
-| Planned domestic sourcing and overseas resale research | `docs/plans/cross-border-research-roadmap.md` |
+| Planned domestic sourcing and overseas resale research (low priority, see below) | `docs/plans/cross-border-research-roadmap.md` |
+| Domestic cross-market price gap detection (Yahoo/Mercari) | `docs/features/domestic-cross-market.md` |
+| Opportunity discovery scan | `docs/features/opportunity-discovery.md` |
+| Listing images | `docs/features/listing-images.md` |
+| Domestic expansion roadmap (D-series) | `docs/plans/domestic-expansion-roadmap.md` |
 | API contracts and migration | `docs/design/api.md` |
 | Database schema and migration | `docs/design/database.md` |
 
@@ -50,6 +54,8 @@ Systema is a Django application that searches Yahoo! Auctions data, stores owner
 - Target analysis owns buying-opportunity and watchlist workflows.
 - Buyer watch items and seller listings are separate resources.
 - Seller support starts with manual listing URL registration and never stores Yahoo credentials.
+- Domestic expansion (Yahoo/Mercari cross-market detection, per ADR 0005) is prioritized over cross-border/overseas expansion given 2025 US tariff changes and cross-border platform fees; see `docs/plans/domestic-expansion-roadmap.md`.
+- Automated bidding, listing, and relisting are explicitly out of scope. Systema stays a decision-support tool; a human executes every trade.
 
 ## Work Routing
 
