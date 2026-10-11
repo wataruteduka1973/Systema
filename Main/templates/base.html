@@ -8,7 +8,8 @@
     {% block extra_head %}{% endblock %}
     {% if not embedded %}
     {# Loaded after page styles to keep the cascade order the inline header/footer styles had. #}
-    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600&display=swap" rel="stylesheet">
+    {# Poppins is still named by several page stylesheets; the header, footer and top page use the other two. #}
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600&family=Shippori+Mincho:wght@400;500;600;700;800&family=Zen+Kaku+Gothic+New:wght@400;500;700;900&display=swap" rel="stylesheet">
     <link href="{% static 'CSS/header.css' %}" rel="stylesheet">
     {% block footer_head %}{% endblock %}
     {% endif %}

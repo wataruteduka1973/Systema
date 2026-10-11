@@ -2,18 +2,19 @@
 <nav class="navbar navbar-expand-lg navbar-custom">
     <div class="container-fluid">
         <a class="navbar-brand" href="{% url 'index' %}">
-            <svg xmlns="http://www.w3.org/2000/svg" width="30" height="30" fill="currentColor" viewBox="0 0 16 16">
-                <path
-                    d="M0 1.5A.5.5 0 0 1 .5 1H2a.5.5 0 0 1 .485.379L2.89 3H14.5a.5.5 0 0 1 .491.592l-1.5 8A.5.5 0 0 1 13 12H4a.5.5 0 0 1-.491-.408L2.01 3.607 1.61 2H.5a.5.5 0 0 1-.5-.5zM3.102 4l1.313 7h8.17l1.313-7H3.102zM5 12a2 2 0 1 0 0 4 2 2 0 0 0 0-4zm7 0a2 2 0 1 0 0 4 2 2 0 0 0 0-4zm-7 1a1 1 0 1 1 0 2 1 1 0 0 1 0-2zm7 0a1 1 0 1 1 0 2 1 1 0 0 1 0-2z" />
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" class="me-2">
+                <path d="M14 4l6 6-9 9-6-6z" />
+                <path d="M4 20h9" />
+                <path d="M9 9l6 6" />
             </svg>
-            <span class="ms-2">情報分析ツール システマ</span>
+            <span>情報分析ツール システマ</span>
         </a>
         <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav"
             aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
             <span class="navbar-toggler-icon"></span>
         </button>
         <div class="collapse navbar-collapse" id="navbarNav">
-            <ul class="navbar-nav ms-auto">
+            <ul class="navbar-nav ms-auto align-items-lg-center">
                 <li class="nav-item">
                     <a class="nav-link" href="{% url 'market_search' %}">市場検索</a>
                 </li>
@@ -34,10 +35,13 @@
                     <a class="nav-link" href="{% url 'seller_outcomes_page' %}">販売実績分析</a>
                 </li>
                 <li class="nav-item">
-                    <a class="nav-link" href="{% url 'alert_rules_page' %}">アラート</a>
+                    <a class="nav-link" href="{% url 'alert_rules_page' %}">アラート<span class="nav-alert-dot"></span></a>
+                </li>
+                <li class="nav-item d-none d-lg-block">
+                    <span class="nav-divider"></span>
                 </li>
                 <li class="nav-item">
-                    <a class="nav-link" href="{% url 'profile' %}">{% if monitoring_privacy %}プロフィール{% else %}{{ request.user.username }}{% endif %}</a>
+                    <a class="nav-link nav-username" href="{% url 'profile' %}">{% if monitoring_privacy %}プロフィール{% else %}{{ request.user.username }}{% endif %}</a>
                 </li>
                 <li class="nav-item">
                     <form method="post" action="{% url 'logout' %}">

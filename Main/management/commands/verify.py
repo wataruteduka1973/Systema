@@ -11,6 +11,7 @@ from django.core.management.base import BaseCommand, CommandError
 FEATURE_TESTS = {
     "core-contracts": (
         "tests/integration/test_alert_command_usecase.py",
+        "tests/integration/test_notifications.py",
         "tests/integration/test_search_persistence.py",
         "tests/integration/test_search_resend_contract.py",
         "tests/integration/test_external_search_api.py",
@@ -20,6 +21,7 @@ FEATURE_TESTS = {
         "tests/unit/test_yahoo_marketplace.py",
         "tests/unit/test_profitability.py",
         "tests/unit/test_purchase_budget.py",
+        "tests/e2e/test_core_contracts_browser.py",
     ),
     "admin-monitoring": (
         "tests/integration/test_admin_monitoring.py",
