@@ -115,6 +115,7 @@ FEATURE_TESTS = {
         "tests/unit/test_watchlist_analysis.py",
         "tests/integration/test_api.py",
         "tests/e2e/test_target_search_watch_browser.py",
+        "tests/e2e/test_target_result_cards_browser.py",
     ),
     "inventory": (
         "tests/unit/test_profitability.py",
@@ -210,6 +211,7 @@ PATH_FEATURES = {
     "Main/services/watchlist_analysis.py": "target-analysis",
     "Main/static/JS/Deep_Analysis_now.js": "target-analysis",
     "Main/templates/Deep_Analysis_now.html": "target-analysis",
+    "Main/static/CSS/target-results.css": "target-analysis",
     "Main/domain/profitability.py": "inventory",
     "Main/models/inventoryitem.py": "inventory",
     "Main/services/inventory.py": "inventory",
