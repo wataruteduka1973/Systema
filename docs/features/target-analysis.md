@@ -59,6 +59,26 @@ card with a 104px image so several listings fit on one screen. Card text is set 
 The result header and the empty-result message appear only after a search; reloading the
 watchlist re-renders cards (watch state) only once a result exists.
 
+## Watchlist cards
+
+The watchlist uses the same card component (`#watchlistCards`). Each card keeps every former table
+column:
+- name
+- current price, with the change since it was added (`追加時から ±¥N`)
+- price when added
+- history analysis (trend, observations, lowest price, market difference)
+- buy decision and its reason
+- decision management (priority, status, category, note)
+- last check
+- actions: purchase limit and profit, history, remove watch
+
+It adds the image (`WatchItem.primary_image_url`, API `imageUrl`), the condition, status and
+priority badges, the median, the bids and the saved note.
+
+The decision editor sits in a collapsible "判断を編集" section. "履歴" opens the last 10 snapshots
+inside the card. "購入上限・利益" opens the existing editor above the list and scrolls to it.
+Watch items registered before image support show "画像なし" until a search refreshes them.
+
 ## Related Files
 
 - `Main/templates/Deep_Analysis_now.html`
@@ -72,7 +92,7 @@ watchlist re-renders cards (watch state) only once a result exists.
 - `Main/domain/buying_opportunity.py`
 - `Main/services/watchlist.py`
 - `Main/services/watchlist_analysis.py`
-- `Main/models/watchitem.py`
+- `Main/models/watchitem.py`, `Main/migrations/0023_watch_item_primary_image.py`
 - `Main/migrations/0015_watchlist_phase2.py`
 - `tests/integration/test_api.py`
 - `tests/unit/test_watchlist_analysis.py`
@@ -80,6 +100,8 @@ watchlist re-renders cards (watch state) only once a result exists.
 - `tests/unit/test_market_statistics.py`
 - `tests/unit/test_market_search_usecase.py`
 - `tests/e2e/test_target_result_cards_browser.py`
+- `tests/e2e/test_watchlist_cards_browser.py`
+- `tests/integration/test_watchlist_images.py`
 - `tests/e2e/test_target_search_watch_browser.py`
 
 ## Product Decision

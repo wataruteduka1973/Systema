@@ -78,12 +78,12 @@ def test_target_search_persists_owned_runs_and_watch_survives_reload(
             expect(cheap_card).to_contain_text("¥12,000")
 
             cheap_card.get_by_role("button", name="ウォッチリストへ追加").click()
-            watchlist = page.locator("#watchlistTable")
+            watchlist = page.locator("#watchlistCards")
             expect(watchlist).to_be_visible()
             expect(watchlist).to_contain_text("中古 ゲーム機 本体 お買い得")
 
             page.reload()
-            expect(page.locator("#watchlistTable")).to_contain_text("中古 ゲーム機 本体 お買い得")
+            expect(page.locator("#watchlistCards")).to_contain_text("中古 ゲーム機 本体 お買い得")
             assert not console_errors
             assert "yahoo.co.jp" not in " ".join(host or "" for host in external_hosts)
         finally:
@@ -96,7 +96,7 @@ def test_target_search_persists_owned_runs_and_watch_survives_reload(
             _login(other_page, live_server.url, "target-other")
             other_page.goto(f"{live_server.url}/taskle/Deep_Analysis_now")
             expect(other_page.locator("#watchlistEmpty")).to_be_visible()
-            expect(other_page.locator("#watchlistTable")).to_be_hidden()
+            expect(other_page.locator("#watchlistCards")).to_be_hidden()
         finally:
             other_context.close()
             browser.close()

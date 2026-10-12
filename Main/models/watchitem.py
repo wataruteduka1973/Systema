@@ -15,6 +15,8 @@ class WatchItem(models.Model):
     session_key = models.CharField(max_length=40, blank=True, db_index=True)
     name = models.TextField()
     url = models.CharField(max_length=1000)
+    # Listing image (https *.yimg.jp only, see Main/domain/listing_image.py); "" when unknown.
+    primary_image_url = models.CharField(max_length=1000, blank=True, default="")
     search_keyword = models.CharField(max_length=255, blank=True)
     current_price = models.PositiveBigIntegerField(default=0)
     added_price = models.PositiveBigIntegerField(default=0)

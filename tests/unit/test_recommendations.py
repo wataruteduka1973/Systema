@@ -126,6 +126,7 @@ def test_card_values_and_watch_payload():
     assert recommendation.watch_payload == {
         "name": "商品 a10000001",
         "url": "https://auctions.yahoo.co.jp/jp/auction/a10000001",
+        "imageUrl": "https://auctions.c.yimg.jp/images/a10000001.jpg",
         "currentPrice": 10000,
         "marketMedian": 20000,
         "bidding": 1,
