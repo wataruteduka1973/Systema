@@ -52,9 +52,23 @@
   JSON `error` message when there is one.
 - `confirm()` remains only for destructive confirmation.
 
+## Guide Screenshots
+
+The guide (`introduction.html`) shows `Main/static/jpg/*_screen.jpg` (2560 x 1230, top-left anchored in
+the cards). Regenerate them after a visual change instead of editing images by hand:
+
+```bash
+GUIDE_SCREENSHOT_DIR=Main/static/jpg DB_ENGINE=sqlite python -m pytest -m e2e tests/e2e/test_guide_screenshots.py
+```
+
+The script is skipped unless `GUIDE_SCREENSHOT_DIR` is set. It serves generated sample listings through
+the HTTP fetch boundary (no Yahoo access, generic product names, generated SVG product images) and
+captures each page below its hero, with the results visible.
+
 ## Related Files
 
 - `Main/templates/base.html`, `Main/static/CSS/theme.css`
+- `Main/templates/introduction.html`, `tests/e2e/test_guide_screenshots.py`
 - `Main/templates/base_with_footer.html`
 - `Main/static/JS/Feedback.js`
 - `Main/templates/header.html`
