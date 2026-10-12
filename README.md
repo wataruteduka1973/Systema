@@ -49,7 +49,7 @@ python manage.py migrate
 python manage.py runserver
 ```
 
-Windowsで仮想環境の有効化なしにコマンドを実行したい場合は、`.\scripts\Set-SystemaDatabase.ps1` でPostgreSQL資格情報を一度だけ保存し、以後`.\scripts\Invoke-Systema.ps1 <command>`を使用してください。詳細は [docs/development.md](docs/development.md) と [docs/testing.md](docs/testing.md) を参照してください。
+`run_systema.bat` は初回に入力したPostgreSQLのユーザー名・パスワードを、接続確認後に暗号化して保存できます（Windows DPAPI、`.local/` はGit対象外）。保存後は起動時の入力が不要です。Windowsで仮想環境の有効化なしにコマンドを実行したい場合は、`.\scripts\Set-SystemaDatabase.ps1` でPostgreSQL資格情報を一度だけ保存し、以後`.\scripts\Invoke-Systema.ps1 <command>`を使用してください。詳細は [docs/development.md](docs/development.md) と [docs/testing.md](docs/testing.md) を参照してください。
 
 ## 📚 ドキュメント
 

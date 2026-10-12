@@ -154,6 +154,7 @@ DB名の既定値は既存起動スクリプトと同じ `Yahuoku_analyze_DB`。
 表示される入力欄にPostgreSQLユーザー名・パスワードを入力する。
 パスワードはWindows DPAPIで暗号化し、Git対象外の `.local/database.clixml` に保存する。
 同じWindowsユーザー・端末で利用する。別端末へのコピー時やパスワード変更時は再設定する。
+`run_systema.bat` も同じ保存内容を読み込むため、保存後はサーバー起動時にユーザー名・パスワードを入力しない。未保存のまま起動して入力した場合は、DB接続を確認した後に保存するかを尋ねる（`Set-SystemaDatabase.ps1 -FromEnvironment`）。
 
 以後は仮想環境の有効化なしで実行できる:
 
