@@ -1,4 +1,4 @@
-/* Target-analysis result cards: the former table columns, grouped around the listing image. */
+/* Listing cards shared by the target-analysis results and the top-page recommendations. */
 .target-results {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(min(100%, 250px), 1fr));
@@ -180,6 +180,16 @@ a.target-result-name:hover {
 
     .target-result-price {
         font-size: 1.2rem;
+    }
+
+    /* Columns follow their content so an end time such as "10/12 22:32" stays on one line. */
+    .target-result-facts {
+        grid-template-columns: repeat(3, auto);
+        justify-content: space-between;
+    }
+
+    .target-result-facts dd {
+        white-space: nowrap;
     }
 
     .target-result-actions {

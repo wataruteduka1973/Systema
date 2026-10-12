@@ -89,10 +89,11 @@ def test_recommendation_cards_show_images_and_add_to_watchlist(db_for_e2e, live_
             expect(with_image.locator("img")).to_have_js_property("naturalWidth", 1)
             expect(cards.filter(has_text="画像なしの商品").locator("img")).to_have_count(0)
             expect(cards.filter(has_text="画像切れの商品").locator("img")).to_have_count(0)
-            expect(cards.first).to_contain_text("相場より47%安い")
+            for text in ("かなり買い時 (90)", "中古・動作品", "相場比 -46.7%", "2件", "¥22,500"):
+                expect(cards.first).to_contain_text(text)
 
             button = with_image.locator(".recommendation-watch")
-            expect(button).to_have_text("ウォッチに追加")
+            expect(button).to_have_text("ウォッチリストへ追加")
             button.click()
             expect(page.locator("#systemaFeedback [role=status]")).to_contain_text(
                 "「画像ありの商品」をウォッチリストに追加しました"
