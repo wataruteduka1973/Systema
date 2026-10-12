@@ -13,7 +13,11 @@ from Main.management.commands import run_alerts
 from Main.models.savedsearch import SavedSearch
 from Main.models.searchrun import SearchRun
 from Main.models.watchitem import WatchItem
-from Main.services.job_lock import JobAlreadyRunning, alert_job_lock
+from Main.services.job_lock import (
+    JOB_ALREADY_RUNNING_EXIT_CODE,
+    JobAlreadyRunning,
+    alert_job_lock,
+)
 
 pytestmark = pytest.mark.django_db(transaction=True)
 
@@ -44,9 +48,10 @@ def test_command_refuses_overlapping_job(monkeypatch):
     monkeypatch.setattr(run_alerts, "YahooMarketplaceProvider", provider)
     SavedSearch.objects.create(user=_user("job-overlap"), name="saved", keyword="camera")
     with alert_job_lock():
-        with pytest.raises(CommandError, match="already running"):
+        with pytest.raises(CommandError, match="already running") as raised:
             call_command("run_alerts", stdout=StringIO())
     provider.assert_not_called()
+    assert raised.value.returncode == JOB_ALREADY_RUNNING_EXIT_CODE
 
 
 def test_saved_search_scope_and_evaluate_only_do_not_fetch(monkeypatch):

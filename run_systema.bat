@@ -81,6 +81,10 @@ echo Collecting static files...
 "%PYTHON%" manage.py collectstatic --noinput
 if errorlevel 1 goto :error
 
+REM Run saved searches and alert rules hourly from the server process (ADR 0006).
+REM Set SYSTEMA_ALERT_SCHEDULER=false before launching to turn it off.
+if not defined SYSTEMA_ALERT_SCHEDULER set "SYSTEMA_ALERT_SCHEDULER=true"
+
 REM Start the development server.
 "%PYTHON%" manage.py runserver 127.0.0.1:8000 --insecure
 if errorlevel 1 goto :error

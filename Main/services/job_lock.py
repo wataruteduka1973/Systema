@@ -10,6 +10,8 @@ from django.conf import settings
 from django.db import connection
 
 LOCK_KEY = 739_245_901
+# run_alerts exit status when another job holds the lock (EX_TEMPFAIL: try again later).
+JOB_ALREADY_RUNNING_EXIT_CODE = 75
 
 
 class JobAlreadyRunning(RuntimeError):
