@@ -20,7 +20,8 @@ own saved-search results, as image cards they can add to the watchlist.
   first snapshot marks nothing new. Snapshots store the top 30 ranked items, so an item that dropped out
   of the previous top 30 can show as new again.
 - Order: new items first, then buy score (high first), then earliest estimated end. The same URL from
-  several saved searches appears once, with its highest score. At most 6 cards.
+  several saved searches appears once, with its highest score. At most 12 cards: four per row
+  on desktop (≥1200px, 3 rows), three at ≥992px, two at ≥576px, one horizontal card on phones.
 - Empty states: signed out (log in), no active saved search (open target analysis), and no current
   candidates (shows the last fetch time).
 - Cards use the same component as the target-analysis results (`Main/static/CSS/target-results.css`,
