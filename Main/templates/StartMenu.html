@@ -25,7 +25,7 @@
 
         <section class="feature-section" aria-labelledby="featuresHeading">
             <h2 id="featuresHeading" class="section-label">機能一覧</h2>
-            <div class="row row-cols-1 row-cols-sm-2 row-cols-lg-4 g-3">
+            <div class="row row-cols-1 row-cols-sm-2 row-cols-lg-3 g-3">
                 <div class="col">
                     <div class="feature-card">
                         <div class="icon-badge icon-coral">
@@ -47,8 +47,8 @@
                             <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20V10M12 20V4M20 20v-7" /></svg>
                         </div>
                         <div>
-                            <h3 class="serif">価格分析</h3>
-                            <p>今まで取得したデータを分析し、売れ行きの傾向を分析します。</p>
+                            <h3 class="serif">相場分析</h3>
+                            <p>保存した相場データの傾向を確認し、落札データから30日後の相場を予想します。</p>
                         </div>
                         <a href="{% url 'Deep_Analysis' %}" class="btn-feature btn-feature-teal">
                             詳細を見る
@@ -66,21 +66,6 @@
                             <p>出品中の商品を統計的に分析して狙い目の商品をピックアップして表示します。</p>
                         </div>
                         <a href="{% url 'Deep_Analysis_now' %}" class="btn-feature btn-feature-gold">
-                            詳細を見る
-                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6" /></svg>
-                        </a>
-                    </div>
-                </div>
-                <div class="col">
-                    <div class="feature-card">
-                        <div class="icon-badge icon-coral">
-                            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 17l6-6 4 4 8-9" /><path d="M15 6h6v6" /></svg>
-                        </div>
-                        <div>
-                            <h3 class="serif">相場予想</h3>
-                            <p>既存の相場情報を参照して今後の商品価格を予想します。</p>
-                        </div>
-                        <a href="{% url 'Yahuoku_prediction' %}" class="btn-feature btn-feature-coral">
                             詳細を見る
                             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6" /></svg>
                         </a>

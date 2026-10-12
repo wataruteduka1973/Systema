@@ -1,5 +1,5 @@
 from django.contrib.auth.decorators import login_required
-from django.shortcuts import render
+from django.shortcuts import redirect, render
 from django.urls import reverse
 from django.views.decorators.csrf import ensure_csrf_cookie
 
@@ -80,7 +80,8 @@ def Deep_Analysis_now(request):
 
 
 def Yahuoku_prediction(request):
-    return render(request, "Yahuoku_prediction.html")
+    """The prediction page was merged into the market analysis page; keep old links working."""
+    return redirect(f"{reverse('Deep_Analysis')}?source=new")
 
 
 def introduction(request):

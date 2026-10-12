@@ -186,23 +186,14 @@ def test_regenerate_guide_screenshots(db_for_e2e, live_server, monkeypatch):
                 state="attached"
             )
             page.select_option("#searchWordDropdown", label=KEYWORD)
-            page.on("dialog", lambda dialog: dialog.accept())
-            for _ in range(4):  # a few stored updates draw the price-history chart
-                page.click("#updateMarketData")
-                page.wait_for_load_state("networkidle")
-                page.wait_for_timeout(700)
-            page.click("#analyzeMarketPrice")
-            page.wait_for_load_state("networkidle")
-            page.wait_for_timeout(1500)
-            _shoot(page, "yahuoku_analysis_screen", BELOW_HERO)
+            page.click("#predictSavedKeyword")
+            page.locator("#predictionTable tbody tr").first.wait_for()
+            page.wait_for_timeout(1500)  # chart animation
+            _shoot(page, "yahuoku_analysis_screen", "#predictionSection")
 
             _search(page, f"{base}/taskle/Deep_Analysis_now")
             page.locator("#targetResults .target-result-card").nth(3).wait_for()
             _shoot(page, "yahuoku_analysis_now_screen", "#targetResultsHeader")
 
-            _search(page, f"{base}/taskle/Yahuoku_prediction")
-            page.locator("#predictionTable tbody tr").first.wait_for()
-            page.wait_for_timeout(1500)  # chart animation
-            _shoot(page, "Yahuoku_prediction_screen", BELOW_HERO)
         finally:
             browser.close()

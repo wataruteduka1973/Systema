@@ -26,7 +26,6 @@ AUTHENTICATED_PAGES = [
     "yahuoku_history",
     "Deep_Analysis",
     "Deep_Analysis_now",
-    "Yahuoku_prediction",
     "developer_dashboard",
     "seller_management",
     "seller_outcomes_page",
@@ -114,6 +113,22 @@ def test_authenticated_pages_render_one_document(client, name):
 
     assert response.status_code == 200
     _assert_single_document(response)
+
+
+@pytest.mark.django_db
+def test_prediction_page_redirects_to_the_merged_market_analysis(client):
+    response = client.get(reverse("Yahuoku_prediction"))
+
+    assert response.status_code == 302
+    assert response["Location"] == f"{reverse('Deep_Analysis')}?source=new"
+
+
+@pytest.mark.django_db
+def test_header_links_one_market_analysis_page(client):
+    html = client.get(reverse("index")).content.decode("utf-8")
+
+    assert reverse("Yahuoku_prediction") not in html
+    assert ">相場分析</a>" in html
 
 
 @pytest.mark.django_db
