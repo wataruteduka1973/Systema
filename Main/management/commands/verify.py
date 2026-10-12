@@ -61,6 +61,7 @@ FEATURE_TESTS = {
         "tests/integration/test_seller_outcomes.py",
         "tests/integration/test_seller_outcome_analytics.py",
         "tests/e2e/test_seller_outcomes_browser.py",
+        "tests/e2e/test_seller_sale_from_ended_browser.py",
         "tests/integration/test_seller_listings.py",
     ),
     "purchase-budget": (

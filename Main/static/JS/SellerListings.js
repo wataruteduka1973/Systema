@@ -71,7 +71,7 @@
             ['全出品', summary.total, ''],
             ['要対応', summary.requiresAction, ''],
             ['優先度1', summary.urgent, ''],
-            ['販売結果待ち', summary.saleResultMissing, 'sale_result_missing'],
+            ['販売結果待ち', summary.saleResultMissing, 'awaiting_sale'],
         ];
         container.replaceChildren(...values.map(([label, value, action]) => {
             const column = el('div', '', 'col-6 col-lg-3');
@@ -117,7 +117,7 @@
         node.append(el('p', `最終取得 ${date(item.lastCheckedAt)}。現在価格・入札数は取得時点の情報です。`, 'small text-muted'));
         const profit = item.profit;
         const action = item.actionStatus;
-        const actionClasses = {sale_result_missing: 'alert-warning', loss_risk: 'alert-danger', cost_incomplete: 'alert-warning', target_unmet: 'alert-warning', ending_without_bids: 'alert-warning', bid_stalled: 'alert-info', stale: 'alert-secondary', needs_refresh: 'alert-warning', price_missing: 'alert-warning', ok: 'alert-success', sold: 'alert-success', cancelled: 'alert-secondary', relist: 'alert-info'};
+        const actionClasses = {sale_likely: 'alert-warning', sale_result_missing: 'alert-warning', loss_risk: 'alert-danger', cost_incomplete: 'alert-warning', target_unmet: 'alert-warning', ending_without_bids: 'alert-warning', bid_stalled: 'alert-info', stale: 'alert-secondary', needs_refresh: 'alert-warning', price_missing: 'alert-warning', ok: 'alert-success', sold: 'alert-success', cancelled: 'alert-secondary', relist: 'alert-info'};
         actionClasses.ending_soon = 'alert-warning';
         actionClasses.status_check = 'alert-info';
         const nextAction = el('div', '', `alert ${actionClasses[action.status] || 'alert-secondary'} mb-2`);
@@ -195,15 +195,29 @@
         if (['status_check', 'sold'].includes(action.status)) {
             details.append(el('p', '管理状態はユーザーが明示的に記録します。公開ページの終了だけでは販売済みにしません。', 'small text-muted mt-2'));
         }
+        if (action.status === 'status_check') {
+            [['relist', '再出品待ちにする'], ['cancelled', '見送りにする']].forEach(([value, label]) => {
+                nextAction.append(button(label, async () => {
+                    await api(`${base}/${item.id}`, 'PATCH', {status: value});
+                    message(`「${statuses[value]}」として記録しました。`);
+                    await load();
+                }, 'btn btn-outline-secondary btn-sm me-2'));
+            });
+        }
         const sale = item.saleRecord;
-        if (action.status === 'sale_result_missing' || sale) {
+        // Ended with bids: offer the sale form directly, prefilled from the listing, so a sale can be
+        // recorded without first changing the management status by hand.
+        const saleLikely = action.status === 'sale_likely';
+        if (action.status === 'sale_result_missing' || saleLikely || sale) {
             const saleDetails = el('details');
             saleDetails.id = `seller-${item.id}-sale`;
             saleDetails.append(el('summary', sale ? '販売結果を確認・修正' : '販売結果を入力'));
             const saleForm = el('form', '', 'row g-3 mt-1');
+            const observedPrice = item.currentPrice ?? null;
+            const feeEstimate = observedPrice == null ? 0 : Math.round(observedPrice * Number(item.feeRate || 0));
             const saleFields = [
-                ['salePrice', '販売価格', sale?.salePrice],
-                ['actualFee', '実手数料', sale?.actualFee ?? 0],
+                ['salePrice', '販売価格', sale?.salePrice ?? observedPrice],
+                ['actualFee', '実手数料', sale?.actualFee ?? feeEstimate],
                 ['actualShippingCost', '実送料', sale?.actualShippingCost ?? item.shippingCostEstimate],
                 ['actualPackagingCost', '実梱包費', sale?.actualPackagingCost ?? item.packagingCostEstimate],
                 ['actualOtherCost', 'その他実費', sale?.actualOtherCost ?? item.otherCostEstimate],
@@ -212,6 +226,7 @@
             const soldAt = field(saleForm, `sale-${item.id}`, 'soldAt', '販売日時', '', 'datetime-local');
             soldAt.value = localDateTime(sale?.soldAt || item.endsAt);
             soldAt.required = true;
+            if (!sale) saleForm.append(el('p', '落札価格・終了日時・見積費用を初期値にしています。実際の金額に直してから確定してください。確定すると出品と在庫が「落札済み」になり、販売実績分析に加わります。', 'col-12 small text-muted'));
             if (sale) saleForm.append(el('p', `確定利益 ${yen(sale.confirmedProfit)}。仕入価格と仕入時送料を含め、サーバーで再計算した結果です。`, sale.confirmedProfit < 0 ? 'col-12 text-danger fw-bold' : 'col-12 fw-bold'));
             const saveSale = el('button', sale ? '販売結果を更新' : '販売結果を確定', 'btn btn-primary');
             saveSale.type = 'submit';
@@ -227,7 +242,7 @@
                 });
             });
             saleDetails.append(saleForm); node.append(saleDetails);
-            if (['sale_result_missing', 'sold'].includes(action.status)) {
+            if (['sale_likely', 'sale_result_missing', 'sold'].includes(action.status)) {
                 const saleAction = button(action.nextAction, () => {
                     saleDetails.open = true;
                     saleForm.elements.namedItem('salePrice').focus();

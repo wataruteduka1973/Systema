@@ -37,6 +37,10 @@ MONEY_FIELDS = {
 }
 STATUS_VALUES = {value for value, _ in SellerListing.STATUS_CHOICES}
 
+# Filter value for every listing whose sale result still has to be entered.
+AWAITING_SALE = "awaiting_sale"
+AWAITING_SALE_STATUSES = ("sale_likely", "sale_result_missing")
+
 
 class ListingConflictError(ValueError):
     pass
@@ -83,7 +87,7 @@ def listing_action(item: SellerListing, now: datetime) -> dict[str, str | int]:
 def listing_page(
     user: Any, *, status: str, action: str, sort: str, page: int, size: int
 ) -> dict[str, Any]:
-    if action and action not in ACTION_LABELS:
+    if action and action not in ACTION_LABELS and action != AWAITING_SALE:
         raise ValueError("対応内容が正しくありません")
     if sort not in {"updated", "priority"}:
         raise ValueError("並び順が正しくありません")
@@ -112,7 +116,10 @@ def listing_page(
             urgent += 1
         if status and item.status != status:
             continue
-        if action and assessment["status"] != action:
+        if action == AWAITING_SALE:
+            if assessment["status"] not in AWAITING_SALE_STATUSES:
+                continue
+        elif action and assessment["status"] != action:
             continue
         end = item.ends_at.timestamp() if item.ends_at else float("inf")
         key = (
@@ -140,7 +147,8 @@ def listing_page(
             "total": total,
             "requiresAction": requires_action,
             "urgent": urgent,
-            "saleResultMissing": action_counts["sale_result_missing"],
+            # Listings whose sale still has to be recorded: marked sold, or ended with bids.
+            "saleResultMissing": sum(action_counts[key] for key in AWAITING_SALE_STATUSES),
             "actionCounts": action_counts,
         },
     }

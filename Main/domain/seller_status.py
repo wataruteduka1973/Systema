@@ -6,6 +6,7 @@ from typing import Any
 from Main.domain.profitability import calculate_profitability
 
 ACTION_LABELS = {
+    "sale_likely": "落札の可能性あり",
     "sale_result_missing": "販売結果未入力",
     "ending_without_bids": "終了間近・入札なし",
     "ending_soon": "終了間近",
@@ -26,7 +27,13 @@ ACTION_RANK = {
     key: rank
     for rank, keys in enumerate(
         (
-            ("ending_without_bids", "ending_soon", "status_check", "sale_result_missing"),
+            (
+                "sale_likely",
+                "ending_without_bids",
+                "ending_soon",
+                "status_check",
+                "sale_result_missing",
+            ),
             ("loss_risk",),
             ("cost_incomplete", "price_missing"),
             ("needs_refresh", "stale"),
@@ -72,10 +79,19 @@ def assess_listing(
     if item.status == "ended" or (
         item.status == "active" and remaining is not None and remaining <= 0
     ):
+        # Public closure is still not a confirmed sale (no payment, cancellation), so the seller
+        # confirms it; with bids the sale form is offered right away, prefilled from the listing.
+        if item.bidding > 0:
+            return _result(
+                "sale_likely",
+                "販売結果を入力",
+                "入札がある状態で終了しました。取引が成立したら販売結果を確定してください。"
+                "確定するまで販売実績には入りません",
+            )
         return _result(
             "status_check",
-            "状態を確認",
-            "終了を確認してください。公開ページの終了は販売成立を意味しません",
+            "再出品・見送りを記録",
+            "入札なしで終了しました。再出品するか見送るかを記録してください",
         )
     if not stale and item.status == "active" and remaining is not None and 0 < remaining <= 86400:
         if item.bidding == 0:

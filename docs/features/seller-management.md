@@ -92,6 +92,26 @@ Phase 4D adds owner-scoped summary counts to the listing response: all listings,
 
 ## Phase 7A: Confirmed sale analysis
 
+**Recording sales from ended listings (2026-10-12).** Sales were rarely recorded because an ended
+listing first had to be switched to `sold` by hand before the sale form appeared.
+
+A listing that ended with bids now gets action status `sale_likely` (落札の可能性あり, priority 1).
+Its card shows the sale form directly, with these initial values:
+- sale price: the last observed price
+- fee: price × fee rate
+- shipping, packaging and other costs: the estimates
+- sale time: the end time
+
+Confirming it saves the `SaleRecord` and marks the listing and its inventory sold, as before.
+Public closure is still not a confirmed sale (unpaid or cancelled deals), so nothing is recorded
+automatically.
+
+A listing that ended without bids gets `status_check` with one-click "再出品待ちにする" /
+"見送りにする".
+
+The summary's "販売結果待ち" counts `sale_likely` plus `sale_result_missing`, and opens the combined
+filter `action=awaiting_sale`.
+
 `/taskle/seller-outcomes` aggregates only the signed-in user's confirmed `SaleRecord` values. It shows all-time sales count, sale amount, total expenses, net profit, profitable/loss-making counts, category totals, and up to ten lowest-profit sales. Empty results are explicit; no projected values or recommendation are fabricated.
 
 **Period filter (2026-10-12).** `?from=YYYY-MM-DD&to=YYYY-MM-DD` limits every figure to sales whose
