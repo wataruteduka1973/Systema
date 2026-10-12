@@ -33,6 +33,21 @@ own saved-search results, as image cards they can add to the watchlist.
 - "ウォッチリストへ追加" posts the card's stored values (including `imageUrl`) to the existing `/taskle/watchlist` API and reports
   through `SystemaFeedback`.
 
+## Top page sections
+
+The section headings "あなたへのおすすめ" and "機能一覧" share `.section-label` (Shippori Mincho,
+1.35rem) in `start-menu.css`. Under "機能一覧" the four public feature cards (相場検索, 価格分析,
+ターゲット分析, 相場予想) are always shown.
+
+Signed-in users also get a second row (`.member-features`) linking to:
+- 出品・在庫管理 (`seller_management`)
+- アラート条件 (`alert_rules_page`)
+- ユーザーページ (`profile`)
+- 販売実績分析 (`seller_outcomes_page`)
+
+Anonymous visitors do not see these links. Card buttons sit at the card bottom, so each row lines
+up.
+
 ## Images
 
 - The Yahoo parser reads listing images from result cards (`data-src`/`data-original`/`src`, lazy

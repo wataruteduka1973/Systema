@@ -84,12 +84,16 @@ main {
   padding: 0 1.5rem 3.5rem;
 }
 
-.hot-picks .hot-picks-label {
+/* Section headings on the top page ("あなたへのおすすめ", "機能一覧"). */
+.section-label {
   text-align: center;
-  font-size: 0.72rem;
-  letter-spacing: 0.16em;
-  color: #6b6158;
-  margin-bottom: 1rem;
+  font-family: 'Shippori Mincho', serif;
+  font-size: 1.35rem;
+  font-weight: 600;
+  line-height: 1.5;
+  letter-spacing: 0.12em;
+  color: #362f28;
+  margin-bottom: 1.25rem;
 }
 
 .feature-section {
@@ -161,12 +165,7 @@ main {
 .btn-feature-gold { background: #a9823f; }
 .btn-feature-gold:hover { background: #8f6d34; color: #fdf8f3; }
 
-/* Recommendations heading and empty states; the cards use CSS/target-results.css. */
-h2.hot-picks-label {
-    font-weight: 400;
-    line-height: 1.5;
-}
-
+/* Recommendations empty states; the cards use CSS/target-results.css. */
 .hot-picks-empty {
     max-width: 44rem;
     margin: 0 auto;
