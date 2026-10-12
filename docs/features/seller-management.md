@@ -90,7 +90,7 @@ Phase 4A adds a server-derived `actionStatus` to each listing. It distinguishes 
 
 Phase 4C connects that status to an explicit card action. Missing costs open the existing editor at the first unknown cost; missing price/loss risk focus expected price, target shortfall focuses target profit, and ended/manual states focus management status. Unobserved, stale, ending-soon and stalled listings promote the existing public refresh button (one button, one request). Opening an editor never saves automatically. Save/refresh use existing owner-scoped, CSRF-protected APIs and reload the filtered/sorted list to reassess priority; failed edits retain input and allow retry. Normal listings have no promoted action. No API/schema changes are required for 4C itself.
 
-Phase 4D adds owner-scoped summary counts to the listing response: all listings, listings requiring action, priority-one listings, and listings awaiting a sale result. The compact summary is shown above the listing cards, and the sale-result count opens its corresponding filter. Phase 4E adds `PUT /api/v1/seller-listings/{id}/sale`. A seller can enter the sale price, actual fee, shipping, packaging, other costs, and timezone-aware sale time. The server recalculates confirmed profit, rejects client-supplied calculated values, allows negative results, marks the listing and linked inventory as sold, and exposes the saved result on the listing. A sold listing without a record is explicitly marked `sale_result_missing`; public closure still never implies a sale. The sale record is owner-scoped and deleted with its listing.
+Phase 4D adds owner-scoped summary counts to the listing response: all listings, listings requiring action, priority-one listings, and listings awaiting a sale result. The compact summary is shown above the listing cards, and the sale-result count opens its corresponding filter. Phase 4E adds `PUT /api/v1/seller-listings/{id}/sale`. A seller can enter the sale price, actual fee, shipping, packaging, other costs, and timezone-aware sale time. The server recalculates confirmed profit, rejects client-supplied calculated values, allows negative results, marks the listing and linked inventory as sold, and exposes the saved result on the listing. A sold listing without a record is explicitly marked `sale_result_missing`; public closure still never implies a sale. The sale record is the sales ledger: it holds its own owner and a snapshot of the listing name, URL, acquisition cost and purchase shipping taken at confirmation. Deleting the listing only unlinks it (`seller_listing` becomes NULL), so outcomes survive listing cleanup.
 
 ## Phase 7A: Confirmed sale analysis
 
@@ -128,16 +128,17 @@ period end (or the last sale). The page draws sales and profit as grouped bars o
 with a table view; the teal/coral pair passes the colour-vision palette check.
 
 **Expense breakdown.** `expenseBreakdown` lists:
-- purchase cost: acquisition plus purchase shipping
+- acquisition cost (`acquisition`)
+- purchase shipping (`purchaseShipping`)
 - sales fee
 - shipping
 - packaging
 - other costs
 
-The four selling costs are summed from `SaleRecord`. The purchase cost is derived as sales −
-confirmed profit − selling costs, which is exact because the profit was computed from those
-values at confirmation. It therefore needs no schema change and covers existing records.
-Acquisition cost and purchase shipping cannot be shown separately without storing them on
-`SaleRecord`.
+All six amounts are summed from the `SaleRecord` ledger. Acquisition cost and purchase shipping
+are copied from the listing at confirmation (and re-copied when the result is updated). Records
+created before migration 0025 were backfilled: the purchase total is recovered exactly as sales −
+confirmed profit − selling costs, and split using the listing's purchase shipping (capped at that
+total), so historical totals are unchanged.
 
 At sale confirmation the linked inventory category is copied to `SaleRecord.category`. This keeps historical category totals stable when inventory is edited or deleted. Existing records are backfilled from an extant linked inventory during the Phase 7 migration; records without one remain `未分類`.

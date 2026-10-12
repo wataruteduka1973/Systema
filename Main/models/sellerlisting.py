@@ -94,9 +94,23 @@ class SellerListingSnapshot(models.Model):
 
 
 class SaleRecord(models.Model):
+    """A confirmed sale. It is the sales ledger: it keeps its own owner and a snapshot of the
+    listing (name, URL, purchase costs), so deleting the listing only unlinks it."""
+
     seller_listing = models.OneToOneField(
-        SellerListing, on_delete=models.CASCADE, related_name="sale_record"
+        SellerListing,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="sale_record",
     )
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="sale_records"
+    )
+    item_name = models.TextField(blank=True)
+    listing_url = models.CharField(max_length=1000, blank=True)
+    acquisition_cost = models.PositiveBigIntegerField(default=0)
+    purchase_shipping_cost = models.PositiveBigIntegerField(default=0)
     sale_price = models.PositiveBigIntegerField()
     actual_fee = models.PositiveBigIntegerField(default=0)
     actual_shipping_cost = models.PositiveBigIntegerField(default=0)
@@ -110,3 +124,4 @@ class SaleRecord(models.Model):
 
     class Meta:
         ordering = ("-sold_at", "-pk")
+        indexes = [models.Index(fields=("user", "-sold_at"), name="sale_record_owner_time_idx")]

@@ -145,8 +145,9 @@ def test_period_filter_monthly_trend_and_expense_breakdown(db_for_e2e, live_serv
             expect(rows.first).to_contain_text(last_month.strftime("%Y/%m"))
 
             breakdown = page.locator("#expenseBreakdown")
-            # Two sales: purchase 1200, fee 300, shipping 400, packaging 100 each.
-            expect(breakdown.locator('[data-expense="purchase"]')).to_contain_text("2,400 円")
+            # Two sales: acquisition 1000, purchase shipping 200, fee 300, shipping 400, packaging 100.
+            expect(breakdown.locator('[data-expense="acquisition"]')).to_contain_text("2,000 円")
+            expect(breakdown.locator('[data-expense="purchaseShipping"]')).to_contain_text("400 円")
             expect(breakdown.locator('[data-expense="fee"]')).to_contain_text("600 円")
             expect(breakdown.locator('[data-expense="shipping"]')).to_contain_text("800 円")
             expect(breakdown.locator('[data-expense="packaging"]')).to_contain_text("200 円")

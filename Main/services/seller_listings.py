@@ -193,6 +193,12 @@ def save_sale_record(user: Any, listing_id: int, payload: Mapping[str, Any]) -> 
             **values,
             "sold_at": sold_at,
             "confirmed_profit": confirmed_profit,
+            # Ledger snapshot: the record outlives the listing and keeps the profit's inputs.
+            "user": user,
+            "item_name": listing.name,
+            "listing_url": listing.url,
+            "acquisition_cost": listing.acquisition_cost,
+            "purchase_shipping_cost": listing.purchase_shipping_cost,
         },
     )
     if created:

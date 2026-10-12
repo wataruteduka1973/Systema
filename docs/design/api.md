@@ -269,7 +269,7 @@ Phase 3B specifics:
 |---|---|---|
 | GET | `/api/v1/seller-outcomes` | 本人の確定販売実績の合計、カテゴリ別内訳、利益が低い販売結果、月別推移、費用内訳。`from`/`to`（YYYY-MM-DD、日本時間の日付、両端を含む）で期間を絞り込む |
 
-結果は確定した`SaleRecord`だけを対象とし、販売価格・費用・純利益はサーバー保存済みの実績値から返す。カテゴリは販売確定時のスナップショットで、在庫の後変更を反映しない。
+結果は確定した`SaleRecord`だけを対象とし、販売価格・費用・純利益はサーバー保存済みの実績値から返す。カテゴリ・商品名・仕入れ値・仕入れ送料は販売確定時のスナップショットで、出品・在庫の後変更や削除を反映しない。`expenseBreakdown`のkeyは`acquisition`・`purchaseShipping`・`fee`・`shipping`・`packaging`・`other`。出品削除後の実績は`lowProfitSales[].listingId`が`null`になる。
 
 ### 6.6 Seller recommendations (Phase 7B)
 
