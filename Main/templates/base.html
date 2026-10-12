@@ -13,6 +13,8 @@
     <link href="{% static 'CSS/header.css' %}" rel="stylesheet">
     {% block footer_head %}{% endblock %}
     {% endif %}
+    {# Calm shared palette; after page styles so it wins at equal specificity. #}
+    <link href="{% static 'CSS/theme.css' %}" rel="stylesheet">
     <link href="{% static 'CSS/feedback.css' %}" rel="stylesheet">
     <script src="{% static 'JS/ClientErrors.js' %}" defer></script>
 </head>

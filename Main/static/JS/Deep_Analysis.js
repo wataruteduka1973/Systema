@@ -342,10 +342,10 @@ function renderPriceTrend(series) {
         .attr('height', d => Math.max(3, y(d.q1) - y(d.q3)))
         .attr('rx', 4)
         .attr('fill', 'rgba(59,130,246,.28)');
-    svg.append('path').datum(data).attr('fill', 'none').attr('stroke', '#dc2626').attr('stroke-width', 2.5)
+    svg.append('path').datum(data).attr('fill', 'none').attr('stroke', '#c2532c').attr('stroke-width', 2.5)
         .attr('d', d3.line().x(d => x(d.index)).y(d => y(d.median)));
     svg.selectAll('.median-point').data(data).enter().append('circle').attr('class', 'median-point')
-        .attr('cx', d => x(d.index)).attr('cy', d => y(d.median)).attr('r', 5).attr('fill', '#dc2626')
+        .attr('cx', d => x(d.index)).attr('cy', d => y(d.median)).attr('r', 5).attr('fill', '#c2532c')
         .append('title').text(d => `${d.parsedDate.toLocaleString('ja-JP')}: ${d.median.toLocaleString()}円 (${d.count}件)`);
     svg.append('g').attr('transform', `translate(0,${height})`)
         .call(d3.axisBottom(x).tickFormat(index => {

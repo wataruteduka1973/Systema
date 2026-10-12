@@ -164,7 +164,7 @@ function updatePredictionChart() {
         {
             type: 'line', label: '30日後予測',
             data: daily.map(() => null).concat([currentData.predicted_price]),
-            borderColor: '#dc2626', backgroundColor: '#dc2626', pointRadius: 7, borderDash: [6, 4]
+            borderColor: '#c2532c', backgroundColor: '#c2532c', pointRadius: 7, borderDash: [6, 4]
         }
     ];
     predictionChart = new Chart(ctx, {

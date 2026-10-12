@@ -2,19 +2,26 @@
 
 ## Direction
 
-- Use a consistent red-gradient hero, white content cards, restrained shadows, and Bootstrap controls.
-- The top page (`StartMenu.html`, `static/CSS/start-menu.css`) uses a warm palette instead: beige background
-  `#f7f2ea`, Shippori Mincho headings and prices, Zen Kaku Gothic New body text, coral/teal/gold accents.
-  Other pages keep the red-gradient hero until they are redesigned.
+- Every page uses the calm beige palette of the header, footer and top page.
+  - `static/CSS/theme.css` is loaded by `base.html` after page styles. It defines the `--systema-*`
+    variables and remaps Bootstrap's colour tokens and button classes.
+  - Base colours: background `#f7f2ea`, surfaces `#fdfaf6`, borders `#ddd3c5`, text `#362f28`.
+  - Accents: coral `#c2532c` for primary and links, teal `#2f8f78` for success, gold `#a9823f` for
+    warning, muted red `#b0412e` for danger.
+  - Page heroes (`.hero-section`, `.market-hero`) are a quiet beige band with dark Shippori Mincho
+    headings. The top page hero (`.hero-top`) keeps its own layout.
+  - The top page additionally uses Zen Kaku Gothic New body text (`static/CSS/start-menu.css`).
+  - New page styles use the variables or Bootstrap classes, not new hard-coded saturated colours.
+    Product photos keep a white backdrop.
 - Prefer shared navigation and reusable class names over page-specific copies.
 - Tables must remain usable on narrow screens through responsive overflow or card presentation.
 - Use inline status regions for expected validation and network errors; reserve dialogs for destructive confirmation.
 
 ## Core Patterns
 
-- Page background: light neutral gray
-- Content card: white, subtle border, rounded corners
-- Primary action: red
+- Page background: beige (`--systema-bg`)
+- Content card: warm off-white (`--systema-surface`), subtle border, rounded corners
+- Primary action: coral (`.btn-primary`, remapped by `theme.css`)
 - Secondary action: outline or neutral
 - Destructive action: explicit danger styling and confirmation
 
@@ -31,7 +38,7 @@
   markup-only like the header and footer.
 - `?embedded=1` pages (market search tabs) render without header and footer; the base handles this.
 - `tests/integration/test_page_layout.py` renders every page and fails on a second document, a missing
-  shared asset, or a page script that uses `alert()` / `document.write()`.
+  shared asset (including `theme.css`), or a page script that uses `alert()` / `document.write()`.
 
 ## Feedback Messages
 
@@ -47,7 +54,7 @@
 
 ## Related Files
 
-- `Main/templates/base.html`
+- `Main/templates/base.html`, `Main/static/CSS/theme.css`
 - `Main/templates/base_with_footer.html`
 - `Main/static/JS/Feedback.js`
 - `Main/templates/header.html`

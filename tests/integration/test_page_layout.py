@@ -90,6 +90,7 @@ def _assert_single_document(response, *, with_header=True):
     assert html.count("bootstrap.bundle.min.js") == 1
     assert html.count("JS/Feedback.js") == 1
     assert html.count("JS/ClientErrors.js") == 1
+    assert html.count("CSS/theme.css") == 1
     assert ("navbar-custom" in html) is with_header
     return html
 
