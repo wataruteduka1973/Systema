@@ -166,7 +166,7 @@ function updatePagination() {
             </li>
             ${Array.from({ length: totalPages }, (_, i) => `
                 <li class="page-item ${currentPage === i + 1 ? 'active' : ''}";>
-                    <a class="page-link" href="#" onclick="changePage(${i + 1}); return false;" style="${currentPage === i + 1 ? 'background-color: #ffd700; color: #000000;' : ''}">${i + 1}</a>
+                    <a class="page-link" href="#" onclick="changePage(${i + 1}); return false;" style="${currentPage === i + 1 ? 'background-color: #c2532c; border-color: #c2532c; color: #fdf8f3;' : ''}">${i + 1}</a>
                 </li>
             `).join('')}
             <li class="page-item ${currentPage === totalPages ? 'disabled' : ''}">
@@ -387,7 +387,7 @@ function updateTable(data) {
         link.textContent = href === '#' ? 'URLなし' : '商品リンクURL';
         link.target = '_blank';
         link.rel = 'noopener noreferrer';
-        link.style.color = href === '#' ? '#666' : '#0d6efd';
+        link.style.color = href === '#' ? '#6b6158' : '#c2532c';
         productURLCell.appendChild(link);
     });
 }

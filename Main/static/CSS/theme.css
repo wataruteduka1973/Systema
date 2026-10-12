@@ -1,0 +1,272 @@
+/*
+ * Shared calm theme: the beige palette of the header, footer and top page, applied to every page.
+ * Loaded by base.html after page styles, so equal-specificity page rules are overridden.
+ * Page-specific colours should use these variables instead of new hard-coded values.
+ */
+:root {
+    --systema-bg: #f7f2ea;
+    --systema-surface: #fdfaf6;
+    --systema-surface-2: #f3ece1;
+    --systema-border: #ddd3c5;
+    --systema-text: #362f28;
+    --systema-muted: #6b6158;
+    --systema-coral: #c2532c;
+    --systema-coral-strong: #a8461f;
+    --systema-coral-soft: #f6dccb;
+    --systema-teal: #2f8f78;
+    --systema-teal-soft: #dcefe8;
+    --systema-gold: #a9823f;
+    --systema-gold-soft: #f0e0bd;
+
+    /* Bootstrap colour tokens (badges, text, alerts, tables and links read these). */
+    --bs-body-bg: var(--systema-surface);
+    --bs-body-color: var(--systema-text);
+    --bs-emphasis-color: #241f1a;
+    --bs-secondary-color: var(--systema-muted);
+    --bs-tertiary-bg: var(--systema-surface-2);
+    --bs-secondary-bg: #ede4d6;
+    --bs-border-color: var(--systema-border);
+    --bs-link-color: var(--systema-coral);
+    --bs-link-color-rgb: 194, 83, 44;
+    --bs-link-hover-color: var(--systema-coral-strong);
+    --bs-link-hover-color-rgb: 168, 70, 31;
+    --bs-primary: #c2532c;
+    --bs-primary-rgb: 194, 83, 44;
+    --bs-secondary: #8a7d70;
+    --bs-secondary-rgb: 138, 125, 112;
+    --bs-success: #2f8f78;
+    --bs-success-rgb: 47, 143, 120;
+    --bs-info: #5f8a8b;
+    --bs-info-rgb: 95, 138, 139;
+    --bs-warning: #d9a441;
+    --bs-warning-rgb: 217, 164, 65;
+    --bs-danger: #b0412e;
+    --bs-danger-rgb: 176, 65, 46;
+    --bs-light: #f3ece1;
+    --bs-light-rgb: 243, 236, 225;
+    --bs-dark: #362f28;
+    --bs-dark-rgb: 54, 47, 40;
+    --bs-primary-text-emphasis: #7a3018;
+    --bs-primary-bg-subtle: #f9e6da;
+    --bs-primary-border-subtle: #ecc2ad;
+    --bs-secondary-text-emphasis: #4d443b;
+    --bs-secondary-bg-subtle: #efe8de;
+    --bs-secondary-border-subtle: #ddd3c5;
+    --bs-success-text-emphasis: #1f6d57;
+    --bs-success-bg-subtle: #dcefe8;
+    --bs-success-border-subtle: #b3dccf;
+    --bs-info-text-emphasis: #3d5e5f;
+    --bs-info-bg-subtle: #e3eeec;
+    --bs-info-border-subtle: #c2d8d6;
+    --bs-warning-text-emphasis: #6b4f1d;
+    --bs-warning-bg-subtle: #f6ead0;
+    --bs-warning-border-subtle: #e6d09f;
+    --bs-danger-text-emphasis: #7a2a1c;
+    --bs-danger-bg-subtle: #f6ddd6;
+    --bs-danger-border-subtle: #e8b9ad;
+    --bs-light-text-emphasis: #4d443b;
+    --bs-light-bg-subtle: #faf6f0;
+    --bs-light-border-subtle: #e8dfd2;
+    --bs-focus-ring-color: rgba(194, 83, 44, .25);
+}
+
+body {
+    background: var(--systema-bg);
+    color: var(--systema-text);
+}
+
+/* Page heroes: a quiet beige band with dark serif headings (the top page keeps its own hero). */
+.hero-section:not(.hero-top),
+.market-hero {
+    background: linear-gradient(180deg, #f3ebde, #ece2d2);
+    color: var(--systema-text);
+    border-bottom: 1px solid var(--systema-border);
+    box-shadow: none;
+}
+
+.hero-section:not(.hero-top) h1,
+.market-hero h1 {
+    font-family: 'Shippori Mincho', serif;
+    font-weight: 700;
+    color: var(--systema-text);
+}
+
+.hero-section:not(.hero-top) p,
+.market-hero p {
+    color: var(--systema-muted);
+}
+
+/* Buttons. Bootstrap sets these per class, so the variables are restated here. */
+.btn-primary,
+.btn-custom {
+    --bs-btn-color: #fdf8f3;
+    --bs-btn-bg: var(--systema-coral);
+    --bs-btn-border-color: var(--systema-coral);
+    --bs-btn-hover-color: #fdf8f3;
+    --bs-btn-hover-bg: var(--systema-coral-strong);
+    --bs-btn-hover-border-color: var(--systema-coral-strong);
+    --bs-btn-active-color: #fdf8f3;
+    --bs-btn-active-bg: var(--systema-coral-strong);
+    --bs-btn-active-border-color: var(--systema-coral-strong);
+    --bs-btn-disabled-color: #fdf8f3;
+    --bs-btn-disabled-bg: #d39a82;
+    --bs-btn-disabled-border-color: #d39a82;
+    --bs-btn-focus-shadow-rgb: 194, 83, 44;
+}
+
+.btn-custom {
+    color: var(--bs-btn-color);
+    background-color: var(--bs-btn-bg);
+    border-color: var(--bs-btn-border-color);
+}
+
+.btn-custom:hover {
+    color: var(--bs-btn-hover-color);
+    background-color: var(--bs-btn-hover-bg);
+    border-color: var(--bs-btn-hover-border-color);
+}
+
+.btn-success {
+    --bs-btn-bg: var(--systema-teal);
+    --bs-btn-border-color: var(--systema-teal);
+    --bs-btn-hover-bg: #26745f;
+    --bs-btn-hover-border-color: #26745f;
+    --bs-btn-active-bg: #26745f;
+    --bs-btn-active-border-color: #26745f;
+    --bs-btn-disabled-bg: var(--systema-teal);
+    --bs-btn-disabled-border-color: var(--systema-teal);
+}
+
+.btn-danger {
+    --bs-btn-bg: #b0412e;
+    --bs-btn-border-color: #b0412e;
+    --bs-btn-hover-bg: #933524;
+    --bs-btn-hover-border-color: #933524;
+    --bs-btn-active-bg: #933524;
+    --bs-btn-active-border-color: #933524;
+    --bs-btn-disabled-bg: #b0412e;
+    --bs-btn-disabled-border-color: #b0412e;
+}
+
+.btn-warning {
+    --bs-btn-color: #362f28;
+    --bs-btn-bg: var(--systema-gold-soft);
+    --bs-btn-border-color: #e0c98f;
+    --bs-btn-hover-color: #362f28;
+    --bs-btn-hover-bg: #e9d3a1;
+    --bs-btn-hover-border-color: #d9bd78;
+    --bs-btn-active-bg: #e9d3a1;
+    --bs-btn-active-border-color: #d9bd78;
+}
+
+.btn-info {
+    --bs-btn-color: #fdf8f3;
+    --bs-btn-bg: #5f8a8b;
+    --bs-btn-border-color: #5f8a8b;
+    --bs-btn-hover-color: #fdf8f3;
+    --bs-btn-hover-bg: #4c7273;
+    --bs-btn-hover-border-color: #4c7273;
+    --bs-btn-active-bg: #4c7273;
+    --bs-btn-active-border-color: #4c7273;
+}
+
+.btn-secondary {
+    --bs-btn-bg: #8a7d70;
+    --bs-btn-border-color: #8a7d70;
+    --bs-btn-hover-bg: #74685c;
+    --bs-btn-hover-border-color: #74685c;
+    --bs-btn-active-bg: #74685c;
+    --bs-btn-active-border-color: #74685c;
+}
+
+.btn-outline-primary {
+    --bs-btn-color: var(--systema-coral);
+    --bs-btn-border-color: var(--systema-coral);
+    --bs-btn-hover-color: #fdf8f3;
+    --bs-btn-hover-bg: var(--systema-coral);
+    --bs-btn-hover-border-color: var(--systema-coral);
+    --bs-btn-active-color: #fdf8f3;
+    --bs-btn-active-bg: var(--systema-coral);
+    --bs-btn-active-border-color: var(--systema-coral);
+    --bs-btn-focus-shadow-rgb: 194, 83, 44;
+}
+
+.btn-outline-success {
+    --bs-btn-color: var(--systema-teal);
+    --bs-btn-border-color: var(--systema-teal);
+    --bs-btn-hover-color: #fdf8f3;
+    --bs-btn-hover-bg: var(--systema-teal);
+    --bs-btn-hover-border-color: var(--systema-teal);
+    --bs-btn-active-color: #fdf8f3;
+    --bs-btn-active-bg: var(--systema-teal);
+    --bs-btn-active-border-color: var(--systema-teal);
+}
+
+.btn-outline-danger {
+    --bs-btn-color: #b0412e;
+    --bs-btn-border-color: #b0412e;
+    --bs-btn-hover-color: #fdf8f3;
+    --bs-btn-hover-bg: #b0412e;
+    --bs-btn-hover-border-color: #b0412e;
+    --bs-btn-active-color: #fdf8f3;
+    --bs-btn-active-bg: #b0412e;
+    --bs-btn-active-border-color: #b0412e;
+}
+
+.btn-outline-secondary,
+.btn-outline-dark {
+    --bs-btn-color: var(--systema-muted);
+    --bs-btn-border-color: #c9bcab;
+    --bs-btn-hover-color: var(--systema-text);
+    --bs-btn-hover-bg: #ede4d6;
+    --bs-btn-hover-border-color: #c9bcab;
+    --bs-btn-active-color: var(--systema-text);
+    --bs-btn-active-bg: #e4d8c6;
+    --bs-btn-active-border-color: #c9bcab;
+}
+
+/* Surfaces. */
+.card,
+.modal-content,
+.list-group-item {
+    --bs-card-bg: var(--systema-surface);
+    --bs-card-border-color: var(--systema-border);
+}
+
+.table {
+    --bs-table-bg: transparent;
+    --bs-table-striped-bg: rgba(54, 47, 40, .035);
+    --bs-table-hover-bg: rgba(54, 47, 40, .06);
+    --bs-table-border-color: var(--systema-border);
+}
+
+.form-control:focus,
+.form-select:focus,
+.form-check-input:focus {
+    border-color: #dfa486;
+    box-shadow: 0 0 0 .25rem rgba(194, 83, 44, .2);
+}
+
+.form-check-input:checked {
+    background-color: var(--systema-coral);
+    border-color: var(--systema-coral);
+}
+
+.pagination {
+    --bs-pagination-color: var(--systema-coral);
+    --bs-pagination-hover-color: var(--systema-coral-strong);
+    --bs-pagination-active-bg: var(--systema-coral);
+    --bs-pagination-active-border-color: var(--systema-coral);
+    --bs-pagination-focus-box-shadow: 0 0 0 .25rem rgba(194, 83, 44, .25);
+}
+
+.nav-pills,
+.nav {
+    --bs-nav-pills-link-active-bg: var(--systema-coral);
+    --bs-nav-link-color: var(--systema-coral);
+    --bs-nav-link-hover-color: var(--systema-coral-strong);
+}
+
+.progress {
+    --bs-progress-bar-bg: var(--systema-coral);
+}

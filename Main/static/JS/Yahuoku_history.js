@@ -159,7 +159,7 @@ function updatePagination() {
             </li>
             ${Array.from({ length: totalPages }, (_, i) => `
                 <li class="page-item ${currentPage === i + 1 ? 'active' : ''}";>
-                    <a class="page-link" href="#" onclick="changePage(${i + 1}); return false;" style="${currentPage === i + 1 ? 'background-color: #ffd700; color: #000000;' : ''}">${i + 1}</a>
+                    <a class="page-link" href="#" onclick="changePage(${i + 1}); return false;" style="${currentPage === i + 1 ? 'background-color: #c2532c; border-color: #c2532c; color: #fdf8f3;' : ''}">${i + 1}</a>
                 </li>
             `).join('')}
             <li class="page-item ${currentPage === totalPages ? 'disabled' : ''}">
