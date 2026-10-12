@@ -5,17 +5,31 @@ cd /d "%~dp0"
 REM Remove the legacy environment now that this project uses .venv.
 
 REM PostgreSQL is the default development database. Values already configured
-REM in the launching shell are preserved; missing credentials are requested for
-REM this process only and are discarded when the window closes.
+REM in the launching shell are preserved. Missing values come from the settings
+REM saved by scripts\Set-SystemaDatabase.ps1 (.local\database.clixml, password
+REM encrypted with Windows DPAPI for this user). Anything still missing is asked
+REM for, and after a successful connection the launcher offers to save it.
 if not defined DB_ENGINE set "DB_ENGINE=postgresql"
+set "SAVED_DB_SETTINGS="
+set "PROMPTED_DB_CREDENTIALS="
 if /I "%DB_ENGINE%"=="postgresql" (
+    if exist ".local\database.clixml" (
+        for /f "usebackq delims=" %%L in (`powershell.exe -NoProfile -ExecutionPolicy Bypass -File "scripts\Read-SystemaDatabase.ps1"`) do (
+            set "%%L"
+            set "SAVED_DB_SETTINGS=1"
+        )
+    )
     if not defined DB_NAME set "DB_NAME=Yahuoku_analyze_DB"
     if not defined DB_HOST set "DB_HOST=localhost"
     if not defined DB_PORT set "DB_PORT=5432"
     if not defined DB_SSLMODE set "DB_SSLMODE=prefer"
-    if not defined DB_USER set /p "DB_USER=PostgreSQL user: "
+    if not defined DB_USER (
+        set /p "DB_USER=PostgreSQL user: "
+        set "PROMPTED_DB_CREDENTIALS=1"
+    )
     if not defined DB_PASSWORD (
         for /f "usebackq delims=" %%P in (`powershell.exe -NoProfile -Command "$value = Read-Host 'PostgreSQL password' -AsSecureString; [System.Net.NetworkCredential]::new('', $value).Password"`) do set "DB_PASSWORD=%%P"
+        set "PROMPTED_DB_CREDENTIALS=1"
     )
     if not defined DB_USER (
         echo DB_USER is required for PostgreSQL.
@@ -66,6 +80,18 @@ if errorlevel 1 goto :error
 "%PYTHON%" -m pip install -r requirements.txt
 if errorlevel 1 goto :error
 
+REM Check the connection first so a wrong user or password is reported clearly
+REM (and is never saved).
+"%PYTHON%" manage.py check_database >nul
+if errorlevel 1 (
+    echo.
+    echo Could not connect to the database. Check that PostgreSQL is running and that
+    echo the user and password are correct.
+    if defined SAVED_DB_SETTINGS echo If the saved password changed, run scripts\Set-SystemaDatabase.ps1 again or delete .local\database.clixml.
+    goto :error
+)
+if defined PROMPTED_DB_CREDENTIALS call :offer_save_database
+
 REM Apply any pending database migrations.
 "%PYTHON%" manage.py showmigrations --plan | findstr /C:"[ ]" >nul
 if not errorlevel 1 (
@@ -89,6 +115,14 @@ REM Start the development server.
 "%PYTHON%" manage.py runserver 127.0.0.1:8000 --insecure
 if errorlevel 1 goto :error
 goto :end
+
+:offer_save_database
+echo.
+choice /C YN /N /M "Save these PostgreSQL settings so you are not asked next time? The password is encrypted for this Windows user. [Y/N] "
+if errorlevel 2 exit /b 0
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File "scripts\Set-SystemaDatabase.ps1" -FromEnvironment
+if errorlevel 1 echo The settings were not saved. Systema continues without saving them.
+exit /b 0
 
 :error
 echo.
