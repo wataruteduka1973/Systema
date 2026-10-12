@@ -1,4 +1,5 @@
-from datetime import timedelta
+from datetime import datetime, timedelta
+from zoneinfo import ZoneInfo
 
 import pytest
 from django.contrib.auth import get_user_model
@@ -82,6 +83,15 @@ def test_sale_outcomes_are_empty_for_no_confirmed_sales_and_require_login(client
         },
         "categories": [],
         "lowProfitSales": [],
+        "period": {"from": None, "to": None},
+        "expenseBreakdown": [
+            {"key": "purchase", "label": "仕入れ費用（仕入れ値・仕入れ送料）", "amount": 0},
+            {"key": "fee", "label": "販売手数料", "amount": 0},
+            {"key": "shipping", "label": "発送送料", "amount": 0},
+            {"key": "packaging", "label": "梱包費", "amount": 0},
+            {"key": "other", "label": "その他費用", "amount": 0},
+        ],
+        "monthly": [],
     }
 
 
@@ -95,3 +105,98 @@ def test_sale_record_copies_category_at_confirmation_even_if_inventory_changes()
     record.refresh_from_db()
     assert record.category == "初期カテゴリ"
     assert SaleRecord.objects.get(pk=record.pk).category == "初期カテゴリ"
+
+
+JST = ZoneInfo("Asia/Tokyo")
+
+
+def sale_at(when, sale_price, *, fee=100, shipping=100, packaging=50, other=0):
+    return {
+        "salePrice": sale_price,
+        "actualFee": fee,
+        "actualShippingCost": shipping,
+        "actualPackagingCost": packaging,
+        "actualOtherCost": other,
+        "soldAt": when.isoformat(),
+    }
+
+
+def _seed_period_sales(user):
+    """Sales on JST calendar edges: 7/31 23:30, 8/1 00:10, 8/15 and 10/2 (September has none)."""
+    inventory = InventoryItem.objects.create(user=user, name="品", category="カメラ")
+    times = (
+        datetime(2026, 7, 31, 23, 30, tzinfo=JST),
+        datetime(2026, 8, 1, 0, 10, tzinfo=JST),
+        datetime(2026, 8, 15, 12, 0, tzinfo=JST),
+        datetime(2026, 10, 2, 9, 0, tzinfo=JST),
+    )
+    for index, when in enumerate(times):
+        item = listing(user, inventory, 10 + index)
+        item.purchase_shipping_cost = 200
+        item.save(update_fields=("purchase_shipping_cost",))
+        save_sale_record(user, item.pk, sale_at(when, 3000 + index * 1000))
+
+
+def test_period_filter_uses_inclusive_japan_calendar_days(client):
+    user = get_user_model().objects.create_user("outcome-period")
+    _seed_period_sales(user)
+    client.force_login(user)
+
+    data = client.get(
+        reverse("seller_outcomes"), {"from": "2026-08-01", "to": "2026-08-31"}
+    ).json()["data"]
+
+    assert data["period"] == {"from": "2026-08-01", "to": "2026-08-31"}
+    assert data["summary"]["saleCount"] == 2  # 8/1 00:10 and 8/15, not 7/31 23:30 JST
+    assert data["summary"]["totalSales"] == 4000 + 5000
+    assert [item["salePrice"] for item in data["lowProfitSales"]] == [4000, 5000]
+    assert data["categories"][0]["saleCount"] == 2
+
+
+def test_expense_breakdown_adds_up_to_total_expenses(client):
+    user = get_user_model().objects.create_user("outcome-breakdown")
+    _seed_period_sales(user)
+    client.force_login(user)
+
+    data = client.get(reverse("seller_outcomes")).json()["data"]
+
+    amounts = {item["key"]: item["amount"] for item in data["expenseBreakdown"]}
+    # Each sale: acquisition 1000 + purchase shipping 200, fee 100, shipping 100, packaging 50.
+    assert amounts == {"purchase": 4800, "fee": 400, "shipping": 400, "packaging": 200, "other": 0}
+    assert sum(amounts.values()) == data["summary"]["totalExpenses"]
+
+
+def test_monthly_trend_fills_months_without_sales(client):
+    user = get_user_model().objects.create_user("outcome-monthly")
+    _seed_period_sales(user)
+    client.force_login(user)
+
+    all_time = client.get(reverse("seller_outcomes")).json()["data"]["monthly"]
+    assert [(row["month"], row["saleCount"], row["totalSales"]) for row in all_time] == [
+        ("2026-07", 1, 3000),
+        ("2026-08", 2, 9000),
+        ("2026-09", 0, 0),
+        ("2026-10", 1, 6000),
+    ]
+    assert all_time[1]["totalExpenses"] == 2 * 1450
+    assert all_time[1]["totalProfit"] == 9000 - 2 * 1450
+
+    ranged = client.get(reverse("seller_outcomes"), {"from": "2026-06-10", "to": "2026-08-20"})
+    assert [row["month"] for row in ranged.json()["data"]["monthly"]] == [
+        "2026-06",
+        "2026-07",
+        "2026-08",
+    ]
+
+
+@pytest.mark.parametrize(
+    "params",
+    [{"from": "2026-13-01"}, {"to": "yesterday"}, {"from": "2026-09-02", "to": "2026-09-01"}],
+)
+def test_invalid_periods_are_rejected(client, params):
+    client.force_login(get_user_model().objects.create_user("outcome-invalid"))
+
+    response = client.get(reverse("seller_outcomes"), params)
+
+    assert response.status_code == 400
+    assert response.json()["error"]["code"] == "validation_error"

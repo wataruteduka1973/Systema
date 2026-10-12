@@ -94,4 +94,28 @@ Phase 4D adds owner-scoped summary counts to the listing response: all listings,
 
 `/taskle/seller-outcomes` aggregates only the signed-in user's confirmed `SaleRecord` values. It shows all-time sales count, sale amount, total expenses, net profit, profitable/loss-making counts, category totals, and up to ten lowest-profit sales. Empty results are explicit; no projected values or recommendation are fabricated.
 
+**Period filter (2026-10-12).** `?from=YYYY-MM-DD&to=YYYY-MM-DD` limits every figure to sales whose
+`sold_at` falls within those Asia/Tokyo calendar days, inclusive. Either bound may be omitted. An
+invalid date, or a start after the end, returns 400 `validation_error`. The page offers presets
+(all time, this month, last month, last 3 or 12 months, this year) and custom dates. The chosen
+period is kept in the page URL.
+
+**Monthly trend.** `monthly` lists one row per Asia/Tokyo month with sale count, sales, expenses
+and profit. Months without sales are zero-filled, from the period start (or the first sale) to the
+period end (or the last sale). The page draws sales and profit as grouped bars on one yen axis,
+with a table view; the teal/coral pair passes the colour-vision palette check.
+
+**Expense breakdown.** `expenseBreakdown` lists:
+- purchase cost: acquisition plus purchase shipping
+- sales fee
+- shipping
+- packaging
+- other costs
+
+The four selling costs are summed from `SaleRecord`. The purchase cost is derived as sales −
+confirmed profit − selling costs, which is exact because the profit was computed from those
+values at confirmation. It therefore needs no schema change and covers existing records.
+Acquisition cost and purchase shipping cannot be shown separately without storing them on
+`SaleRecord`.
+
 At sale confirmation the linked inventory category is copied to `SaleRecord.category`. This keeps historical category totals stable when inventory is edited or deleted. Existing records are backfilled from an extant linked inventory during the Phase 7 migration; records without one remain `未分類`.

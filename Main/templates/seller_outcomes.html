@@ -3,6 +3,14 @@
 
 {% block title %}販売実績分析 | Systema{% endblock %}
 
+{% block extra_head %}
+    <style>
+        .outcome-breakdown-bar { height: .5rem; border-radius: 999px; background: #ede4d6; overflow: hidden; }
+        .outcome-breakdown-bar > span { display: block; height: 100%; border-radius: 999px; background: #a9823f; }
+        .outcome-chart { position: relative; height: 280px; }
+    </style>
+{% endblock %}
+
 {% block body_attrs %} class="bg-light"{% endblock %}
 
 {% block content %}
@@ -11,13 +19,56 @@
             <div><h1 class="h2 mb-1">販売実績分析</h1><p class="text-muted mb-0">確定した販売結果から、売上・費用・純利益を集計します。</p></div>
             <a class="btn btn-outline-primary" href="{% url 'seller_management' %}">出品・在庫管理へ</a>
         </div>
+        <form id="outcomePeriodForm" class="card card-body mb-4" aria-label="集計期間">
+            <div class="row g-2 align-items-end">
+                <div class="col-sm-4 col-lg-3">
+                    <label class="form-label" for="outcomePeriod">集計期間</label>
+                    <select id="outcomePeriod" class="form-select">
+                        <option value="all">全期間</option>
+                        <option value="this-month">今月</option>
+                        <option value="last-month">先月</option>
+                        <option value="last-3-months">直近3か月</option>
+                        <option value="last-12-months">直近12か月</option>
+                        <option value="this-year">今年</option>
+                        <option value="custom">期間を指定</option>
+                    </select>
+                </div>
+                <div class="col-6 col-sm-3"><label class="form-label" for="outcomeFrom">開始日</label><input type="date" id="outcomeFrom" class="form-control"></div>
+                <div class="col-6 col-sm-3"><label class="form-label" for="outcomeTo">終了日</label><input type="date" id="outcomeTo" class="form-control"></div>
+                <div class="col-sm-2 col-lg-3"><button type="submit" class="btn btn-primary w-100">表示</button></div>
+            </div>
+            <p id="outcomePeriodLabel" class="text-muted small mb-0 mt-2" aria-live="polite"></p>
+        </form>
         <div id="outcomeMessage" class="alert d-none" role="status"></div>
         <section aria-label="販売実績の合計" class="mb-4"><div id="outcomeSummary" class="row g-3"></div></section>
+        <div class="row g-4 mb-4">
+            <section class="col-lg-8" aria-labelledby="monthlyHeading">
+                <div class="card h-100"><div class="card-body">
+                    <h2 id="monthlyHeading" class="h4">月別推移</h2>
+                    <p id="monthlyEmpty" class="text-muted mb-0" hidden>この期間の販売結果はありません。</p>
+                    <div id="monthlyChartArea">
+                        <div class="outcome-chart"><canvas id="monthlyChart" role="img" aria-label="月別の売上と純利益の棒グラフ"></canvas></div>
+                        <details class="mt-3">
+                            <summary>月別の数値を表で見る</summary>
+                            <div class="table-responsive mt-2"><table class="table table-sm align-middle mb-0"><thead><tr><th>月</th><th>販売件数</th><th>売上</th><th>費用</th><th>純利益</th></tr></thead><tbody id="monthlyTable"></tbody></table></div>
+                        </details>
+                    </div>
+                </div></div>
+            </section>
+            <section class="col-lg-4" aria-labelledby="breakdownHeading">
+                <div class="card h-100"><div class="card-body">
+                    <h2 id="breakdownHeading" class="h4">費用の内訳</h2>
+                    <ul id="expenseBreakdown" class="list-unstyled mb-2"></ul>
+                    <p class="text-muted small mb-0">仕入れ費用は、販売確定時の仕入れ値と仕入れ送料の合計です。</p>
+                </div></div>
+            </section>
+        </div>
         <section class="card mb-4" aria-labelledby="categoryHeading"><div class="card-body"><h2 id="categoryHeading" class="h4">カテゴリ別の実績</h2><div class="table-responsive"><table class="table align-middle mb-0"><thead><tr><th>カテゴリ</th><th>販売件数</th><th>売上</th><th>費用</th><th>純利益</th></tr></thead><tbody id="outcomeCategories"></tbody></table></div></div></section>
         <section class="card" aria-labelledby="lowProfitHeading"><div class="card-body"><h2 id="lowProfitHeading" class="h4">利益が低い販売結果</h2><p class="text-muted">純利益の低い順に最大10件を表示します。</p><div class="table-responsive"><table class="table align-middle mb-0"><thead><tr><th>商品</th><th>カテゴリ</th><th>販売日</th><th>落札額</th><th>費用</th><th>純利益</th></tr></thead><tbody id="outcomeLowProfit"></tbody></table></div></div></section>
     </main>
 {% endblock %}
 
 {% block scripts %}
+    <script src="{% static 'vendor/chart.js-4.4.7/chart.umd.js' %}"></script>
     <script src="{% static 'JS/SellerOutcomes.js' %}"></script>
 {% endblock %}

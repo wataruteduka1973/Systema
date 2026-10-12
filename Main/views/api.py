@@ -1,6 +1,7 @@
 import hashlib
 import json
 import logging
+from datetime import date
 
 from django.conf import settings
 from django.core.cache import cache
@@ -617,7 +618,22 @@ def seller_outcomes(request):
         return _seller_error("ログインが必要です", "authentication_required", 401)
     if request.method != "GET":
         return _seller_error("許可されていないメソッドです", "method_not_allowed", 405)
-    return JsonResponse({"data": seller_outcome_analytics(request.user)})
+    try:
+        start = _optional_date(request.GET.get("from"))
+        end = _optional_date(request.GET.get("to"))
+        data = seller_outcome_analytics(request.user, start=start, end=end)
+    except ValueError as error:
+        return _seller_error(str(error), "validation_error", 400)
+    return JsonResponse({"data": data})
+
+
+def _optional_date(value: str | None) -> date | None:
+    if not value:
+        return None
+    try:
+        return date.fromisoformat(value)
+    except ValueError:
+        raise ValueError("期間の日付は YYYY-MM-DD 形式で指定してください") from None
 
 
 def inventory_items(request):
