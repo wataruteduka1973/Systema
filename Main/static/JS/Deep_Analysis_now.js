@@ -1,4 +1,4 @@
-let currentData = [];
+let currentData = null; // null until the first result; the watchlist reload must not show an empty result.
 let currentMedianPrice = 0;
 let watchedByUrl = new Map();
 let watchlistItems = [];
@@ -129,41 +129,149 @@ window.renderTargetAnalysisResult = function (result) {
 };
 
 function updateTable(data) {
-    const tableBody = document.getElementById("dataTable").getElementsByTagName("tbody")[0];
-    tableBody.innerHTML = "";
+    const list = document.getElementById('targetResults');
+    list.replaceChildren(...data.map(createResultCard));
+    document.getElementById('targetResultsHeader').hidden = false;
+    document.getElementById('targetResultCount').textContent = `${data.length}件`;
+    document.getElementById('targetResultsEmpty').hidden = data.length > 0;
+}
 
-    data.forEach(item => {
-        const row = tableBody.insertRow();
-        const compareCell = row.insertCell(0);
-        if (window.MarketComparison) compareCell.appendChild(window.MarketComparison.createSelector(item));
-        const productNameCell = row.insertCell(1);
-        productNameCell.textContent = item.name || 'N/A';
-        const conditionCell = row.insertCell(2);
-        conditionCell.appendChild(createConditionBadge(item));
-        const currentPriceCell = row.insertCell(3);
-        currentPriceCell.textContent = item.price !== undefined && item.price !== null ? item.price.toLocaleString() : 'N/A';
-        const decisionCell = row.insertCell(4);
-        decisionCell.appendChild(createDecisionBadge(item.buyDecision));
-        if (item.buyDecision && item.buyDecision.reason) {
-            const reason = document.createElement('div');
-            reason.className = 'small text-muted mt-1';
-            reason.textContent = item.buyDecision.reason;
-            decisionCell.appendChild(reason);
-        }
-        const biddingCell = row.insertCell(5);
-        biddingCell.textContent = item.bidding !== undefined ? item.bidding : 'N/A';
-        const remainingTimeCell = row.insertCell(6);
-        remainingTimeCell.textContent = item.remainingTime || 'N/A';
-        const productURLCell = row.insertCell(7);
-        const link = document.createElement("a");
-        link.href = item.url || '#';
-        link.textContent = "商品リンクURL";
-        link.target = "_blank";
-        link.rel = "noopener noreferrer";
-        productURLCell.appendChild(link);
-        const watchCell = row.insertCell(8);
-        watchCell.appendChild(createWatchButton(item));
-    });
+// Same rule as the server (Main/domain/listing_image.py): only https Yahoo image hosts.
+function safeImageUrl(value) {
+    try {
+        const url = new URL(value);
+        return url.protocol === 'https:' && (url.hostname === 'yimg.jp' || url.hostname.endsWith('.yimg.jp')) ? url.href : '';
+    } catch {
+        return '';
+    }
+}
+
+function safeListingUrl(value) {
+    try {
+        const url = new URL(value);
+        return url.protocol === 'https:' || url.protocol === 'http:' ? url.href : '';
+    } catch {
+        return '';
+    }
+}
+
+function formatYen(value) {
+    return value !== undefined && value !== null && value !== '' && Number.isFinite(Number(value))
+        ? `¥${Math.round(Number(value)).toLocaleString()}` : '不明';
+}
+
+function createFact(label, value) {
+    const wrapper = document.createElement('div');
+    const term = document.createElement('dt');
+    term.textContent = label;
+    const detail = document.createElement('dd');
+    if (value instanceof Node) detail.appendChild(value);
+    else detail.textContent = value;
+    wrapper.append(term, detail);
+    return wrapper;
+}
+
+function createResultCard(item) {
+    const card = document.createElement('article');
+    card.className = 'target-result-card';
+    card.setAttribute('role', 'listitem');
+    const listingUrl = safeListingUrl(item.url);
+
+    const media = document.createElement(listingUrl ? 'a' : 'div');
+    media.className = 'target-result-media';
+    if (listingUrl) {
+        media.href = listingUrl;
+        media.target = '_blank';
+        media.rel = 'noopener noreferrer';
+        media.tabIndex = -1;
+        media.setAttribute('aria-hidden', 'true');
+    }
+    const placeholder = document.createElement('span');
+    placeholder.className = 'target-result-placeholder';
+    placeholder.textContent = '画像なし';
+    media.appendChild(placeholder);
+    const imageUrl = safeImageUrl(item.imageUrl);
+    if (imageUrl) {
+        const image = document.createElement('img');
+        image.alt = '';
+        image.loading = 'lazy';
+        image.referrerPolicy = 'no-referrer';
+        image.addEventListener('error', () => image.remove(), { once: true });
+        image.src = imageUrl;
+        media.appendChild(image);
+    }
+
+    const body = document.createElement('div');
+    body.className = 'target-result-body';
+    const tags = document.createElement('div');
+    tags.className = 'target-result-tags';
+    tags.append(createDecisionBadge(item.buyDecision), createConditionBadge(item));
+
+    const name = document.createElement(listingUrl ? 'a' : 'span');
+    name.className = 'target-result-name';
+    name.textContent = item.name || '名称不明';
+    name.title = item.name || '';
+    if (listingUrl) {
+        name.href = listingUrl;
+        name.target = '_blank';
+        name.rel = 'noopener noreferrer';
+    }
+
+    const priceRow = document.createElement('div');
+    priceRow.className = 'target-result-price-row';
+    const price = document.createElement('span');
+    price.className = 'target-result-price';
+    price.textContent = formatYen(item.price);
+    priceRow.appendChild(price);
+    const comparison = item.marketComparison || {};
+    if (comparison.differenceRate !== null && comparison.differenceRate !== undefined) {
+        const rate = Number(comparison.differenceRate);
+        const chip = document.createElement('span');
+        chip.className = `target-result-diff is-${comparison.position || 'near'}`;
+        chip.textContent = `相場比 ${rate > 0 ? '+' : ''}${rate.toFixed(1)}%`;
+        priceRow.appendChild(chip);
+    }
+
+    const facts = document.createElement('dl');
+    facts.className = 'target-result-facts';
+    facts.append(
+        createFact('入札', item.bidding !== undefined && item.bidding !== null ? `${item.bidding}件` : '不明'),
+        createFact('残り時間', item.remainingTime || '不明'),
+        createFact('相場中央値', formatYen(item.marketMedian ?? currentMedianPrice)),
+    );
+
+    body.append(tags, name, priceRow, facts);
+    if (item.buyDecision && item.buyDecision.reason) {
+        const reason = document.createElement('p');
+        reason.className = 'target-result-reason';
+        reason.textContent = item.buyDecision.reason;
+        body.appendChild(reason);
+    }
+
+    const actions = document.createElement('div');
+    actions.className = 'target-result-actions';
+    if (window.MarketComparison) {
+        const compare = document.createElement('label');
+        compare.className = 'target-result-compare';
+        const selector = window.MarketComparison.createSelector(item);
+        compare.append(selector.querySelector('input'), document.createTextNode('比較'));
+        actions.appendChild(compare);
+    }
+    if (listingUrl) {
+        const link = document.createElement('a');
+        link.className = 'btn btn-sm btn-outline-secondary';
+        link.href = listingUrl;
+        link.target = '_blank';
+        link.rel = 'noopener noreferrer';
+        link.textContent = '商品ページ';
+        actions.appendChild(link);
+    }
+    const watch = createWatchButton(item);
+    watch.classList.add('target-result-watch');
+    actions.appendChild(watch);
+
+    card.append(media, body, actions);
+    return card;
 }
 
 function createConditionBadge(item) {
@@ -210,7 +318,7 @@ async function loadWatchlist() {
         watchlistItems = result.items || [];
         watchedByUrl = new Map(watchlistItems.map(item => [item.url, item]));
         renderFilteredWatchlist();
-        updateTable(currentData);
+        if (currentData) updateTable(currentData);
     } catch (error) {
         console.error('ウォッチリスト取得エラー:', error);
         if (error.message === 'SERVER_RESTART_REQUIRED') {

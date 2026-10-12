@@ -71,12 +71,13 @@ def test_target_search_persists_owned_runs_and_watch_survives_reload(
             page.fill("#search", "ゲーム機")
             page.click("#button-search")
 
-            results = page.locator("#dataTable tbody")
+            results = page.locator("#targetResults")
             expect(results).to_contain_text("中古 ゲーム機 本体 お買い得")
-            cheap_row = results.locator("tr", has_text="お買い得")
-            expect(cheap_row).to_contain_text("かなり買い時")
+            cheap_card = results.locator(".target-result-card", has_text="お買い得")
+            expect(cheap_card).to_contain_text("かなり買い時")
+            expect(cheap_card).to_contain_text("¥12,000")
 
-            cheap_row.get_by_role("button", name="ウォッチリストへ追加").click()
+            cheap_card.get_by_role("button", name="ウォッチリストへ追加").click()
             watchlist = page.locator("#watchlistTable")
             expect(watchlist).to_be_visible()
             expect(watchlist).to_contain_text("中古 ゲーム機 本体 お買い得")

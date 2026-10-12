@@ -19,7 +19,7 @@ Compare current listings with the closed-auction market and identify buying oppo
 - The keyword is the saved condition's display name; the UI does not ask for a separate title.
 - The related-feature links, criteria, action, and frequent-word aid share one card.
 - Submitting the form by button or Enter starts the same target-analysis flow and shows a loading state until completion.
-- Authenticated users can inspect, edit, delete, and rerun their owner-scoped saved conditions without leaving target analysis; rerun results refresh the median and recommendation table in place.
+- Authenticated users can inspect, edit, delete, and rerun their owner-scoped saved conditions without leaving target analysis; rerun results refresh the median and result cards in place.
 - Authenticated users automatically save the complete criteria and execute it as a saved search, so the same displayed result remains available on the profile; the keyword is the default name, and an existing same-named condition is updated instead of duplicated.
 - Profile creation and rerun use the same complete target-analysis criteria contract without involving market search.
 - Saved-search execution persists the exact displayed recommendation result for profile-page revisits.
@@ -35,11 +35,36 @@ Compare current listings with the closed-auction market and identify buying oppo
   ""). It is additive; existing keys are unchanged. The top page reuses `recommend_items` for its
   recommendation cards (`docs/features/recommendations.md`).
 
+## Result cards
+
+Current listings are shown as image cards (`#targetResults`, `Main/static/CSS/target-results.css`)
+instead of the former table. Each card keeps every former column:
+- comparison checkbox
+- name, linked to the listing
+- condition and buy decision with score and reason
+- current price
+- bids
+- remaining time
+- listing link
+- watch button
+
+It adds the image, the closed-price median and the market difference chip (`相場比 ±N%`). Images
+follow the server rule (https `*.yimg.jp` only, re-checked in JS). They load with
+`referrerpolicy="no-referrer"` and fall back to "画像なし" when missing or failing.
+
+The grid is responsive: about four cards per row on desktop, and on phones (<576px) a horizontal
+card with a 104px image so several listings fit on one screen. Card text is set with
+`textContent`, and listing links accept only http(s) URLs.
+
+The result header and the empty-result message appear only after a search; reloading the
+watchlist re-renders cards (watch state) only once a result exists.
+
 ## Related Files
 
 - `Main/templates/Deep_Analysis_now.html`
 - `Main/static/JS/Deep_Analysis_now.js`
 - `Main/static/JS/MarketComparison.js`
+- `Main/static/CSS/target-results.css`
 - `Main/views/utils.py` (`complex_market_data_logic`)
 - `Main/services/market_statistics.py`
 - `Main/services/market_search.py`
@@ -54,6 +79,8 @@ Compare current listings with the closed-auction market and identify buying oppo
 - `tests/unit/test_buying_opportunity.py`
 - `tests/unit/test_market_statistics.py`
 - `tests/unit/test_market_search_usecase.py`
+- `tests/e2e/test_target_result_cards_browser.py`
+- `tests/e2e/test_target_search_watch_browser.py`
 
 ## Product Decision
 
