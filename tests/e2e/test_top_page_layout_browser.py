@@ -57,13 +57,13 @@ def test_twelve_recommendations_in_rows_of_four_and_feature_buttons_align(db_for
             assert len(set(tops)) == 3
             assert [tops[i * 4 : i * 4 + 4].count(tops[i * 4]) for i in range(3)] == [4, 4, 4]
 
-            # Four public cards plus four signed-in cards, buttons aligned within each row.
+            # Three public cards plus four signed-in cards, buttons aligned within each row.
             buttons = page.locator(".feature-card .btn-feature")
-            expect(buttons).to_have_count(8)
-            button_tops = [round(buttons.nth(i).bounding_box()["y"]) for i in range(8)]
-            assert len(set(button_tops[:4])) == 1
-            assert len(set(button_tops[4:])) == 1
-            assert button_tops[4] > button_tops[0]
+            expect(buttons).to_have_count(7)
+            button_tops = [round(buttons.nth(i).bounding_box()["y"]) for i in range(7)]
+            assert len(set(button_tops[:3])) == 1
+            assert len(set(button_tops[3:])) == 1
+            assert button_tops[3] > button_tops[0]
             for heading in ("#recommendationsHeading", "#featuresHeading"):
                 size = page.locator(heading).evaluate(
                     "e => parseFloat(getComputedStyle(e).fontSize)"

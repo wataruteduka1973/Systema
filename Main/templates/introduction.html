@@ -205,11 +205,11 @@
                     <div class="feature-card h-100" data-bs-toggle="modal" data-bs-target="#analysisModal">
                         <img src="{% static 'jpg/yahuoku_analysis_screen.jpg' %}" alt="相場分析スクリーンショット">
                         <div class="card-body">
-                            <h3>価格分析</h3>
+                            <h3>相場分析</h3>
                             <ul>
-                                <li><strong>概要</strong>: 過去に検索した相場のデータを分析します。</li>
-                                <li><strong>機能</strong>: 更新ごとの中央値・中央50%の価格帯と、商品状態別の相場を表示します。</li>
-                                <li><strong>用途</strong>: 相場の変化とデータのばらつきを把握します。</li>
+                                <li><strong>概要</strong>: 検索履歴のキーワードか新しいキーワードで相場を分析します。</li>
+                                <li><strong>機能</strong>: 落札日ごとの価格推移と30日後の予想、保存データの概要と商品状態別の相場を表示します。</li>
+                                <li><strong>用途</strong>: 仕入れ値の目安や出品時の落札価格の見込みを立てます。</li>
                             </ul>
                         </div>
                     </div>
@@ -223,19 +223,6 @@
                                 <li><strong>概要</strong>: 現在売られている商品の中から目玉商品をピックアップ。</li>
                                 <li><strong>機能</strong>: 相場との比較、お買い得商品のピックアップ。</li>
                                 <li><strong>用途</strong>: 競争優位性の確保。</li>
-                            </ul>
-                        </div>
-                    </div>
-                </div>
-                <div class="col-md-6 col-lg-4">
-                    <div class="feature-card h-100" data-bs-toggle="modal" data-bs-target="#predictionModal">
-                        <img src="{% static 'jpg/Yahuoku_prediction_screen.jpg' %}" alt="相場予想スクリーンショット">
-                        <div class="card-body">
-                            <h3>相場予想</h3>
-                            <ul>
-                                <li><strong>概要</strong>: 過去データを参考に購入すべき金額を算出。</li>
-                                <li><strong>機能</strong>: 折れ線グラフで価格の推移を可視化、将来的な価格帯の予想。</li>
-                                <li><strong>用途</strong>: 落札価格の推計、出品時の落札価格の見込みを立てる。</li>
                             </ul>
                         </div>
                     </div>
@@ -310,11 +297,11 @@
         <div class="modal-dialog modal-lg">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h5 class="modal-title" id="analysisModalLabel">価格分析 詳細</h5>
+                    <h5 class="modal-title" id="analysisModalLabel">相場分析 詳細</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body">
-                    <p>保存済みデータの更新履歴から中央値と中央50%の価格帯を表示し、商品状態ごとの相場差も確認できます。</p>
+                    <p>キーワードは検索履歴から選ぶか、新しく入力できます。落札日ごとの中央値と30日後の予想価格・予想範囲、予想の当たり具合（バックテスト）を表示し、検索履歴のキーワードでは保存データの概要と商品状態別の相場も確認できます。新しいキーワードはその場で検索履歴に保存できます。</p>
                     <img src="{% static 'jpg/yahuoku_analysis_screen.jpg' %}" alt="相場分析詳細">
                 </div>
                 <div class="modal-footer">
@@ -343,22 +330,4 @@
         </div>
     </div>
 
-    <div class="modal fade" id="predictionModal" tabindex="-1" aria-labelledby="predictionModalLabel"
-        aria-hidden="true">
-        <div class="modal-dialog modal-lg">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title" id="predictionModalLabel">相場予想 詳細</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                </div>
-                <div class="modal-body">
-                    <p>過去データを基に今後の価格を出品、落札の際の目安を数字とグラフで分かりやすく表示。</p>
-                    <img src="{% static 'jpg/Yahuoku_prediction_screen.jpg' %}" alt="相場予想詳細">
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-custom" data-bs-dismiss="modal">閉じる</button>
-                </div>
-            </div>
-        </div>
-    </div>
 {% endblock %}

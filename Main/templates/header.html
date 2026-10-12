@@ -19,13 +19,10 @@
                     <a class="nav-link" href="{% url 'market_search' %}">市場検索</a>
                 </li>
                 <li class="nav-item">
-                    <a class="nav-link" href="{% url 'Deep_Analysis' %}">情報分析</a>
+                    <a class="nav-link" href="{% url 'Deep_Analysis' %}">相場分析</a>
                 </li>
                 <li class="nav-item">
                     <a class="nav-link" href="{% url 'Deep_Analysis_now' %}">ターゲット分析</a>
-                </li>
-                <li class="nav-item">
-                    <a class="nav-link" href="{% url 'Yahuoku_prediction' %}">相場予想</a>
                 </li>
                 {% if request.user.is_authenticated %}
                 <li class="nav-item">

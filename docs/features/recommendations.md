@@ -36,8 +36,9 @@ own saved-search results, as image cards they can add to the watchlist.
 ## Top page sections
 
 The section headings "あなたへのおすすめ" and "機能一覧" share `.section-label` (Shippori Mincho,
-1.35rem) in `start-menu.css`. Under "機能一覧" the four public feature cards (相場検索, 価格分析,
-ターゲット分析, 相場予想) are always shown.
+1.35rem) in `start-menu.css`. Under "機能一覧" the three public feature cards (相場検索, 相場分析,
+ターゲット分析) are always shown, three per row on wide screens. 相場分析 covers the former 価格分析
+and 相場予想 cards (see `price-analysis.md`).
 
 Signed-in users also get a second row (`.member-features`) linking to:
 - 出品・在庫管理 (`seller_management`)
