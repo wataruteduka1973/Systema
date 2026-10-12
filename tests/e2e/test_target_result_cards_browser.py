@@ -124,7 +124,7 @@ def test_result_cards_show_table_facts_and_add_to_watchlist(db_for_e2e, live_ser
             expect(page.locator("#marketComparisonTray")).to_be_visible()
 
             cards.nth(0).get_by_role("button", name="ウォッチリストへ追加").click()
-            expect(page.locator("#watchlistTable")).to_contain_text("画像ありの<b>商品</b>")
+            expect(page.locator("#watchlistCards")).to_contain_text("画像ありの<b>商品</b>")
             expect(
                 page.locator(".target-result-card")
                 .nth(0)

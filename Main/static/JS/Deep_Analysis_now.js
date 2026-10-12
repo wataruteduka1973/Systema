@@ -171,12 +171,8 @@ function createFact(label, value) {
     return wrapper;
 }
 
-function createResultCard(item) {
-    const card = document.createElement('article');
-    card.className = 'target-result-card';
-    card.setAttribute('role', 'listitem');
-    const listingUrl = safeListingUrl(item.url);
-
+// Image area shared by result and watchlist cards; a missing or failed image shows the placeholder.
+function createListingMedia(listingUrl, rawImageUrl) {
     const media = document.createElement(listingUrl ? 'a' : 'div');
     media.className = 'target-result-media';
     if (listingUrl) {
@@ -190,7 +186,7 @@ function createResultCard(item) {
     placeholder.className = 'target-result-placeholder';
     placeholder.textContent = '画像なし';
     media.appendChild(placeholder);
-    const imageUrl = safeImageUrl(item.imageUrl);
+    const imageUrl = safeImageUrl(rawImageUrl);
     if (imageUrl) {
         const image = document.createElement('img');
         image.alt = '';
@@ -200,6 +196,16 @@ function createResultCard(item) {
         image.src = imageUrl;
         media.appendChild(image);
     }
+    return media;
+}
+
+function createResultCard(item) {
+    const card = document.createElement('article');
+    card.className = 'target-result-card';
+    card.setAttribute('role', 'listitem');
+    const listingUrl = safeListingUrl(item.url);
+
+    const media = createListingMedia(listingUrl, item.imageUrl);
 
     const body = document.createElement('div');
     body.className = 'target-result-body';
@@ -377,56 +383,135 @@ async function removeWatchItem(itemId) {
     }
 }
 
-function renderWatchlist(items) {
-    const table = document.getElementById('watchlistTable');
-    const empty = document.getElementById('watchlistEmpty');
-    const body = table.querySelector('tbody');
-    body.innerHTML = '';
-    table.style.display = items.length ? 'table' : 'none';
-    empty.style.display = items.length ? 'none' : 'block';
+const LIFECYCLE_LABELS = { active: '追跡中', purchased: '購入済み', skipped: '見送り', ended: '終了', archived: 'アーカイブ' };
+const PRIORITY_LABELS = { 1: '優先度 通常', 2: '優先度 高', 3: '最優先' };
 
-    items.forEach(item => {
-        const row = body.insertRow();
-        const nameCell = row.insertCell(0);
-        const link = document.createElement('a');
-        link.href = item.url;
-        link.textContent = item.name;
-        link.target = '_blank';
-        link.rel = 'noopener noreferrer';
-        nameCell.appendChild(link);
-        row.insertCell(1).textContent = `${Number(item.currentPrice).toLocaleString()}円`;
-        row.insertCell(2).textContent = `${Number(item.addedPrice).toLocaleString()}円`;
-        const change = Number(item.priceChange);
-        const changeCell = row.insertCell(3);
-        changeCell.textContent = `${change > 0 ? '+' : ''}${change.toLocaleString()}円`;
-        changeCell.className = change < 0 ? 'text-success' : change > 0 ? 'text-danger' : '';
-        const analysisCell = row.insertCell(4);
-        analysisCell.appendChild(createHistorySummary(item.historyAnalysis));
-        row.insertCell(5).appendChild(createDecisionBadge(item.buyDecision));
-        row.insertCell(6).appendChild(createWatchEditor(item));
-        row.insertCell(7).textContent = formatCheckedAt(item.lastCheckedAt);
-        const actionCell = row.insertCell(8);
-        if (document.getElementById('purchaseBudgetEditor')) {
-            const budgetButton = document.createElement('button');
-            budgetButton.type = 'button';
-            budgetButton.className = 'btn btn-sm btn-outline-success me-2 mb-1';
-            budgetButton.textContent = '購入上限・利益';
-            budgetButton.addEventListener('click', () => window.openPurchaseBudget(item));
-            actionCell.appendChild(budgetButton);
-        }
-        const historyButton = document.createElement('button');
-        historyButton.type = 'button';
-        historyButton.className = 'btn btn-sm btn-outline-primary me-2 mb-1';
-        historyButton.textContent = '履歴';
-        historyButton.addEventListener('click', () => toggleWatchHistory(item.id, row));
-        actionCell.appendChild(historyButton);
-        const removeButton = document.createElement('button');
-        removeButton.type = 'button';
-        removeButton.className = 'btn btn-sm btn-outline-danger';
-        removeButton.textContent = 'ウォッチ解除';
-        removeButton.addEventListener('click', () => removeWatchItem(item.id));
-        actionCell.appendChild(removeButton);
-    });
+function renderWatchlist(items) {
+    const list = document.getElementById('watchlistCards');
+    const empty = document.getElementById('watchlistEmpty');
+    list.replaceChildren(...items.map(createWatchCard));
+    list.hidden = !items.length;
+    empty.style.display = items.length ? 'none' : 'block';
+}
+
+function createTag(text, className) {
+    const tag = document.createElement('span');
+    tag.className = `badge ${className}`;
+    tag.textContent = text;
+    return tag;
+}
+
+function createWatchCard(item) {
+    const card = document.createElement('article');
+    card.className = 'target-result-card watch-card';
+    card.setAttribute('role', 'listitem');
+    card.dataset.watchId = String(item.id);
+    const listingUrl = safeListingUrl(item.url);
+
+    const body = document.createElement('div');
+    body.className = 'target-result-body';
+    const tags = document.createElement('div');
+    tags.className = 'target-result-tags';
+    tags.append(
+        createDecisionBadge(item.buyDecision),
+        createConditionBadge(item),
+        createTag(LIFECYCLE_LABELS[item.lifecycleStatus] || item.lifecycleStatus, 'text-bg-light border'),
+    );
+    if (PRIORITY_LABELS[item.priority]) tags.appendChild(createTag(PRIORITY_LABELS[item.priority], 'bg-warning text-dark'));
+    if (item.category) tags.appendChild(createTag(item.category, 'text-bg-light border'));
+
+    const name = document.createElement(listingUrl ? 'a' : 'span');
+    name.className = 'target-result-name';
+    name.textContent = item.name;
+    name.title = item.name;
+    if (listingUrl) {
+        name.href = listingUrl;
+        name.target = '_blank';
+        name.rel = 'noopener noreferrer';
+    }
+
+    const priceRow = document.createElement('div');
+    priceRow.className = 'target-result-price-row';
+    const price = document.createElement('span');
+    price.className = 'target-result-price';
+    price.textContent = formatYen(item.currentPrice);
+    const change = Number(item.priceChange) || 0;
+    const chip = document.createElement('span');
+    chip.className = `target-result-diff ${change < 0 ? 'is-below' : change > 0 ? 'is-above' : 'is-near'}`;
+    chip.textContent = change ? `追加時から ${change > 0 ? '+' : '-'}¥${Math.abs(change).toLocaleString()}` : '追加時から変化なし';
+    priceRow.append(price, chip);
+
+    const facts = document.createElement('dl');
+    facts.className = 'target-result-facts';
+    facts.append(
+        createFact('追加時価格', formatYen(item.addedPrice)),
+        createFact('相場中央値', item.marketMedian ? formatYen(item.marketMedian) : '不明'),
+        createFact('入札', `${Number(item.bidding) || 0}件`),
+    );
+
+    const history = createHistorySummary(item.historyAnalysis);
+    history.classList.add('watch-history-summary');
+
+    body.append(tags, name, priceRow, facts, history);
+    if (item.buyDecision && item.buyDecision.reason) {
+        const reason = document.createElement('p');
+        reason.className = 'target-result-reason';
+        reason.textContent = item.buyDecision.reason;
+        body.appendChild(reason);
+    }
+    if (item.note) {
+        const note = document.createElement('p');
+        note.className = 'watch-note';
+        note.textContent = item.note;
+        body.appendChild(note);
+    }
+    const checked = document.createElement('p');
+    checked.className = 'target-result-reason';
+    checked.textContent = `最終確認 ${formatCheckedAt(item.lastCheckedAt)}${item.remainingTime ? `・確認時の残り ${item.remainingTime}` : ''}`;
+    body.appendChild(checked);
+
+    const editor = document.createElement('details');
+    editor.className = 'watch-editor';
+    const summary = document.createElement('summary');
+    summary.textContent = '判断を編集';
+    editor.append(summary, createWatchEditor(item));
+    body.appendChild(editor);
+
+    const historyPanel = document.createElement('div');
+    historyPanel.className = 'watch-history';
+    historyPanel.hidden = true;
+    historyPanel.setAttribute('aria-live', 'polite');
+    body.appendChild(historyPanel);
+
+    const actions = document.createElement('div');
+    actions.className = 'target-result-actions';
+    if (document.getElementById('purchaseBudgetEditor')) {
+        const budgetButton = document.createElement('button');
+        budgetButton.type = 'button';
+        budgetButton.className = 'btn btn-sm btn-outline-success';
+        budgetButton.textContent = '購入上限・利益';
+        budgetButton.addEventListener('click', () => {
+            window.openPurchaseBudget(item);
+            document.getElementById('purchaseBudgetEditor').scrollIntoView({ behavior: 'smooth', block: 'start' });
+        });
+        actions.appendChild(budgetButton);
+    }
+    const historyButton = document.createElement('button');
+    historyButton.type = 'button';
+    historyButton.className = 'btn btn-sm btn-outline-primary';
+    historyButton.textContent = '履歴';
+    historyButton.setAttribute('aria-expanded', 'false');
+    historyButton.addEventListener('click', () => toggleWatchHistory(item.id, historyPanel, historyButton));
+    actions.appendChild(historyButton);
+    const removeButton = document.createElement('button');
+    removeButton.type = 'button';
+    removeButton.className = 'btn btn-sm btn-outline-danger';
+    removeButton.textContent = 'ウォッチ解除';
+    removeButton.addEventListener('click', () => removeWatchItem(item.id));
+    actions.appendChild(removeButton);
+
+    card.append(createListingMedia(listingUrl, item.imageUrl), body, actions);
+    return card;
 }
 
 function createHistorySummary(analysis) {
@@ -509,31 +594,28 @@ async function updateWatchItem(itemId, payload) {
     }
 }
 
-async function toggleWatchHistory(itemId, sourceRow) {
-    const existing = sourceRow.nextElementSibling;
-    if (existing?.dataset.historyFor === String(itemId)) {
-        existing.remove();
+async function toggleWatchHistory(itemId, panel, button) {
+    if (!panel.hidden) {
+        panel.hidden = true;
+        button.setAttribute('aria-expanded', 'false');
         return;
     }
     try {
         const response = await fetch(`/taskle/watchlist/${itemId}/snapshots`);
         const result = await response.json();
         if (!response.ok) throw new Error(result.error || `HTTP ${response.status}`);
-        const detailRow = sourceRow.parentNode.insertRow(sourceRow.rowIndex);
-        detailRow.dataset.historyFor = String(itemId);
-        const cell = detailRow.insertCell(0);
-        cell.colSpan = 9;
         const heading = document.createElement('strong');
         heading.textContent = `価格・入札履歴（${result.snapshots.length}件）`;
-        cell.appendChild(heading);
         const list = document.createElement('ul');
-        list.className = 'mb-0 mt-2';
+        list.className = 'mb-0 mt-1';
         result.snapshots.slice(-10).reverse().forEach(snapshot => {
             const entry = document.createElement('li');
             entry.textContent = `${formatCheckedAt(snapshot.observedAt)}: ${Number(snapshot.price).toLocaleString()}円・入札${snapshot.bidding}件`;
             list.appendChild(entry);
         });
-        cell.appendChild(list);
+        panel.replaceChildren(heading, list);
+        panel.hidden = false;
+        button.setAttribute('aria-expanded', 'true');
     } catch (error) {
         console.error('ウォッチ履歴取得エラー:', error);
         window.SystemaFeedback.error(`価格履歴を取得できませんでした: ${error.message}`);

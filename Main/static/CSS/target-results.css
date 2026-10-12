@@ -5,6 +5,10 @@
     gap: 1rem;
 }
 
+.target-results[hidden] {
+    display: none;
+}
+
 .target-result-card {
     display: flex;
     flex-direction: column;
@@ -196,4 +200,39 @@ a.target-result-name:hover {
         grid-column: 1 / -1;
         padding: .25rem .75rem .75rem;
     }
+}
+
+/* Watchlist cards (target analysis): history summary, note, editor and history panel. */
+.watch-history-summary {
+    font-size: .85rem;
+}
+
+.watch-note {
+    margin: 0;
+    padding: .375rem .5rem;
+    font-size: .85rem;
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+    background: #f8f9fa;
+    border-radius: .375rem;
+}
+
+.watch-editor summary {
+    font-size: .875rem;
+    cursor: pointer;
+}
+
+.watch-editor[open] summary {
+    margin-bottom: .5rem;
+}
+
+.watch-history {
+    font-size: .85rem;
+    padding-top: .5rem;
+    border-top: 1px solid #eef0f3;
+}
+
+/* Three watch actions wrap evenly instead of leaving a ragged second row. */
+.watch-card .target-result-actions .btn {
+    flex: 1 1 auto;
 }

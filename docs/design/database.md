@@ -15,7 +15,7 @@ A0保存境界は実装済み。新Core物理モデルは未実装: [越境ロ�
 | `SearchRun` | keyword, search_type, item_count, succeeded, created_at | userまたはsession_key、items | 条件、trigger、所要時間、失敗分類がない |
 | `scraping` | SearchWord, SearchDay, Bidding, EndPrice, StartPrice, Name, URL | nullable SearchRun FK | legacy命名、日時/入札がtext、状態・商品キーがない |
 | `searchwordlog` | word, searched_at | userまたはsession_key | SearchRunと役割が重複 |
-| `WatchItem` | URL、追加/現在価格、入札、状態、相場、買い時判定、メモ、優先度、カテゴリ、ライフサイクル | userまたはsession_key、価格履歴 | タグは未実装 |
+| `WatchItem` | URL、画像URL、追加/現在価格、入札、状態、相場、買い時判定、メモ、優先度、カテゴリ、ライフサイクル | userまたはsession_key、価格履歴 | タグは未実装 |
 | `ErrorLog` | code, message, timestamp, file, line | なし | 生messageへ個人情報が混ざる可能性 |
 | Django User/Session | 認証・セッション | Django標準 | 維持する |
 
@@ -118,6 +118,11 @@ Add:
 - last_price_change_at: nullable DateTime
 
 観測更新ではこれらユーザー管理列を変更しない。
+
+`0023_watch_item_primary_image` adds `primary_image_url` (CharField(1000), blank, default "").
+It holds a safe listing image only (https `*.yimg.jp`). Registration and search refreshes overwrite it
+only with a non-empty image, so a payload without one keeps the stored URL. Existing rows start empty
+until a search finds the listing again.
 
 ## 6. New Search and Watch Models
 

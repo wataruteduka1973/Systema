@@ -11,6 +11,7 @@ from django.db import transaction
 from django.utils import timezone
 
 from Main.domain.buying_opportunity import evaluate_buying_opportunity
+from Main.domain.listing_image import safe_image_url
 from Main.models.watchitem import WatchItem, WatchPriceSnapshot
 from Main.services.alert_rules import evaluate_watch_alert_rules
 from Main.services.notifications import notify_watch_observation
@@ -59,6 +60,7 @@ def save_watch_item(payload: Mapping[str, Any], owner: RequestOwner) -> tuple[Wa
     remaining_seconds = payload.get("remainingSeconds")
     decision = evaluate_buying_opportunity(price, median_price, condition, remaining_seconds)
 
+    image_url = safe_image_url(payload.get("imageUrl"))
     defaults = {
         "name": name,
         "search_keyword": str(payload.get("searchKeyword") or "")[:255],
@@ -73,6 +75,9 @@ def save_watch_item(payload: Mapping[str, Any], owner: RequestOwner) -> tuple[Wa
         "buy_score": decision["score"],
         "buy_reason": decision["reason"],
     }
+    # Payloads without an image (older pages, the top page before images) keep the stored one.
+    if image_url:
+        defaults["primary_image_url"] = image_url
     item, created = WatchItem.objects.select_for_update().get_or_create(
         **owner.model_values,
         url=url,
@@ -112,6 +117,7 @@ def serialize_watch_item(item: WatchItem) -> dict[str, Any]:
         "id": item.pk,
         "name": item.name,
         "url": item.url,
+        "imageUrl": item.primary_image_url,
         "searchKeyword": item.search_keyword,
         "currentPrice": item.current_price,
         "addedPrice": item.added_price,
@@ -162,6 +168,9 @@ def refresh_watched_item(payload: Mapping[str, Any], owner: RequestOwner) -> boo
     previous_price = item.current_price
     price_changed = previous_price != price
     item.name = str(payload.get("name") or item.name)
+    image_url = safe_image_url(payload.get("imageUrl"))
+    if image_url:
+        item.primary_image_url = image_url
     item.current_price = price
     item.bidding = _non_negative_int(payload.get("bidding"))
     item.remaining_time = str(payload.get("remainingTime") or "")[:100]

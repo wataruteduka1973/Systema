@@ -29,7 +29,7 @@ own saved-search results, as image cards they can add to the watchlist.
   reason and the source line (saved search · fetch time). The top page shows the estimated end
   time instead of the stored remaining time, because snapshots are not live. It adds a "新着" badge
   and has no comparison checkbox. The cards use the top page's own font.
-- "ウォッチリストへ追加" posts the card's stored values to the existing `/taskle/watchlist` API and reports
+- "ウォッチリストへ追加" posts the card's stored values (including `imageUrl`) to the existing `/taskle/watchlist` API and reports
   through `SystemaFeedback`.
 
 ## Images

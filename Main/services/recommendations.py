@@ -125,6 +125,7 @@ def _recommendation(
         watch_payload={
             "name": name,
             "url": url,
+            "imageUrl": safe_image_url(item.get("imageUrl")),
             "currentPrice": price,
             "marketMedian": item.get("marketMedian") or pair.median_price,
             "bidding": _int(item.get("bidding")) or 0,

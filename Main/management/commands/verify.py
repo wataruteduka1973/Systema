@@ -116,6 +116,8 @@ FEATURE_TESTS = {
         "tests/integration/test_api.py",
         "tests/e2e/test_target_search_watch_browser.py",
         "tests/e2e/test_target_result_cards_browser.py",
+        "tests/e2e/test_watchlist_cards_browser.py",
+        "tests/integration/test_watchlist_images.py",
     ),
     "inventory": (
         "tests/unit/test_profitability.py",

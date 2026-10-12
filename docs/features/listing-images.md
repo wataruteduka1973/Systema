@@ -5,7 +5,10 @@
 Phase A 一部実装済み（2026-10-11）。ヤフオク検索結果からの画像URL抽出（HTMLカードと`__NEXT_DATA__`、
 `https`の`*.yimg.jp`だけを許可）、現在出品と`recommend_items`への`imageUrl`追加、トップページの
 おすすめカードでの表示とフォールバックを実装した（`docs/features/recommendations.md`）。
-DBカラム（`scraping`、`WatchItem`、`InventoryItem`、`SellerListing`）、`seller_listing.py`、
+2026-10-12に、ターゲット分析の検索結果とウォッチリストを画像付きカードにした。
+あわせて`WatchItem.primary_image_url`（`0023`）を追加した。値は登録時と検索の再取得時に保存し、
+画像のない値では上書きしない。APIでは`imageUrl`として返す。
+残るDBカラム（`scraping`、`InventoryItem`、`SellerListing`）、`seller_listing.py`、
 他画面のサムネイル表示は未実装。
 
 ## Purpose
