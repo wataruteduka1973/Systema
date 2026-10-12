@@ -18,28 +18,39 @@
         <a href="{% url 'Deep_Analysis_now' %}">ターゲット分析を開く</a>
     </p>
     {% else %}
-    <div class="row row-cols-1 row-cols-sm-2 row-cols-lg-3 g-3">
+    {# Same card component as the target-analysis results (CSS/target-results.css). #}
+    <div class="target-results" role="list" aria-labelledby="recommendationsHeading">
         {% for item in recommendations.items %}
-        <div class="col">
-            <article class="hot-pick-card recommendation-card">
-                <a class="recommendation-image" href="{{ item.url }}" target="_blank" rel="noopener noreferrer" tabindex="-1" aria-hidden="true">
-                    <span class="recommendation-image-placeholder">画像なし</span>
-                    {% if item.image_url %}<img src="{{ item.image_url }}" alt="" loading="lazy" referrerpolicy="no-referrer">{% endif %}
-                </a>
-                <div class="recommendation-tags">
-                    {% if item.is_new %}<span class="tag tag-rising">新着</span>{% endif %}
-                    <span class="tag {% if item.decision_status == 'strong_buy' %}tag-deal{% else %}tag-notable{% endif %}">{{ item.decision_label }}</span>
+        <article class="target-result-card recommendation-card" role="listitem">
+            <a class="target-result-media" href="{{ item.url }}" target="_blank" rel="noopener noreferrer" tabindex="-1" aria-hidden="true">
+                <span class="target-result-placeholder">画像なし</span>
+                {% if item.image_url %}<img src="{{ item.image_url }}" alt="" loading="lazy" referrerpolicy="no-referrer">{% endif %}
+            </a>
+            <div class="target-result-body">
+                <div class="target-result-tags">
+                    {% if item.is_new %}<span class="badge bg-warning text-dark">新着</span>{% endif %}
+                    <span class="badge {% if item.decision_status == 'strong_buy' %}bg-success{% else %}bg-primary{% endif %}">{{ item.decision_label }} ({{ item.decision_score }})</span>
+                    <span class="badge {% if item.condition == 'junk' %}bg-danger{% elif item.condition == 'new' %}bg-success{% elif item.condition == 'used' %}bg-primary{% else %}bg-secondary{% endif %}">{{ item.condition_label|default:"未分類" }}</span>
                 </div>
-                <a class="name recommendation-name" href="{{ item.url }}" target="_blank" rel="noopener noreferrer">{{ item.name }}</a>
-                <span class="serif price">¥{{ item.price|floatformat:"0g" }}</span>
-                <ul class="recommendation-meta">
-                    {% if item.discount_percent %}<li class="recommendation-discount">相場より{{ item.discount_percent }}%安い</li>{% endif %}
-                    {% if item.ends_at %}<li>終了予定 {{ item.ends_at|date:"n/j H:i" }}</li>{% elif item.remaining_time %}<li>取得時 残り{{ item.remaining_time }}</li>{% endif %}
-                    <li>{{ item.saved_search_name }} · {{ item.observed_at|date:"n/j H:i" }} 取得</li>
-                </ul>
-                <button type="button" class="btn recommendation-watch" data-index="{{ forloop.counter0 }}">ウォッチに追加</button>
-            </article>
-        </div>
+                <a class="target-result-name" href="{{ item.url }}" target="_blank" rel="noopener noreferrer" title="{{ item.name }}">{{ item.name }}</a>
+                <div class="target-result-price-row">
+                    <span class="target-result-price">¥{{ item.price|floatformat:"0g" }}</span>
+                    {% if item.difference_label %}<span class="target-result-diff is-{{ item.market_position }}">{{ item.difference_label }}</span>{% endif %}
+                </div>
+                <dl class="target-result-facts">
+                    <div><dt>入札</dt><dd>{% if item.bidding is not None %}{{ item.bidding }}件{% else %}不明{% endif %}</dd></div>
+                    {# Snapshots are not live, so the end time is estimated instead of a stale "remaining" value. #}
+                    <div><dt>終了予定</dt><dd>{% if item.ends_at %}{{ item.ends_at|date:"n/j H:i" }}{% else %}不明{% endif %}</dd></div>
+                    <div><dt>相場中央値</dt><dd>{% if item.market_median %}¥{{ item.market_median|floatformat:"0g" }}{% else %}不明{% endif %}</dd></div>
+                </dl>
+                {% if item.decision_reason %}<p class="target-result-reason">{{ item.decision_reason }}</p>{% endif %}
+                <p class="target-result-reason">{{ item.saved_search_name }} · {{ item.observed_at|date:"n/j H:i" }} 取得</p>
+            </div>
+            <div class="target-result-actions">
+                <a class="btn btn-sm btn-outline-secondary" href="{{ item.url }}" target="_blank" rel="noopener noreferrer">商品ページ</a>
+                <button type="button" class="btn btn-sm btn-primary target-result-watch recommendation-watch" data-index="{{ forloop.counter0 }}">ウォッチリストへ追加</button>
+            </div>
+        </article>
         {% endfor %}
     </div>
     {{ recommendation_payloads|json_script:"recommendationPayloads" }}

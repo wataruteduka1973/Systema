@@ -118,7 +118,10 @@ def test_duplicates_across_saved_searches_keep_the_highest_score_and_limit_appli
 def test_card_values_and_watch_payload():
     [recommendation] = select_recommendations([_pair([_item("a10000001")])], set(), now=NOW)
 
-    assert recommendation.discount_percent == 50
+    assert recommendation.difference_label == "相場比 -50.0%"
+    assert recommendation.market_position == "below"
+    assert recommendation.bidding == 1
+    assert recommendation.condition == "used"
     assert recommendation.ends_at == OBSERVED + timedelta(seconds=7200)
     assert recommendation.watch_payload == {
         "name": "商品 a10000001",
@@ -134,9 +137,10 @@ def test_card_values_and_watch_payload():
     }
 
 
-def test_price_above_market_has_no_discount_label():
+def test_price_above_market_shows_a_positive_difference():
     pair = _pair([_item("a10000001", marketComparison={"differenceRate": 12.0})])
 
     [recommendation] = select_recommendations([pair], set(), now=NOW)
 
-    assert recommendation.discount_percent is None
+    assert recommendation.difference_label == "相場比 +12.0%"
+    assert recommendation.market_position == "near"

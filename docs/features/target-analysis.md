@@ -37,8 +37,8 @@ Compare current listings with the closed-auction market and identify buying oppo
 
 ## Result cards
 
-Current listings are shown as image cards (`#targetResults`, `Main/static/CSS/target-results.css`)
-instead of the former table. Each card keeps every former column:
+Current listings are shown as image cards (`#targetResults`, `Main/static/CSS/target-results.css`;
+the top-page recommendations reuse the same component) instead of the former table. Each card keeps every former column:
 - comparison checkbox
 - name, linked to the listing
 - condition and buy decision with score and reason

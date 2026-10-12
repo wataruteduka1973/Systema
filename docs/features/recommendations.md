@@ -23,7 +23,13 @@ own saved-search results, as image cards they can add to the watchlist.
   several saved searches appears once, with its highest score. At most 6 cards.
 - Empty states: signed out (log in), no active saved search (open target analysis), and no current
   candidates (shows the last fetch time).
-- "ウォッチに追加" posts the card's stored values to the existing `/taskle/watchlist` API and reports
+- Cards use the same component as the target-analysis results (`Main/static/CSS/target-results.css`,
+  see `target-analysis.md`): image, decision and condition badges, name, price with the
+  `相場比 ±N%` chip, and a facts row (bids, estimated end, closed-price median), then the decision
+  reason and the source line (saved search · fetch time). The top page shows the estimated end
+  time instead of the stored remaining time, because snapshots are not live. It adds a "新着" badge
+  and has no comparison checkbox. The cards use the top page's own font.
+- "ウォッチリストへ追加" posts the card's stored values to the existing `/taskle/watchlist` API and reports
   through `SystemaFeedback`.
 
 ## Images
@@ -48,7 +54,7 @@ own saved-search results, as image cards they can add to the watchlist.
 - `Main/templates/StartMenu.html`
 - `Main/templates/partials/recommendations.html`
 - `Main/static/JS/Recommendations.js`
-- `Main/static/CSS/start-menu.css`
+- `Main/static/CSS/start-menu.css`, `Main/static/CSS/target-results.css`
 - `Main/scraping/yahoo.py`, `Main/infrastructure/marketplaces/yahoo.py`, `Main/services/market_search.py`
 - `tests/unit/test_recommendations.py`
 - `tests/unit/test_listing_images.py`

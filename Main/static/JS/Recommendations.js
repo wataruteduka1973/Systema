@@ -6,7 +6,7 @@
     const payloads = source ? JSON.parse(source.textContent) : [];
 
     // A broken or blocked image falls back to the placeholder behind it.
-    document.querySelectorAll('.recommendation-image img').forEach(image => {
+    document.querySelectorAll('.recommendation-card .target-result-media img').forEach(image => {
         const drop = () => image.remove();
         if (image.complete && image.naturalWidth === 0) drop();
         else image.addEventListener('error', drop, { once: true });

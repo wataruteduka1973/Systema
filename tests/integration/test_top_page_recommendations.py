@@ -140,12 +140,15 @@ def test_cards_render_escaped_names_safe_images_and_watch_payloads(client):
 
     content = client.get(reverse("index")).content.decode("utf-8")
 
-    assert content.count('class="hot-pick-card recommendation-card"') == 2
+    assert content.count('class="target-result-card recommendation-card"') == 2
     assert "<script>alert(1)</script>" not in content
     assert "&lt;script&gt;alert(1)&lt;/script&gt;中古カメラ" in content
     assert 'src="https://auctions.c.yimg.jp/images/a10000001.jpg"' in content
     assert content.count('referrerpolicy="no-referrer"') == 1
-    assert "相場より47%安い" in content
+    assert "相場比 -46.7%" in content
+    assert "target-results.css" in content
+    for text in ("かなり買い時 (90)", "中古・動作品", "2件", "¥22,500", "商品ページ"):
+        assert text in content
     assert "¥12,000" in content
     assert 'id="recommendationPayloads"' in content
     assert "Recommendations.js" in content

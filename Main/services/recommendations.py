@@ -47,7 +47,10 @@ class Recommendation:
     decision_status: str
     decision_label: str
     decision_score: int
+    decision_reason: str
+    condition: str
     condition_label: str
+    bidding: int | None
     remaining_time: str
     ends_at: datetime | None
     is_new: bool
@@ -56,11 +59,20 @@ class Recommendation:
     watch_payload: dict[str, Any]
 
     @property
-    def discount_percent(self) -> int | None:
-        """How far below the market median the price is, as a positive whole percent."""
-        if self.discount_rate is None or self.discount_rate >= 0:
-            return None
-        return round(-self.discount_rate)
+    def difference_label(self) -> str:
+        """Signed market difference as shown on the target-analysis cards ("相場比 -46.7%")."""
+        if self.discount_rate is None:
+            return ""
+        return f"相場比 {self.discount_rate:+.1f}%"
+
+    @property
+    def market_position(self) -> str:
+        """Same bands as Main/services/market_statistics.py (±15%)."""
+        if self.discount_rate is None:
+            return "near"
+        if self.discount_rate <= -15:
+            return "below"
+        return "above" if self.discount_rate >= 15 else "near"
 
 
 def _int(value: object) -> int | None:
@@ -101,7 +113,10 @@ def _recommendation(
         decision_status=str(decision.get("status")),
         decision_label=str(decision.get("label") or ""),
         decision_score=_int(decision.get("score")) or 0,
+        decision_reason=str(decision.get("reason") or ""),
+        condition=str(item.get("condition") or "unknown"),
         condition_label=str(item.get("conditionLabel") or ""),
+        bidding=_int(item.get("bidding")),
         remaining_time=str(item.get("remainingTime") or ""),
         ends_at=ends_at,
         is_new=is_new,
