@@ -85,7 +85,8 @@ def test_sale_outcomes_are_empty_for_no_confirmed_sales_and_require_login(client
         "lowProfitSales": [],
         "period": {"from": None, "to": None},
         "expenseBreakdown": [
-            {"key": "purchase", "label": "仕入れ費用（仕入れ値・仕入れ送料）", "amount": 0},
+            {"key": "acquisition", "label": "仕入れ値", "amount": 0},
+            {"key": "purchaseShipping", "label": "仕入れ送料", "amount": 0},
             {"key": "fee", "label": "販売手数料", "amount": 0},
             {"key": "shipping", "label": "発送送料", "amount": 0},
             {"key": "packaging", "label": "梱包費", "amount": 0},
@@ -162,7 +163,14 @@ def test_expense_breakdown_adds_up_to_total_expenses(client):
 
     amounts = {item["key"]: item["amount"] for item in data["expenseBreakdown"]}
     # Each sale: acquisition 1000 + purchase shipping 200, fee 100, shipping 100, packaging 50.
-    assert amounts == {"purchase": 4800, "fee": 400, "shipping": 400, "packaging": 200, "other": 0}
+    assert amounts == {
+        "acquisition": 4000,
+        "purchaseShipping": 800,
+        "fee": 400,
+        "shipping": 400,
+        "packaging": 200,
+        "other": 0,
+    }
     assert sum(amounts.values()) == data["summary"]["totalExpenses"]
 
 
@@ -200,3 +208,23 @@ def test_invalid_periods_are_rejected(client, params):
 
     assert response.status_code == 400
     assert response.json()["error"]["code"] == "validation_error"
+
+
+def test_sales_stay_in_outcomes_after_the_listing_is_deleted(client):
+    user = get_user_model().objects.create_user("outcome-keep")
+    inventory = InventoryItem.objects.create(user=user, name="品", category="カメラ")
+    item = listing(user, inventory, 30)
+    record = save_sale_record(user, item.pk, payload(5000, 1))
+    client.force_login(user)
+
+    response = client.delete(reverse("seller_listing_item", args=[item.pk]))
+
+    assert response.status_code == 204
+    record.refresh_from_db()
+    assert record.seller_listing_id is None
+    assert (record.user_id, record.item_name, record.category) == (user.pk, "販売品30", "カメラ")
+    data = client.get(reverse("seller_outcomes")).json()["data"]
+    assert data["summary"]["saleCount"] == 1
+    assert data["summary"]["totalSales"] == 5000
+    assert data["lowProfitSales"][0]["name"] == "販売品30"
+    assert data["lowProfitSales"][0]["listingId"] is None

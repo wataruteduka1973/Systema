@@ -246,7 +246,12 @@ Both models are added without changing existing tables or ownership. Inventory d
 
 | Field | Type/constraint |
 |---|---|
-| seller_listing | OneToOne FK CASCADE |
+| seller_listing | OneToOne FK SET_NULL, nullable | 出品削除で切り離されるだけ |
+| user | FK User CASCADE, indexed with sold_at | 実績の所有者 |
+| item_name | Text, blank | 確定時の出品名 |
+| listing_url | CharField(1000), blank | 確定時の出品URL |
+| acquisition_cost | PositiveBigInteger default=0 | 確定時の仕入れ値 |
+| purchase_shipping_cost | PositiveBigInteger default=0 | 確定時の仕入れ送料 |
 | sale_price | PositiveBigInteger |
 | actual_fee | PositiveBigInteger default=0 |
 | actual_shipping_cost | PositiveBigInteger default=0 |
@@ -259,6 +264,7 @@ Both models are added without changing existing tables or ownership. Inventory d
 
 `confirmed_profit`は確定時の監査用スナップショット。serviceで再計算した値だけ保存し、入力された計算結果は採用しない。
 `category`も同時に固定し、在庫の編集・削除によって過去の集計を変えない。空値は集計画面で未分類として扱う。
+SaleRecordは販売台帳であり、出品・在庫を削除しても残る。所有者は`user`で判定する。`0024`で列追加、`0025`で既存行を出品から補完（仕入れ合計は販売価格−確定利益−販売費用で正確に復元し、出品の仕入れ送料を上限に分割）、`0026`で`user`を必須化しindexを追加する。逆方向の補完は行わない。
 
 ## 8. Alerts and Notifications
 

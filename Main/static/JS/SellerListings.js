@@ -137,7 +137,10 @@
         }, 'btn btn-outline-primary');
         actions.append(refresh);
         actions.append(button('削除', async () => {
-            if (!window.confirm('出品とその観測履歴を削除します。元の在庫は削除されません。よろしいですか？')) return;
+            const confirmText = item.saleRecord
+                ? '出品とその観測履歴を削除します。販売結果は販売実績分析に残ります。元の在庫は削除されません。よろしいですか？'
+                : '出品とその観測履歴を削除します。元の在庫は削除されません。よろしいですか？';
+            if (!window.confirm(confirmText)) return;
             await api(`${base}/${item.id}`, 'DELETE'); await load(); message('出品を削除しました。');
         }, 'btn btn-outline-danger'));
         node.append(actions);

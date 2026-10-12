@@ -9,8 +9,10 @@ from django.utils import timezone
 
 from Main.models.sellerlisting import SaleRecord
 
-# Selling-side costs stored on each SaleRecord, in display order.
-SELLING_COSTS = (
+# Costs stored on each SaleRecord, in display order. They add up to sale price - confirmed profit.
+EXPENSE_ITEMS = (
+    ("acquisition", "仕入れ値", "acquisition_cost"),
+    ("purchaseShipping", "仕入れ送料", "purchase_shipping_cost"),
     ("fee", "販売手数料", "actual_fee"),
     ("shipping", "発送送料", "actual_shipping_cost"),
     ("packaging", "梱包費", "actual_packaging_cost"),
@@ -42,28 +44,10 @@ def _local_midnight(day: date) -> datetime:
 
 
 def _expense_breakdown(records: Any) -> list[dict[str, Any]]:
-    """Expense items for the period.
-
-    Purchase cost (acquisition plus purchase shipping) is not stored on SaleRecord. It is exactly
-    sale price - confirmed profit - selling costs, because the profit was computed from those values.
-    """
-    totals = records.aggregate(
-        total_sales=Sum("sale_price"),
-        total_profit=Sum("confirmed_profit"),
-        **{key: Sum(field) for key, _, field in SELLING_COSTS},
-    )
-    selling = [(key, label, totals[key] or 0) for key, label, _ in SELLING_COSTS]
-    purchase = (
-        (totals["total_sales"] or 0)
-        - (totals["total_profit"] or 0)
-        - sum(amount for _, _, amount in selling)
-    )
+    """Expense items for the period, summed from the costs stored on each SaleRecord."""
+    totals = records.aggregate(**{key: Sum(field) for key, _, field in EXPENSE_ITEMS})
     return [
-        {"key": key, "label": label, "amount": amount}
-        for key, label, amount in [
-            ("purchase", "仕入れ費用（仕入れ値・仕入れ送料）", purchase),
-            *selling,
-        ]
+        {"key": key, "label": label, "amount": totals[key] or 0} for key, label, _ in EXPENSE_ITEMS
     ]
 
 
@@ -121,7 +105,8 @@ def seller_outcome_analytics(
     Asia/Tokyo calendar days)."""
     if start and end and start > end:
         raise ValueError("期間の開始日は終了日以前にしてください")
-    records = SaleRecord.objects.filter(seller_listing__user=user)
+    # Owned by the record itself, so sales stay counted after their listing is deleted.
+    records = SaleRecord.objects.filter(user=user)
     if start:
         records = records.filter(sold_at__gte=_local_midnight(start))
     if end:
@@ -147,9 +132,7 @@ def seller_outcome_analytics(
                 "totalProfit": total_profit,
             }
         )
-    low_profit = list(
-        records.select_related("seller_listing").order_by("confirmed_profit", "sold_at", "pk")[:10]
-    )
+    low_profit = list(records.order_by("confirmed_profit", "sold_at", "pk")[:10])
     return {
         "period": {
             "from": start.isoformat() if start else None,
@@ -163,7 +146,7 @@ def seller_outcome_analytics(
             {
                 "id": record.pk,
                 "listingId": record.seller_listing_id,
-                "name": record.seller_listing.name,
+                "name": record.item_name,
                 "category": record.category or "未分類",
                 "salePrice": record.sale_price,
                 "totalExpenses": record.sale_price - record.confirmed_profit,
