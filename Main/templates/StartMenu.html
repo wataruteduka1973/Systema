@@ -23,7 +23,8 @@
 
         {% include 'partials/recommendations.html' %}
 
-        <section class="feature-section">
+        <section class="feature-section" aria-labelledby="featuresHeading">
+            <h2 id="featuresHeading" class="section-label">機能一覧</h2>
             <div class="row row-cols-1 row-cols-sm-2 row-cols-lg-4 g-3">
                 <div class="col">
                     <div class="feature-card">
@@ -86,6 +87,71 @@
                     </div>
                 </div>
             </div>
+            {% if request.user.is_authenticated %}
+            {# Signed-in work areas, under the search and analysis cards. #}
+            <div class="row row-cols-1 row-cols-sm-2 row-cols-lg-4 g-3 mt-1 member-features">
+                <div class="col">
+                    <div class="feature-card">
+                        <div class="icon-badge icon-teal">
+                            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7l9-4 9 4-9 4-9-4z" /><path d="M3 7v10l9 4 9-4V7" /><path d="M12 11v10" /></svg>
+                        </div>
+                        <div>
+                            <h3 class="serif">出品・在庫管理</h3>
+                            <p>仕入れた商品と自分の出品を登録し、費用や見込み利益をまとめて管理します。</p>
+                        </div>
+                        <a href="{% url 'seller_management' %}" class="btn-feature btn-feature-teal">
+                            管理画面へ
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6" /></svg>
+                        </a>
+                    </div>
+                </div>
+                <div class="col">
+                    <div class="feature-card">
+                        <div class="icon-badge icon-gold">
+                            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9" /><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0" /></svg>
+                        </div>
+                        <div>
+                            <h3 class="serif">アラート条件</h3>
+                            <p>保存検索・ウォッチ商品・出品に通知条件を設定し、気になる変化を知らせます。</p>
+                        </div>
+                        <a href="{% url 'alert_rules_page' %}" class="btn-feature btn-feature-gold">
+                            条件を設定する
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6" /></svg>
+                        </a>
+                    </div>
+                </div>
+                <div class="col">
+                    <div class="feature-card">
+                        <div class="icon-badge icon-coral">
+                            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4" /><path d="M4 21a8 8 0 0 1 16 0" /></svg>
+                        </div>
+                        <div>
+                            <h3 class="serif">ユーザーページ</h3>
+                            <p>検索履歴、保存した検索条件、ウォッチ商品をひとつのページで確認できます。</p>
+                        </div>
+                        <a href="{% url 'profile' %}" class="btn-feature btn-feature-coral">
+                            ユーザーページへ
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6" /></svg>
+                        </a>
+                    </div>
+                </div>
+                <div class="col">
+                    <div class="feature-card">
+                        <div class="icon-badge icon-teal">
+                            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12A9 9 0 1 1 12 3v9z" /><path d="M21 12a9 9 0 0 0-9-9" /></svg>
+                        </div>
+                        <div>
+                            <h3 class="serif">販売実績分析</h3>
+                            <p>確定した販売結果から、売上・費用・純利益をカテゴリ別に集計します。</p>
+                        </div>
+                        <a href="{% url 'seller_outcomes_page' %}" class="btn-feature btn-feature-teal">
+                            分析を見る
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6" /></svg>
+                        </a>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
         </section>
     </main>
 {% endblock %}

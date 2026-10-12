@@ -153,3 +153,22 @@ def test_cards_render_escaped_names_safe_images_and_watch_payloads(client):
     assert 'id="recommendationPayloads"' in content
     assert "Recommendations.js" in content
     assert 'rel="noopener noreferrer"' in content
+
+
+MEMBER_PAGES = ("seller_management", "alert_rules_page", "profile", "seller_outcomes_page")
+
+
+def test_member_feature_cards_appear_only_when_signed_in(client):
+    anonymous = client.get(reverse("index")).content.decode("utf-8")
+    assert "機能一覧" in anonymous
+    assert "member-features" not in anonymous
+    for name in MEMBER_PAGES:
+        assert f'href="{reverse(name)}" class="btn-feature' not in anonymous
+
+    client.force_login(_user("member-cards"))
+    signed_in = client.get(reverse("index")).content.decode("utf-8")
+    assert "member-features" in signed_in
+    for name in MEMBER_PAGES:
+        assert f'href="{reverse(name)}" class="btn-feature' in signed_in
+    for title in ("出品・在庫管理", "アラート条件", "ユーザーページ", "販売実績分析"):
+        assert f'<h3 class="serif">{title}</h3>' in signed_in
