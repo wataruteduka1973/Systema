@@ -25,14 +25,14 @@
         <div class="container mb-5">
             <section class="mb-5" aria-labelledby="sellerHeading">
                 <h2 id="sellerHeading" class="h3">自分の出品</h2>
-                <p class="text-muted">Yahooの商品URLを登録し、公開情報を手動更新します。Yahooへの出品操作・ログイン連携は行いません。利益は見込み値です。</p>
+                <p class="text-muted">Yahooの商品URLを登録すると、公開情報（商品名・価格・入札・終了日時）を取得します。以後は「公開情報を更新」で取り直します。Yahooへの出品操作・ログイン連携は行いません。利益は見込み値です。</p>
                 <div id="sellerMessage" class="alert d-none" role="status" aria-live="polite"></div>
                 <details class="card card-body mb-3">
                     <summary class="fw-bold">出品URLを登録</summary>
                     <form id="sellerCreateForm" class="row g-3 mt-1">
                         <div class="col-12"><label for="sellerUrl" class="form-label">Yahooオークション商品URL</label><input id="sellerUrl" name="url" type="url" class="form-control" placeholder="https://auctions.yahoo.co.jp/jp/auction/…" required></div>
                         <div class="col-md-6"><label for="sellerInventory" class="form-label">元の在庫（任意）</label><select id="sellerInventory" name="inventoryItemId" class="form-select"><option value="">紐付けなし</option></select><div class="form-text">在庫を選ぶと商品名と仕入価格をコピーします。</div></div>
-                        <div class="col-md-6"><label for="sellerName" class="form-label">商品名（任意）</label><input id="sellerName" name="name" maxlength="1000" class="form-control"></div>
+                        <div class="col-md-6"><label for="sellerName" class="form-label">商品名（任意）</label><input id="sellerName" name="name" maxlength="1000" class="form-control" aria-describedby="sellerNameHelp"><div id="sellerNameHelp" class="form-text">登録時に公開ページから商品名を取得します。取得できなかった場合はこの名前を使います。</div></div>
                         <div class="col-12"><button class="btn btn-primary" type="submit">出品を登録</button></div>
                     </form>
                 </details>

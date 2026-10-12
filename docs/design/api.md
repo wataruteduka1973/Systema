@@ -210,7 +210,7 @@ Phase 3A implements the inventory endpoints below on the existing v1 path. Phase
 | GET/PATCH/DELETE | `/api/v1/inventory-items/{id}` | 在庫詳細・更新・削除 |
 | POST | `/api/v1/inventory-items/{id}/profit-simulation` | 保存せず出品前の見込み利益を再計算 |
 | POST | `/api/v1/watch-items/{id}/convert-to-inventory` | 本人の購入候補を重複なく仕入済み在庫へ変換 |
-| GET/POST | `/api/v1/seller-listings` | 自分の出品一覧・URL登録 |
+| GET/POST | `/api/v1/seller-listings` | 自分の出品一覧・URL登録（登録直後に公開ページを1回取得。失敗しても登録し、`notice`で再取得を案内） |
 | GET/PATCH/DELETE | `/api/v1/seller-listings/{id}` | 出品詳細・費用/状態更新・削除 |
 | POST | `/api/v1/seller-listings/{id}/refresh` | 公開出品ページを再取得 |
 | GET | `/api/v1/seller-listings/{id}/snapshots` | 価格・入札・見込み利益推移 |

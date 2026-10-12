@@ -2,6 +2,7 @@ import hashlib
 import json
 import logging
 from datetime import date
+from typing import Any
 
 from django.conf import settings
 from django.core.cache import cache
@@ -70,10 +71,10 @@ from Main.services.search_observability import (
 )
 from Main.services.seller_listings import (
     ListingConflictError,
-    create_listing,
     listing_page,
     owned_listing,
     refresh_listing,
+    register_listing,
     save_sale_record,
     serialize_listing,
     serialize_sale_record,
@@ -522,8 +523,11 @@ def seller_listings(request):
                 )
             )
         if request.method == "POST":
-            item = create_listing(request.user, _json_payload(request))
-            return JsonResponse({"data": serialize_listing(item)}, status=201)
+            item, notice = register_listing(request.user, _json_payload(request))
+            body: dict[str, Any] = {"data": serialize_listing(item)}
+            if notice:
+                body["notice"] = notice
+            return JsonResponse(body, status=201)
         return _seller_error("許可されていないメソッドです", "method_not_allowed", 405)
     except SellerListing.DoesNotExist:
         return _seller_error("在庫が見つかりません", "not_found", 404)

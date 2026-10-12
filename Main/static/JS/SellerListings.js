@@ -16,10 +16,11 @@
         node.className = cls;
         return node;
     };
+    // level: false (success), true (error) or 'warning'.
     function message(text, error = false) {
         const node = document.getElementById('sellerMessage');
         node.textContent = text;
-        node.className = `alert ${error ? 'alert-danger' : 'alert-success'}`;
+        node.className = `alert ${error === 'warning' ? 'alert-warning' : error ? 'alert-danger' : 'alert-success'}`;
     }
     async function api(url, method = 'GET', payload) {
         const response = await fetch(url, {
@@ -211,7 +212,7 @@
         if (action.status === 'sale_result_missing' || saleLikely || sale) {
             const saleDetails = el('details');
             saleDetails.id = `seller-${item.id}-sale`;
-            saleDetails.append(el('summary', sale ? '販売結果を確認・修正' : '販売結果を入力'));
+            saleDetails.append(el('summary', sale ? '販売結果を更新' : '販売結果を入力'));
             const saleForm = el('form', '', 'row g-3 mt-1');
             const observedPrice = item.currentPrice ?? null;
             const feeEstimate = observedPrice == null ? 0 : Math.round(observedPrice * Number(item.feeRate || 0));
@@ -297,10 +298,12 @@
                 const payload = Object.fromEntries(new FormData(form));
                 if (!payload.inventoryItemId) delete payload.inventoryItemId;
                 if (!payload.name.trim()) delete payload.name;
-                await api(base, 'POST', payload); form.reset(); page = 1;
+                const result = await api(base, 'POST', payload); form.reset(); page = 1;
                 document.getElementById('sellerStatus').value = '';
                 document.getElementById('sellerAction').value = '';
-                message('出品を登録しました。費用を確認し「公開情報を更新」を押してください。'); await load();
+                if (result.notice) message(result.notice, 'warning');
+                else message(`出品を登録し、公開情報（商品名「${result.data.name}」・価格・入札・終了日時）を取得しました。費用を確認してください。`);
+                await load();
             });
         });
         document.getElementById('sellerStatus').addEventListener('change', () => { page = 1; load(); });
