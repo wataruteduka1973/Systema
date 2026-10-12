@@ -98,3 +98,68 @@ def test_summary_counts_sale_result_for_owner_only(client):
     assert result["data"][0]["id"] == missing.pk
     assert result["summary"]["total"] == 1
     assert result["summary"]["saleResultMissing"] == 1
+
+
+def _ended_listing(user, suffix, *, bidding, status="ended"):
+    return SellerListing.objects.create(
+        user=user,
+        external_listing_id=f"b12345678{suffix}",
+        url=f"https://auctions.yahoo.co.jp/jp/auction/b12345678{suffix}",
+        name=f"終了した出品{suffix}",
+        status=status,
+        acquisition_cost=3000,
+        current_price=9000,
+        bidding=bidding,
+        ends_at=timezone.now() - timedelta(hours=2),
+        last_checked_at=timezone.now(),
+    )
+
+
+def test_ended_listing_with_bids_awaits_a_sale_and_can_be_recorded_directly(client):
+    owner = get_user_model().objects.create_user("ended-owner")
+    with_bids = _ended_listing(owner, 1, bidding=3)
+    without_bids = _ended_listing(owner, 2, bidding=0)
+    marked_sold = make_listing(owner)
+    client.force_login(owner)
+    url = reverse("seller_listings")
+
+    result = client.get(url, {"action": "awaiting_sale"}).json()
+    assert {item["id"] for item in result["data"]} == {with_bids.pk, marked_sold.pk}
+    assert result["summary"]["saleResultMissing"] == 2
+    statuses = {
+        item["id"]: item["actionStatus"]["status"] for item in client.get(url).json()["data"]
+    }
+    assert statuses == {
+        with_bids.pk: "sale_likely",
+        without_bids.pk: "status_check",
+        marked_sold.pk: "sale_result_missing",
+    }
+
+    # Ended is not sold: recording the sale is what marks it sold and counts it.
+    response = client.put(
+        reverse("seller_listing_sale", args=[with_bids.pk]),
+        sale_payload(salePrice=9000),
+        content_type="application/json",
+    )
+    assert response.status_code == 200
+    with_bids.refresh_from_db()
+    assert with_bids.status == "sold"
+    outcomes = client.get(reverse("seller_outcomes")).json()["data"]["summary"]
+    assert outcomes["saleCount"] == 1
+    assert outcomes["totalSales"] == 9000
+
+
+def test_ended_listing_without_bids_can_be_marked_relist(client):
+    owner = get_user_model().objects.create_user("relist-owner")
+    listing = _ended_listing(owner, 3, bidding=0)
+    client.force_login(owner)
+
+    response = client.patch(
+        reverse("seller_listing_item", args=[listing.pk]),
+        {"status": "relist"},
+        content_type="application/json",
+    )
+
+    assert response.status_code == 200
+    assert response.json()["data"]["actionStatus"]["status"] == "relist"
+    assert client.get(reverse("seller_listings"), {"action": "bogus"}).status_code == 400
