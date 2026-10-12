@@ -79,7 +79,7 @@ main {
 }
 
 .hot-picks {
-  max-width: 1040px;
+  max-width: 1200px;
   margin: 0 auto;
   padding: 0 1.5rem 3.5rem;
 }
@@ -149,6 +149,9 @@ main {
   font-weight: 700;
   color: #fdf8f3;
   border: none;
+  text-decoration: none;
+  /* Descriptions differ in length; the button always sits at the bottom so rows line up. */
+  margin-top: auto;
 }
 
 .btn-feature-coral { background: #d9633a; }
@@ -180,4 +183,24 @@ h2.hot-picks-label {
 .hot-picks-empty a {
     color: #c2532c;
     font-weight: 700;
+}
+
+/* Recommendation grid: four per row on desktop (3 x 4 with 12 cards); phones use the
+   horizontal card layout from target-results.css. */
+@media (min-width: 576px) {
+    .hot-picks .target-results {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
+@media (min-width: 992px) {
+    .hot-picks .target-results {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+}
+
+@media (min-width: 1200px) {
+    .hot-picks .target-results {
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+    }
 }

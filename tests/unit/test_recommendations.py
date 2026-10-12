@@ -111,6 +111,8 @@ def test_duplicates_across_saved_searches_keep_the_highest_score_and_limit_appli
     result = select_recommendations([first, second, many], set(), now=NOW, limit=6)
 
     assert len(result) == 6
+    plenty = _pair([_item(f"c{index:08d}") for index in range(15)], name="D")
+    assert len(select_recommendations([plenty], set(), now=NOW)) == 12  # default: 3 rows of 4
     assert result[0].saved_search_name == "B"
     assert result[0].decision_score == 92
 

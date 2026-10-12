@@ -95,6 +95,7 @@ FEATURE_TESTS = {
         "tests/unit/test_yahoo_parser.py",
         "tests/integration/test_top_page_recommendations.py",
         "tests/e2e/test_top_page_recommendations_browser.py",
+        "tests/e2e/test_top_page_layout_browser.py",
     ),
     "ui-layout": (
         "tests/integration/test_page_layout.py",

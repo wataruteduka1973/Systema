@@ -21,7 +21,7 @@ from Main.models.watchitem import WatchItem
 from Main.services.watchlist import is_watchable_url
 
 RECOMMENDED_STATUSES = {"strong_buy", "buy"}
-DEFAULT_LIMIT = 6
+DEFAULT_LIMIT = 12  # three rows of four cards on desktop
 
 
 @dataclass(frozen=True)

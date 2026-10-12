@@ -110,9 +110,11 @@ a.target-result-name:hover {
     color: #b02a37;
 }
 
+/* Columns follow their content so values such as "10/12 22:32" never wrap, even four cards wide. */
 .target-result-facts {
     display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-template-columns: repeat(3, auto);
+    justify-content: space-between;
     gap: .5rem;
     margin: 0;
     padding: .5rem 0 0;
@@ -127,6 +129,7 @@ a.target-result-name:hover {
 
 .target-result-facts dd {
     margin: 0;
+    white-space: nowrap;
     font-weight: 600;
     font-variant-numeric: tabular-nums;
     overflow-wrap: anywhere;
@@ -184,16 +187,6 @@ a.target-result-name:hover {
 
     .target-result-price {
         font-size: 1.2rem;
-    }
-
-    /* Columns follow their content so an end time such as "10/12 22:32" stays on one line. */
-    .target-result-facts {
-        grid-template-columns: repeat(3, auto);
-        justify-content: space-between;
-    }
-
-    .target-result-facts dd {
-        white-space: nowrap;
     }
 
     .target-result-actions {
