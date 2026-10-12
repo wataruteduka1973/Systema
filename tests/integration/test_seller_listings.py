@@ -42,7 +42,7 @@ def fetch(monkeypatch):
     return mock
 
 
-def test_create_copy_inventory_crud_pagination_and_no_network(client, owner, fetch):
+def test_create_copy_inventory_crud_pagination_and_fetch_on_register(client, owner, fetch):
     inventory = InventoryItem.objects.create(user=owner, name="カメラ", acquisition_cost=8000)
     response = client.post(
         reverse("seller_listings"),
@@ -53,8 +53,12 @@ def test_create_copy_inventory_crud_pagination_and_no_network(client, owner, fet
     item = response.json()["data"]
     assert item["acquisitionCost"] == 8000
     assert item["url"] == URL
-    assert item["profit"] is None and item["currentPrice"] is None
-    fetch.assert_not_called()
+    # Registration fetches the public page once: title, price and bids are filled in.
+    fetch.assert_called_once_with(URL)
+    assert item["name"] == "公開商品名"
+    assert item["currentPrice"] == 12000 and item["bidding"] == 3
+    assert "notice" not in response.json()
+    assert SellerListingSnapshot.objects.filter(seller_listing_id=item["id"]).count() == 1
     detail = reverse("seller_listing_item", args=[item["id"]])
     changed = client.patch(
         detail,
@@ -300,3 +304,37 @@ def test_seller_script_is_discoverable_by_django_staticfiles():
     from django.contrib.staticfiles import finders
 
     assert finders.find("JS/SellerListings.js") is not None
+
+
+@pytest.mark.parametrize(
+    "error",
+    [ExternalServiceError("down"), ListingParseError("unreadable")],
+)
+def test_registration_survives_a_failed_fetch_with_a_notice(client, owner, monkeypatch, error):
+    monkeypatch.setattr("Main.services.seller_listings.fetch_listing", Mock(side_effect=error))
+
+    response = client.post(
+        reverse("seller_listings"),
+        {"url": URL, "name": "手入力の名前"},
+        content_type="application/json",
+    )
+
+    assert response.status_code == 201
+    body = response.json()
+    assert body["data"]["name"] == "手入力の名前"
+    assert body["data"]["currentPrice"] is None
+    assert "公開情報を更新" in body["notice"]
+    assert not SellerListingSnapshot.objects.exists()
+
+
+def test_registration_at_the_refresh_limit_still_registers(client, owner, fetch, settings):
+    settings.SELLER_REFRESH_RATE_LIMIT = 1
+    cache.set(f"seller-refresh:{owner.pk}", 1, timeout=60)  # one refresh already used
+
+    response = client.post(
+        reverse("seller_listings"), {"url": URL}, content_type="application/json"
+    )
+
+    assert response.status_code == 201
+    assert "上限" in response.json()["notice"]
+    fetch.assert_not_called()

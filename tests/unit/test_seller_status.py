@@ -82,4 +82,4 @@ def test_urgency_precedes_loss_and_insufficient_costs():
 def test_completed_sale_has_no_missing_result_action():
     result = assess_listing(listing(status="sold"), now=NOW, sale_record_exists=True)
     assert result["status"] == "sold"
-    assert result["nextAction"] == "販売結果を確認"
+    assert result["nextAction"] == "販売結果を更新"

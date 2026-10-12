@@ -68,10 +68,16 @@ def assess_listing(
             "販売結果を入力",
             "落札済みですが、販売価格と実費がまだ記録されていません",
         )
-    if item.status in {"sold", "cancelled", "relist"}:
+    if item.status == "sold":
+        return _result(
+            "sold",
+            "販売結果を更新",
+            "販売結果は記録済みです。金額や日時を直す場合は更新してください",
+        )
+    if item.status in {"cancelled", "relist"}:
         return _result(
             item.status,
-            "販売結果を確認" if item.status == "sold" else "状態を確認",
+            "状態を確認",
             "手動で設定した管理状態です。必要に応じて記録を確認してください",
         )
     stale = item.last_checked_at is None or now - item.last_checked_at >= timedelta(hours=24)

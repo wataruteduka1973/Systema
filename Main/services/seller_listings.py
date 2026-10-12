@@ -22,9 +22,9 @@ from Main.domain.seller_listing import money, normalize_listing_url
 from Main.domain.seller_status import ACTION_LABELS, assess_listing, listing_price
 from Main.models.inventoryitem import InventoryItem
 from Main.models.sellerlisting import SaleRecord, SellerListing, SellerListingSnapshot
-from Main.scraping.seller_listing import fetch_listing
+from Main.scraping.seller_listing import ListingParseError, fetch_listing
 from Main.services.alert_rules import evaluate_seller_alert_rules
-from Main.services.exceptions import SearchRateLimitError
+from Main.services.exceptions import ExternalServiceError, SearchRateLimitError
 
 MONEY_FIELDS = {
     "acquisitionCost": "acquisition_cost",
@@ -315,6 +315,24 @@ def create_listing(user: Any, payload: Mapping[str, Any]) -> SellerListing:
     except IntegrityError as error:
         raise ListingConflictError("この出品はすでに登録されています") from error
     return item
+
+
+def register_listing(user: Any, payload: Mapping[str, Any]) -> tuple[SellerListing, str | None]:
+    """Create a listing, then fetch its public page once so the title, price, bids and end time
+    are filled in right away. A failed fetch keeps the registration and returns a notice."""
+    item = create_listing(user, payload)
+    try:
+        return refresh_listing(user, item.pk), None
+    except SearchRateLimitError:
+        return item, (
+            "出品を登録しました。公開情報の取得回数が上限に達したため、"
+            "しばらくしてから「公開情報を更新」を押してください。"
+        )
+    except (ListingParseError, ExternalServiceError, ListingConflictError):
+        return item, (
+            "出品を登録しました。公開情報を取得できなかったため、"
+            "「公開情報を更新」で取得し直してください。"
+        )
 
 
 @transaction.atomic

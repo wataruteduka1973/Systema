@@ -71,6 +71,9 @@ def test_sale_is_recorded_from_an_ended_listing_and_counted(db_for_e2e, live_ser
             form.locator('[name="actualShippingCost"]').fill("650")
             form.get_by_role("button", name="販売結果を確定").click()
             expect(page.locator("body")).to_contain_text("販売結果を保存しました")
+            card = page.locator("article, .card").filter(has_text="入札ありで終了したカメラ").first
+            expect(card.get_by_role("button", name="販売結果を更新")).to_be_visible()
+            expect(card.locator("summary", has_text="販売結果を更新")).to_be_visible()
 
             other = page.locator("article, .card").filter(has_text="入札なしで終了したレンズ").first
             expect(other).to_contain_text("再出品・見送りを記録")
@@ -92,3 +95,42 @@ def test_sale_is_recorded_from_an_ended_listing_and_counted(db_for_e2e, live_ser
     unsold.refresh_from_db()
     inventory.refresh_from_db()
     assert (sold.status, unsold.status, inventory.status) == ("sold", "cancelled", "sold")
+
+
+def test_registering_a_url_fetches_the_listing_title(db_for_e2e, live_server, monkeypatch):
+    from Main.scraping.seller_listing import ListingObservation
+
+    monkeypatch.setattr(
+        "Main.services.seller_listings.fetch_listing",
+        lambda url: ListingObservation(
+            "公開ページの商品名 ミラーレスカメラ",
+            15000,
+            2,
+            timezone.now() + timedelta(days=2),
+            "active",
+        ),
+    )
+    get_user_model().objects.create_user("register-browser", password="password")
+    with sync_playwright() as playwright:
+        browser = playwright.chromium.launch(headless=True)
+        page = browser.new_page(viewport={"width": 1280, "height": 900})
+        page.set_default_timeout(10_000)
+        try:
+            page.goto(f"{live_server.url}/accounts/login/")
+            page.fill('input[name="username"]', "register-browser")
+            page.fill('input[name="password"]', "password")
+            page.click('button[type="submit"]')
+            page.goto(f"{live_server.url}/taskle/seller-management")
+            page.locator("summary", has_text="出品URLを登録").click()
+            page.fill('input[name="url"]', "https://auctions.yahoo.co.jp/jp/auction/d123456789")
+            page.get_by_role("button", name="出品を登録").click()
+            expect(page.locator("#sellerMessage")).to_contain_text(
+                "商品名「公開ページの商品名 ミラーレスカメラ」"
+            )
+            expect(page.locator("#sellerList")).to_contain_text(
+                "公開ページの商品名 ミラーレスカメラ"
+            )
+            expect(page.locator("#sellerList")).to_contain_text("15,000円")
+        finally:
+            browser.close()
+    assert SellerListing.objects.get().name == "公開ページの商品名 ミラーレスカメラ"
