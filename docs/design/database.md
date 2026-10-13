@@ -141,13 +141,17 @@ until a search finds the listing again.
 | ending_within_minutes | PositiveInteger nullable |
 | sort_order | CharField(30) |
 | is_active | Boolean default=True, indexed |
-| last_run_at | DateTime nullable |
+| refresh_interval_hours | PositiveSmallInteger default=1, choices 1/6/24 |
+| last_run_at | DateTime nullable（最後に取得を試みた時刻。成功・失敗とも更新） |
 | created_at/updated_at | DateTime |
 
 Constraints:
 
 - unique `(user, name)`
 - check `maximum_price IS NULL OR minimum_price <= maximum_price`
+- check `refresh_interval_hours IN (1, 6, 24)`
+
+`0027_saved_search_refresh_interval`は列と制約を追加するだけで、既存行は既定値1（従来どおり毎時）になる。取得状況（最終成功・直近の失敗・次回予定）は`SearchRun`から算出し、列として重複保存しない。
 - 保存条件は常にターゲット分析として実行し、終了時間条件は現在出品側だけに適用
 
 ### 6.2 WatchTag

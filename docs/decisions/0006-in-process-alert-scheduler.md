@@ -36,6 +36,14 @@ requests, and release readiness requires a hard process timeout.
 - The 120-second startup delay and start-time file are per host. A container with an ephemeral
   filesystem runs once about 2 minutes after each deploy.
 
+## Addendum (2026-10-13): per-search intervals
+
+The timer still wakes hourly; it does not get a finer schedule. Instead each saved search has a
+refresh interval of 1, 6 or 24 hours, and `run_alerts` skips searches that are not due, with a
+10-minute tolerance for the timer's drift and a one-hour retry after a failed attempt. This keeps
+one scheduler while reducing Yahoo requests for searches that need only a daily market view. See
+`docs/features/alert-rules.md` (Refresh interval and status).
+
 ## Related Files
 
 - `Main/services/alert_scheduler.py`, `Main/services/job_lock.py`
