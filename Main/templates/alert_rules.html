@@ -9,6 +9,9 @@
         .alert-target-group + .alert-target-group { margin-top: 1.25rem; }
         .alert-target-kind { background: var(--systema-teal-soft); color: #1d5c4c; font-weight: 600; }
         .alert-rule-card.is-paused { opacity: .7; }
+        .refresh-card.has-failure { border-color: var(--systema-coral); background: #fbf1ea; }
+        .refresh-card.is-paused { opacity: .75; }
+        .refresh-card .form-select { width: auto; }
     </style>
 {% endblock %}
 
@@ -37,6 +40,12 @@
                 <div id="alertRuleMessage" class="alert d-none mt-3 mb-0" role="status" aria-live="polite"></div>
             </div>
         </section>
+        <section class="mb-4" aria-labelledby="refreshHeading">
+            <h2 id="refreshHeading" class="h4">保存検索の取得状況</h2>
+            <p class="text-muted small">保存検索ごとに、自動取得の頻度と直近の結果を確認できます。取得に失敗した場合は、頻度に関係なく1時間後に取り直します。</p>
+            <div id="refreshMessage" class="alert d-none" role="status" aria-live="polite"></div>
+            <div id="refreshList" class="d-grid gap-2" aria-live="polite"></div>
+        </section>
         <section aria-labelledby="alertListHeading">
             <h2 id="alertListHeading" class="h4">登録済みの条件</h2>
             <div id="alertRuleList" class="d-grid gap-3" aria-live="polite"></div>
@@ -48,4 +57,5 @@
 {% block scripts %}
     <script src="{% static 'JS/csrf.js' %}?v=20260821-security"></script>
     <script src="{% static 'JS/AlertRules.js' %}?v=20261013-grouped"></script>
+    <script src="{% static 'JS/SavedSearchRefresh.js' %}?v=20261013-refresh"></script>
 {% endblock %}

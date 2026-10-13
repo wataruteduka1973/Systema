@@ -5,10 +5,29 @@ from dataclasses import dataclass
 from typing import Any
 
 from django.db import IntegrityError, transaction
+from django.utils import timezone
 
+from Main.domain.refresh_schedule import REFRESH_INTERVAL_HOURS, is_refresh_due, next_refresh_at
 from Main.models.savedsearch import SavedSearch
+from Main.models.searchrun import SearchRun
 from Main.services.exceptions import SearchInputError
 from Main.services.search_criteria import SearchCriteria
+from Main.services.search_observability import (
+    FAILURE_EXTERNAL_SERVICE,
+    FAILURE_HTML_PARSE,
+    FAILURE_INSUFFICIENT_DATA,
+    FAILURE_NO_DATA,
+    FAILURE_UNEXPECTED,
+)
+
+# Fixed wording only; stored failure codes never carry upstream content.
+FAILURE_REASONS = {
+    FAILURE_EXTERNAL_SERVICE: "ヤフオクに接続できませんでした",
+    FAILURE_HTML_PARSE: "ヤフオクのページを読み取れませんでした",
+    FAILURE_NO_DATA: "検索結果が0件でした",
+    FAILURE_INSUFFICIENT_DATA: "分析に必要なデータが足りませんでした",
+    FAILURE_UNEXPECTED: "予期しないエラーが発生しました",
+}
 
 
 @dataclass(frozen=True)
@@ -69,6 +88,10 @@ def save_saved_search(
     saved_search.ending_within_minutes = criteria.ending_within_minutes
     saved_search.sort_order = criteria.sort_order
     saved_search.is_active = active
+    interval = merged.get("refreshIntervalHours", saved_search.refresh_interval_hours)
+    if isinstance(interval, bool) or interval not in REFRESH_INTERVAL_HOURS:
+        raise SearchInputError("取得頻度は1、6、24時間のいずれかで指定してください")
+    saved_search.refresh_interval_hours = interval
     try:
         with transaction.atomic():
             saved_search.save()
@@ -91,7 +114,57 @@ def serialize_saved_search(saved_search: SavedSearch | None) -> dict[str, Any]:
         "endingWithinMinutes": saved_search.ending_within_minutes,
         "sortOrder": saved_search.sort_order,
         "isActive": saved_search.is_active,
+        "refreshIntervalHours": saved_search.refresh_interval_hours,
+        "refresh": refresh_status(saved_search),
         "lastRunAt": saved_search.last_run_at.isoformat() if saved_search.last_run_at else None,
         "createdAt": saved_search.created_at.isoformat() if saved_search.created_at else None,
         "updatedAt": saved_search.updated_at.isoformat() if saved_search.updated_at else None,
+    }
+
+
+def last_attempt_failed(saved_search: SavedSearch) -> bool:
+    """Whether the newest recorded run of this search failed (it is then retried sooner)."""
+    latest = (
+        SearchRun.objects.filter(saved_search=saved_search, user_id=saved_search.user_id)
+        .only("succeeded")
+        .first()
+    )
+    return latest is not None and not latest.succeeded
+
+
+def is_saved_search_due(saved_search: SavedSearch, now: Any = None) -> bool:
+    return is_refresh_due(
+        now or timezone.now(),
+        saved_search.last_run_at,
+        saved_search.refresh_interval_hours,
+        last_attempt_failed=last_attempt_failed(saved_search),
+    )
+
+
+def _iso(value: Any) -> str | None:
+    return value.isoformat() if value else None
+
+
+def refresh_status(saved_search: SavedSearch) -> dict[str, Any]:
+    """Last success, last failure and the next planned refresh, read from recorded runs."""
+    if saved_search.pk is None:
+        return {}
+    runs = SearchRun.objects.filter(saved_search=saved_search, user_id=saved_search.user_id)
+    success = runs.filter(succeeded=True, search_type=SearchRun.CURRENT).first()
+    failure = runs.filter(succeeded=False).first()
+    failed = last_attempt_failed(saved_search)
+    planned = next_refresh_at(
+        saved_search.last_run_at, saved_search.refresh_interval_hours, last_attempt_failed=failed
+    )
+    return {
+        "lastAttemptAt": _iso(saved_search.last_run_at),
+        "lastAttemptFailed": failed,
+        "lastSuccessAt": _iso(success.created_at if success else None),
+        "lastSuccessItemCount": success.item_count if success else None,
+        "lastFailureAt": _iso(failure.created_at if failure else None),
+        "lastFailureReason": (
+            FAILURE_REASONS.get(failure.failure_code, "取得に失敗しました") if failure else None
+        ),
+        # None while paused, or when the search has never run and the next wake-up takes it.
+        "nextRefreshAt": _iso(planned) if saved_search.is_active else None,
     }

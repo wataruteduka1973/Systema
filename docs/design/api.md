@@ -184,7 +184,7 @@ Responseはsummary差分、condition composition、新規・消失・継続商�
 | GET/PATCH/DELETE | `/api/v1/saved-searches/{id}` | 参照・部分更新・削除 |
 | POST | `/api/v1/saved-searches/{id}/run` | 保存条件を即時実行 |
 
-作成・更新は`name`とSearch Criteriaを受け取る。削除しても過去`SearchRun`は残り、FKはNULLになる。
+作成・更新は`name`とSearch Criteriaを受け取る。任意の`refreshIntervalHours`（整数1・6・24、それ以外と文字列・真偽値は400）で自動取得の頻度を指定し、省略時は既存値（新規は1）を保つ。応答の各保存条件は`refreshIntervalHours`と`refresh`（`lastAttemptAt`、`lastAttemptFailed`、`lastSuccessAt`、`lastSuccessItemCount`、`lastFailureAt`、`lastFailureReason`、`nextRefreshAt`）を含む。`lastFailureReason`は固定の日本語文言だけで、外部の詳細は含まない。`nextRefreshAt`は停止中と未実行の場合`null`。削除しても過去`SearchRun`は残り、FKはNULLになる。
 保存条件は検索種別を受け取らず、即時実行は常にターゲット分析を行う。表示した結果は`SearchRun.result_snapshot`へ保存する。
 ターゲット分析とユーザーページの「作成して実行」は`replaceExisting: true`を付ける。同一所有者・同一キーワード名の条件があれば更新し、続けて`/{id}/run`を呼び出すことで表示結果も保存する。
 

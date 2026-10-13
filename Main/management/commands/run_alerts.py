@@ -31,7 +31,7 @@ from Main.services.market_search import (
 )
 from Main.services.notifications import notify_saved_search_run
 from Main.services.ownership import RequestOwner
-from Main.services.saved_searches import criteria_from_saved_search
+from Main.services.saved_searches import criteria_from_saved_search, is_saved_search_due
 from Main.services.search_persistence import DjangoSearchRepository
 from Main.services.watchlist import refresh_watched_item
 
@@ -97,14 +97,18 @@ class Command(BaseCommand):
             if not searches.exists():
                 raise CommandError("対象の有効な保存検索が見つかりません")
 
-        counts = {"refreshed": 0, "failed": 0, "notifications": 0}
+        counts = {"refreshed": 0, "failed": 0, "notifications": 0, "not_due": 0}
+        now = timezone.now()
         try:
             for saved_search in searches.iterator():
                 before_unit()
                 if options["evaluate_only"]:
                     counts["notifications"] += self._evaluate_latest(saved_search)
-                else:
+                elif options["saved_search_id"] or is_saved_search_due(saved_search, now):
+                    # An explicitly named search runs now; others wait for their interval.
                     self._refresh(saved_search, counts)
+                else:
+                    counts["not_due"] += 1
             # A run scoped to one saved search does not touch unrelated watch or seller targets.
             if not options["saved_search_id"]:
                 self._evaluate_targets(options, counts, before_unit)
@@ -122,7 +126,7 @@ class Command(BaseCommand):
         self.stdout.write(
             self.style.SUCCESS(
                 f"saved_searches_refreshed={counts['refreshed']} failed={counts['failed']} "
-                f"notifications_created={counts['notifications']}"
+                f"notifications_created={counts['notifications']} not_due={counts['not_due']}"
             )
         )
 

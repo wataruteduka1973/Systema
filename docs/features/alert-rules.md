@@ -51,6 +51,24 @@ create a search run or status notification.
 
 The command is the scheduler boundary.
 
+### Refresh interval and status
+
+Each saved search has `refresh_interval_hours` (1, 6 or 24; default 1, so existing searches keep
+the hourly behavior). On a normal run the command refreshes a search only when it is due
+(`Main/domain/refresh_schedule.py`): it has never run, or its interval has passed since
+`last_run_at` minus a 10-minute tolerance (the hourly scheduler starts a little later each time,
+and without the tolerance an hourly search would run every second wake-up). If the newest
+recorded run of the search failed, it is retried one hour after the attempt whatever its interval.
+Searches that are not due are counted as `not_due=N` at the end of the summary line.
+`--saved-search-id` always refreshes the named search, and `--evaluate-only` is unchanged.
+
+The alert page's 「保存検索の取得状況」 lists every saved search (`SavedSearchRefresh.js`) with the
+interval selector, an 自動取得 on/off switch (`isActive`), and 今すぐ取得, which calls the existing
+`/run` endpoint (disabled while paused; a manual run also resets `last_run_at`). Status comes from
+recorded runs: the last successful current run and its listing count, the latest failure with a
+fixed Japanese reason when the newest attempt failed (the card is then highlighted), and the next
+planned time (「停止中」 when paused, 「次の自動実行で取得」 when never run or already overdue).
+
 ## Scheduled execution
 
 With `SYSTEMA_ALERT_SCHEDULER=true` (set by `run_systema.bat`), the web server process starts the
@@ -80,6 +98,8 @@ scheduler; it is started only from `System_Config/wsgi.py` and `asgi.py`. Email 
 - `Main/management/commands/run_alerts.py`, `Main/services/job_lock.py`, `Main/services/alert_scheduler.py`, `Main/management/commands/verify.py`
 - `tests/integration/test_alert_command_usecase.py`, `tests/integration/test_alert_job.py`, `tests/integration/test_alert_rules.py`
 - `tests/e2e/test_alert_rules_browser.py`, `tests/e2e/test_alert_notification_readability_browser.py`, `tests/unit/test_alert_scheduler.py`
+- `Main/domain/refresh_schedule.py`, `Main/services/saved_searches.py`, `Main/static/JS/SavedSearchRefresh.js`, `Main/migrations/0027_saved_search_refresh_interval.py`
+- `tests/unit/test_refresh_schedule.py`, `tests/integration/test_saved_search_refresh_interval.py`, `tests/e2e/test_saved_search_refresh_browser.py`
 - `docs/decisions/0006-in-process-alert-scheduler.md`
 
 ## Verification

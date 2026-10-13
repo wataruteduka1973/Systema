@@ -12,7 +12,16 @@ def _price_range_constraint() -> models.CheckConstraint:
     return models.CheckConstraint(**arguments)
 
 
+def _refresh_interval_constraint() -> models.CheckConstraint:
+    allowed = models.Q(refresh_interval_hours__in=(1, 6, 24))
+    arguments = {"name": "saved_search_valid_refresh_interval"}
+    arguments["condition" if django.VERSION >= (5, 1) else "check"] = allowed
+    return models.CheckConstraint(**arguments)
+
+
 class SavedSearch(models.Model):
+    REFRESH_INTERVAL_CHOICES = ((1, "1時間ごと"), (6, "6時間ごと"), (24, "24時間ごと"))
+
     user = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
@@ -27,6 +36,10 @@ class SavedSearch(models.Model):
     ending_within_minutes = models.PositiveIntegerField(blank=True, null=True)
     sort_order = models.CharField(max_length=30, default="default")
     is_active = models.BooleanField(default=True, db_index=True)
+    # How often the scheduler refreshes this search; see Main/domain/refresh_schedule.py.
+    refresh_interval_hours = models.PositiveSmallIntegerField(
+        choices=REFRESH_INTERVAL_CHOICES, default=1
+    )
     last_run_at = models.DateTimeField(blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -39,6 +52,7 @@ class SavedSearch(models.Model):
         constraints = [
             models.UniqueConstraint(fields=("user", "name"), name="unique_user_saved_search_name"),
             _price_range_constraint(),
+            _refresh_interval_constraint(),
         ]
         verbose_name = "保存検索"
         verbose_name_plural = "保存検索"
