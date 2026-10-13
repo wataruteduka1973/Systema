@@ -4,7 +4,12 @@
 {% block title %}アラート条件 | Systema{% endblock %}
 
 {% block extra_head %}
-    <style>.alert-target-label { overflow-wrap: anywhere; }</style>
+    <style>
+        .alert-target-label { overflow-wrap: anywhere; }
+        .alert-target-group + .alert-target-group { margin-top: 1.25rem; }
+        .alert-target-kind { background: var(--systema-teal-soft); color: #1d5c4c; font-weight: 600; }
+        .alert-rule-card.is-paused { opacity: .7; }
+    </style>
 {% endblock %}
 
 {% block body_attrs %} class="bg-light"{% endblock %}
@@ -42,5 +47,5 @@
 
 {% block scripts %}
     <script src="{% static 'JS/csrf.js' %}?v=20260821-security"></script>
-    <script src="{% static 'JS/AlertRules.js' %}?v=20260910-phase6"></script>
+    <script src="{% static 'JS/AlertRules.js' %}?v=20261013-grouped"></script>
 {% endblock %}

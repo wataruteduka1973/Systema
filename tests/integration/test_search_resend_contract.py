@@ -88,7 +88,7 @@ def _run_concurrently(task, arguments):
 
 
 @pytest.mark.django_db
-def test_resending_a_saved_search_creates_new_runs_and_one_notification_per_run(monkeypatch):
+def test_resending_a_saved_search_creates_new_runs_and_one_daily_update_notification(monkeypatch):
     user = get_user_model().objects.create_user("resend-owner")
     saved = SavedSearch.objects.create(user=user, name="カメラ", keyword="カメラ")
     monkeypatch.setattr(run_alerts, "YahooMarketplaceProvider", _Provider)
@@ -102,14 +102,18 @@ def test_resending_a_saved_search_creates_new_runs_and_one_notification_per_run(
     assert len({run.pk for run in runs}) == 4
     assert all(run.items.count() == 1 for run in runs)
     current_runs = [run for run in runs if run.search_type == SearchRun.CURRENT]
+    # Successful runs fold into one update notification per day instead of one per run.
     notifications = Notification.objects.filter(user=user, event_type="saved_search_succeeded")
-    assert sorted(notifications.values_list("source_id", flat=True)) == sorted(
-        run.pk for run in current_runs
-    )
+    summary = notifications.get()
+    assert summary.source_id == current_runs[-1].pk
+    assert summary.payload["runCount"] == 2
+    assert summary.payload["searches"][str(saved.pk)]["lastRunId"] == current_runs[-1].pk
 
     notify_saved_search_run(current_runs[-1])
 
-    assert notifications.count() == 2
+    summary.refresh_from_db()
+    assert notifications.count() == 1
+    assert summary.payload["runCount"] == 2
 
 
 @postgresql_only

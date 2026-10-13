@@ -8,8 +8,44 @@
     const next = document.getElementById('nextPage');
     const status = document.getElementById('pageStatus');
     const markAll = document.getElementById('markAllRead');
+    const categories = document.getElementById('notificationCategories');
     let page = 1;
+    let category = '';
     let currentItems = [];
+    const yen = value => (Number.isFinite(Number(value)) && value !== null && value !== '' ? `${Number(value).toLocaleString()}円` : '-');
+    const localTime = value => {
+        const date = new Date(value);
+        return Number.isNaN(date.getTime()) ? '-' : date.toLocaleString('ja-JP', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+    };
+    const safeLink = value => (/^https?:\/\//.test(String(value || '')) ? String(value) : '');
+    const safeImage = value => (/^https:\/\/[^/]+\.yimg\.jp\//.test(String(value || '')) ? String(value) : '');
+    const chip = rate => {
+        if (rate === null || rate === undefined || rate === '' || !Number.isFinite(Number(rate))) return '';
+        const value = Number(rate);
+        const position = value <= -15 ? 'below' : value >= 15 ? 'above' : 'near';
+        return `<span class="compare-chip ${position}">相場比 ${value > 0 ? '+' : ''}${escapeHtml(value)}%</span>`;
+    };
+    const candidateHtml = (candidate, itemIndex, candidateIndex) => {
+        const link = safeLink(candidate.url);
+        const image = safeImage(candidate.imageUrl);
+        const name = escapeHtml(candidate.name || '商品名なし');
+        return `
+            <div class="notification-candidate border rounded p-2 mb-2">
+                <div class="candidate-image">${image ? `<img src="${escapeHtml(image)}" alt="" loading="lazy" referrerpolicy="no-referrer">` : '画像なし'}</div>
+                <div class="candidate-body">
+                    ${link ? `<a class="candidate-name" href="${escapeHtml(link)}" target="_blank" rel="noopener noreferrer">${name}</a>` : `<span class="candidate-name">${name}</span>`}
+                    <div class="small text-muted mt-1">現在価格 ${escapeHtml(yen(candidate.currentPrice))} / 相場中央値 ${escapeHtml(yen(candidate.marketMedian))} ${chip(candidate.differenceRate)}</div>
+                    <div class="small text-muted">取得 ${escapeHtml(localTime(candidate.observedAt))}</div>
+                    <button class="btn btn-sm btn-outline-success mt-2 add-watch" type="button" data-item-index="${itemIndex}" data-candidate-index="${candidateIndex}">ウォッチへ登録</button>
+                </div>
+            </div>`;
+    };
+    const updateSummaryHtml = item => {
+        const searches = item.payload?.searches;
+        if (!searches || typeof searches !== 'object') return '';
+        const rows = Object.values(searches).map(entry => `<li>${escapeHtml(entry.name)}：${escapeHtml(entry.itemCount)}件（${escapeHtml(localTime(entry.lastRunAt))}）</li>`).join('');
+        return `<ul class="small text-muted mb-3">${rows}</ul>`;
+    };
 
     const csrf = () => document.cookie.split('; ').find(row => row.startsWith('csrftoken='))?.split('=')[1] || '';
     const escapeHtml = value => String(value).replace(/[&<>'"]/g, character => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[character]));
@@ -33,13 +69,10 @@
             list.innerHTML = '<div class="card"><div class="card-body text-muted">表示する通知はありません。</div></div>';
         } else {
             list.innerHTML = data.items.map((item, itemIndex) => {
-                const candidates = Array.isArray(item.payload?.candidates) ? item.payload.candidates.slice(0, 3) : [];
-                const candidateHtml = candidates.map((candidate, candidateIndex) => `
-                    <div class="border rounded p-2 mb-2">
-                        <div class="small fw-bold">${escapeHtml(candidate.name)}</div>
-                        <div class="small text-muted">現在価格 ${escapeHtml(candidate.currentPrice ?? '-')}円 / 相場中央値 ${escapeHtml(candidate.marketMedian ?? '-')}円 / 更新 ${escapeHtml(candidate.observedAt ?? '-')}</div>
-                        <button class="btn btn-sm btn-outline-success mt-2 add-watch" type="button" data-item-index="${itemIndex}" data-candidate-index="${candidateIndex}">ウォッチへ登録</button>
-                    </div>`).join('');
+                const allCandidates = Array.isArray(item.payload?.candidates) ? item.payload.candidates : [];
+                const candidates = allCandidates.slice(0, 3).map((candidate, candidateIndex) => candidateHtml(candidate, itemIndex, candidateIndex)).join('');
+                const total = Number(item.payload?.candidateCount) || allCandidates.length;
+                const more = total > 3 ? `<p class="small text-muted">ほか${total - 3}件${item.targetUrl ? 'は「確認する」から見られます' : 'があります'}。</p>` : '';
                 return `
                 <article class="card notification-card ${item.isRead ? '' : 'is-unread'}" data-notification-id="${item.id}">
                     <div class="card-body">
@@ -48,7 +81,7 @@
                             <time class="small text-muted" datetime="${escapeHtml(item.createdAt)}">${new Date(item.createdAt).toLocaleString('ja-JP')}</time>
                         </div>
                         <p class="notification-message mb-3">${escapeHtml(item.message)}</p>
-                        ${candidateHtml}
+                        ${updateSummaryHtml(item)}${candidates}${more}
                         <div class="d-flex flex-wrap gap-2">
                             ${item.targetUrl ? `<a class="btn btn-sm btn-primary" href="${escapeHtml(item.targetUrl)}">確認する</a>` : ''}
                             <button class="btn btn-sm btn-outline-secondary toggle-read" type="button" data-read="${item.isRead ? 'false' : 'true'}">${item.isRead ? '未読に戻す' : '既読にする'}</button>
@@ -65,7 +98,9 @@
     const load = async () => {
         message.classList.add('d-none');
         try {
-            render(await request(`/taskle/api/v1/notifications?unreadOnly=${unreadOnly.checked}&page=${page}`));
+            const query = new URLSearchParams({ unreadOnly: String(unreadOnly.checked), page: String(page) });
+            if (category) query.set('category', category);
+            render(await request(`/taskle/api/v1/notifications?${query}`));
         } catch (error) {
             showMessage(error.message, true);
         }
@@ -111,6 +146,18 @@
         }
     });
     unreadOnly.addEventListener('change', () => { page = 1; load(); });
+    categories?.addEventListener('click', event => {
+        const button = event.target.closest('[data-category]');
+        if (!button) return;
+        category = button.dataset.category;
+        categories.querySelectorAll('[data-category]').forEach(other => {
+            const active = other === button;
+            other.classList.toggle('active', active);
+            other.setAttribute('aria-pressed', String(active));
+        });
+        page = 1;
+        load();
+    });
     previous.addEventListener('click', () => { if (page > 1) { page -= 1; load(); } });
     next.addEventListener('click', () => { page += 1; load(); });
     markAll.addEventListener('click', async () => {

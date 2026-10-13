@@ -10,12 +10,24 @@ Phase 5 gives each authenticated user one place to review actionable Systema eve
 - List, read/unread, and read-all operations start from `request.user`. Another user's ID returns 404.
 - The profile page shows only the unread count and a link. The full list is at `/taskle/notifications` to avoid adding more workflow controls to the profile.
 - Watch creation is not a price-drop event. A later lower observation creates one price-drop notification, and ending-soon is emitted at most once per watch per local day.
-- A saved-search request creates a notification for the final `SearchRun`. Failure text exposes only a stable classification and never raw exceptions or upstream content.
+- A failed saved-search run creates its own notification titled with the saved search's name. Failure text exposes only a stable classification and never raw exceptions or upstream content.
+- Successful saved-search runs are routine (the scheduler refreshes hourly), so they fold into one
+  `saved_search_succeeded` notification per user and local day (`saved-search-daily:<date>`). Its
+  payload keeps `runCount` and, per saved search, the name, latest item count, run id and time;
+  `source_id` is the latest run. Re-recording a run already counted is a no-op, and later updates
+  keep the notification's read state so routine refreshes never resurface as unread.
+- Alert notifications are titled `<target name>：<condition>`. Saved-search candidates also carry
+  `imageUrl` (https `*.yimg.jp` only, re-checked in JS) and `differenceRate` (相場比); older payloads
+  without them still render.
+- The page filters by category: `alert` (`alert_*`), `failure` (`saved_search_failed`), `watch`
+  (`watch_*`) and `update` (`saved_search_succeeded`). Candidates show yen with separators, the
+  local observation time, an image, a listing link (http(s) only) and a 相場比 chip; at most three
+  are listed with a count of the rest.
 - `(user, dedupe_key)` is database-unique. Application `get_or_create` handles normal retries and the constraint resolves PostgreSQL races.
 
 ## API
 
-- `GET /taskle/api/v1/notifications?unreadOnly=false&page=1&pageSize=20`
+- `GET /taskle/api/v1/notifications?unreadOnly=false&page=1&pageSize=20[&category=alert|failure|watch|update]` (an unknown category is 400)
 - `PATCH /taskle/api/v1/notifications/{id}` with exactly `{ "read": true|false }`
 - `POST /taskle/api/v1/notifications/read-all`
 
@@ -27,8 +39,8 @@ Mutations use Django session CSRF protection. Page size is 1 through 100. The li
 - `Main/services/notifications.py`, `Main/services/watchlist.py`
 - `Main/views/api.py`, `Main/views/urls.py`, `Main/urls.py`
 - `Main/templates/notifications.html`, `Main/static/JS/Notifications.js`
-- `tests/integration/test_notifications.py`
-- `tests/e2e/test_notifications_browser.py`
+- `tests/integration/test_notifications.py`, `tests/integration/test_notification_cleanup.py`
+- `tests/e2e/test_notifications_browser.py`, `tests/e2e/test_alert_notification_readability_browser.py`
 - `docs/design/api.md`, `docs/design/database.md`
 
 ## Verification

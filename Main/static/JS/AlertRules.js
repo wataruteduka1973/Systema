@@ -25,6 +25,30 @@
         ['loss_risk', '赤字見込み', '赤字額（円）'], ['target_profit', '目標利益到達', '円'],
         ['market_decline', '相場下落', '%'],
     ];
+    // Display unit and the value a new rule starts with ('' means the user must choose, e.g. a price).
+    const ruleInfo = {
+        price_below: {unit: '円', defaultValue: ''}, median_discount: {unit: '%', defaultValue: '20'},
+        ending_soon: {unit: '分', defaultValue: '60'}, low_bids: {unit: '件以下', defaultValue: '0'},
+        buy_score: {unit: '点以上', defaultValue: '70'}, new_listing: {note: 'しきい値は使いません', defaultValue: '0'},
+        within_budget: {note: '費用設定を使います', defaultValue: '0'}, bid_stalled: {unit: '時間', defaultValue: '24'},
+        ending_without_bids: {unit: '分', defaultValue: '60'}, loss_risk: {unit: '円以上の赤字', defaultValue: '0'},
+        target_profit: {unit: '円', defaultValue: ''}, market_decline: {unit: '%', defaultValue: '10'},
+    };
+    const targetNames = {savedSearch: '保存検索', watchItem: 'ウォッチ商品', sellerListing: '出品'};
+    const thresholdText = item => {
+        const info = ruleInfo[item.ruleType] || {};
+        if (info.note) return info.note;
+        const value = Number(item.thresholdValue);
+        const number = Number.isFinite(value) ? value.toLocaleString('ja-JP', {maximumFractionDigits: 4}) : item.thresholdValue;
+        return `${number}${info.unit || ''}`;
+    };
+    const dateText = value => new Date(value).toLocaleString('ja-JP', {month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit'});
+    const applyDefault = () => {
+        if (ruleId.value) return;
+        const value = ruleInfo[ruleType.value]?.defaultValue ?? '0';
+        threshold.value = value;
+        threshold.placeholder = value === '' ? '値を入力' : '';
+    };
     const csrf = () => document.cookie.split('; ').find(row => row.startsWith('csrftoken='))?.split('=')[1] || '';
     const api = async (url, options = {}) => {
         const response = await fetch(url, {...options, headers: {'Content-Type': 'application/json', 'X-CSRFToken': csrf()}});
@@ -52,31 +76,77 @@
     };
     const reset = () => {
         form.reset(); ruleId.value = ''; submit.textContent = '条件を追加'; cancel.classList.add('d-none');
-        targetType.disabled = false; targetId.disabled = false; refreshInputs();
+        targetType.disabled = false; targetId.disabled = false; refreshInputs(); applyDefault();
     };
     const edit = item => {
         ruleId.value = item.id; targetType.value = item.targetType; refreshInputs(); targetId.value = item.targetId;
-        ruleType.value = item.ruleType; threshold.value = item.thresholdValue; cooldown.value = item.cooldownMinutes;
+        ruleType.value = item.ruleType; threshold.value = String(Number(item.thresholdValue)); cooldown.value = item.cooldownMinutes;
         enabled.checked = item.isEnabled; submit.textContent = '変更を保存'; cancel.classList.remove('d-none');
         targetType.disabled = true; targetId.disabled = true; thresholdHelp.textContent = (targetType.value === 'sellerListing' ? sellerRules : buyerRules).find(row => row[0] === ruleType.value)?.[2] || '';
         form.scrollIntoView({behavior: 'smooth', block: 'start'});
     };
+    const element = (tag, className, text) => {
+        const node = document.createElement(tag);
+        if (className) node.className = className;
+        if (text !== undefined) node.textContent = text;
+        return node;
+    };
+    const ruleCard = item => {
+        const card = element('article', `card alert-rule-card${item.isEnabled ? '' : ' is-paused'}`);
+        card.dataset.ruleId = item.id;
+        const body = element('div', 'card-body d-flex flex-wrap justify-content-between align-items-start gap-3');
+        const info = element('div', 'flex-grow-1');
+        info.append(
+            element('h4', 'h6 mb-1', item.ruleLabel),
+            element('p', 'mb-1 alert-rule-threshold', `しきい値：${thresholdText(item)}・通知間隔：${Number(item.cooldownMinutes).toLocaleString('ja-JP')}分`),
+            element('p', 'small text-muted mb-0', item.lastTriggeredAt ? `最終通知：${dateText(item.lastTriggeredAt)}` : 'まだ通知していません'),
+        );
+        const controls = element('div', 'd-flex flex-wrap align-items-center gap-2');
+        const toggleWrap = element('div', 'form-check form-switch mb-0');
+        const toggle = element('input', 'form-check-input');
+        Object.assign(toggle, {type: 'checkbox', id: `alertToggle${item.id}`, checked: item.isEnabled});
+        const toggleLabel = element('label', 'form-check-label', item.isEnabled ? '通知する' : '停止中');
+        toggleLabel.htmlFor = toggle.id;
+        toggle.addEventListener('change', async () => {
+            toggle.disabled = true;
+            try {
+                await api(`/taskle/api/v1/alert-rules/${item.id}`, {method: 'PATCH', body: JSON.stringify({isEnabled: toggle.checked})});
+                show(toggle.checked ? 'アラート条件を再開しました。' : 'アラート条件を停止しました。');
+                await load();
+            } catch (error) { toggle.checked = !toggle.checked; show(error.message, true); toggle.disabled = false; }
+        });
+        toggleWrap.append(toggle, toggleLabel);
+        const editButton = element('button', 'btn btn-sm btn-outline-primary', '編集'); editButton.type = 'button'; editButton.addEventListener('click', () => edit(item));
+        const deleteButton = element('button', 'btn btn-sm btn-outline-danger', '削除'); deleteButton.type = 'button'; deleteButton.addEventListener('click', async () => { deleteButton.disabled = true; try { await api(`/taskle/api/v1/alert-rules/${item.id}`, {method: 'DELETE'}); show('アラート条件を削除しました。'); await load(); } catch (error) { show(error.message, true); deleteButton.disabled = false; } });
+        controls.append(toggleWrap, editButton, deleteButton);
+        body.append(info, controls); card.append(body);
+        return card;
+    };
     const render = items => {
-        if (!items.length) { const empty = document.createElement('div'); empty.className = 'card card-body text-muted'; empty.textContent = 'アラート条件はまだありません。'; list.replaceChildren(empty); return; }
-        list.replaceChildren(...items.map(item => {
-            const card = document.createElement('article'); card.className = 'card';
-            const body = document.createElement('div'); body.className = 'card-body';
-            const title = document.createElement('h3'); title.className = 'h5'; title.textContent = item.ruleLabel;
-            const target = document.createElement('p'); target.className = 'alert-target-label mb-2'; target.textContent = `対象: ${item.targetLabel}`;
-            const detail = document.createElement('p'); detail.className = 'text-muted small'; detail.textContent = `しきい値 ${item.thresholdValue} / 通知間隔 ${item.cooldownMinutes}分 / ${item.isEnabled ? '有効' : '停止中'}`;
-            const actions = document.createElement('div'); actions.className = 'd-flex gap-2';
-            const editButton = document.createElement('button'); editButton.className = 'btn btn-sm btn-outline-primary'; editButton.type = 'button'; editButton.textContent = '編集'; editButton.addEventListener('click', () => edit(item));
-            const deleteButton = document.createElement('button'); deleteButton.className = 'btn btn-sm btn-outline-danger'; deleteButton.type = 'button'; deleteButton.textContent = '削除'; deleteButton.addEventListener('click', async () => { deleteButton.disabled = true; try { await api(`/taskle/api/v1/alert-rules/${item.id}`, {method: 'DELETE'}); show('アラート条件を削除しました。'); await load(); } catch (error) { show(error.message, true); deleteButton.disabled = false; } });
-            actions.append(editButton, deleteButton); body.append(title, target, detail, actions); card.append(body); return card;
+        if (!items.length) { const empty = element('div', 'card card-body text-muted', 'アラート条件はまだありません。'); list.replaceChildren(empty); return; }
+        // One group per target, ordered by target kind and then name, so each target's rules read together.
+        const order = Object.keys(targetNames);
+        const groups = new Map();
+        [...items].sort((a, b) => order.indexOf(a.targetType) - order.indexOf(b.targetType) || String(a.targetLabel).localeCompare(String(b.targetLabel), 'ja') || a.id - b.id)
+            .forEach(item => {
+                const key = `${item.targetType}:${item.targetId}`;
+                if (!groups.has(key)) groups.set(key, []);
+                groups.get(key).push(item);
+            });
+        list.replaceChildren(...[...groups.values()].map(rules => {
+            const section = element('section', 'alert-target-group');
+            const header = element('h3', 'h6 alert-target-label mb-2');
+            header.append(element('span', 'badge alert-target-kind me-2', targetNames[rules[0].targetType] || ''), document.createTextNode(rules[0].targetLabel));
+            const count = element('span', 'text-muted small ms-2', `${rules.length}件`);
+            header.append(count);
+            const stack = element('div', 'd-grid gap-2');
+            stack.append(...rules.map(ruleCard));
+            section.append(header, stack);
+            return section;
         }));
     };
     const load = async () => { try { render((await api('/taskle/api/v1/alert-rules')).items); } catch (error) { show(error.message, true); } };
-    targetType.addEventListener('change', refreshInputs); ruleType.addEventListener('change', refreshInputs); cancel.addEventListener('click', reset);
+    targetType.addEventListener('change', () => { refreshInputs(); applyDefault(); }); ruleType.addEventListener('change', () => { refreshInputs(); applyDefault(); }); cancel.addEventListener('click', reset);
     form.addEventListener('submit', async event => {
         event.preventDefault(); submit.disabled = true;
         const payload = {ruleType: ruleType.value, thresholdValue: threshold.value, cooldownMinutes: cooldown.value, isEnabled: enabled.checked};
@@ -84,5 +154,5 @@
         try { await api(ruleId.value ? `/taskle/api/v1/alert-rules/${ruleId.value}` : '/taskle/api/v1/alert-rules', {method: ruleId.value ? 'PATCH' : 'POST', body: JSON.stringify(payload)}); show(ruleId.value ? 'アラート条件を更新しました。' : 'アラート条件を追加しました。'); reset(); await load(); }
         catch (error) { show(error.message, true); } finally { submit.disabled = false; }
     });
-    refreshInputs(); load();
+    refreshInputs(); applyDefault(); load();
 })();
