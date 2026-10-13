@@ -6,6 +6,7 @@ from django.views.decorators.csrf import ensure_csrf_cookie
 from Main.models.savedsearch import SavedSearch
 from Main.models.sellerlisting import SellerListing
 from Main.models.watchitem import WatchItem
+from Main.services.market_activity import market_activity_for
 from Main.services.recommendations import recommendations_for
 
 MARKET_SEARCH_MODES = {
@@ -23,6 +24,7 @@ def index(request):
         context = {
             "recommendations": section,
             "recommendation_payloads": [item.watch_payload for item in section.items],
+            "market_activity": market_activity_for(request.user),
         }
     return render(request, "StartMenu.html", context)
 

@@ -54,6 +54,9 @@ computed in `MarketSearch.js` from the rows currently shown, so price/condition 
   and opens target analysis with `?budget=<watch id>`.
 - Panel buttons: 出品中の商品を探す / 落札相場を見る switch mode and search the same keyword;
   相場分析で予想を見る opens `/taskle/Deep_Analysis?source=new&keyword=…`.
+- `?keyword=` (from the top page "市場の動き") opens results immediately: in `mode=history` it
+  selects the saved keyword and loads it without contacting Yahoo; in other modes it fills the
+  keyword and runs one search. The parameter is removed from the URL after use.
 - `#closedMarketNote` and `#marketInsights` force `display:none` when `hidden`, because Bootstrap
   `d-flex` otherwise overrides the attribute.
 

@@ -423,7 +423,26 @@
         id('actionHeading').classList.toggle('d-none', state.mode !== 'current');
         setItems([]); clearMessage();
         const url = new URL(window.location.href); url.searchParams.set('mode', state.mode); window.history.replaceState({}, '', url);
-        if (history) loadWords();
+        return history ? loadWords() : Promise.resolve();
+    }
+
+    // トップページの「市場の動き」から ?keyword= 付きで開かれたときは、その結果をすぐ表示する。
+    // 保存済みデータは読み込むだけ（Yahooへは問い合わせない）、それ以外は通常の検索を1回行う。
+    async function openRequestedKeyword(ready) {
+        const url = new URL(window.location.href);
+        const keyword = (url.searchParams.get('keyword') || '').trim();
+        if (!keyword) return;
+        url.searchParams.delete('keyword');
+        window.history.replaceState({}, '', url);
+        await ready;
+        if (state.mode !== 'history') {
+            el.keyword.value = keyword;
+            await externalSearch();
+            return;
+        }
+        el.history.value = keyword;
+        if (el.history.value === keyword) await loadHistory();
+        else message(`${keyword} の保存済みデータが見つかりません。`, 'warning');
     }
 
     document.addEventListener('DOMContentLoaded', () => {
@@ -433,6 +452,6 @@
         el.min.addEventListener('input', filter); el.max.addEventListener('input', filter); el.condition.addEventListener('change', filter); el.sort.addEventListener('change', () => { state.page = 1; filter(); });
         id('resetFilters').addEventListener('click', () => { el.min.value='0';el.max.value='';el.condition.value='';el.sort.value='default';filter(); });
         document.querySelectorAll('.mode-button').forEach(button => button.addEventListener('click', () => activate(button.dataset.mode)));
-        popularWords(); activate(state.mode);
+        popularWords(); openRequestedKeyword(activate(state.mode));
     });
 })();

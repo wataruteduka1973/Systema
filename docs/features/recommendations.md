@@ -40,6 +40,21 @@ The section headings "あなたへのおすすめ" and "機能一覧" share `.se
 ターゲット分析) are always shown, three per row on wide screens. 相場分析 covers the former 価格分析
 and 相場予想 cards (see `price-analysis.md`).
 
+Between the recommendations and "機能一覧", signed-in users get "市場の動き"
+(`partials/market_activity.html`, `Main/services/market_activity.py`). It reads only their saved
+search runs (successful, with items; the newest 300 are scanned) and never contacts Yahoo:
+
+- 最近検索したキーワード: up to six distinct keywords from closed/current runs, newest first. A
+  keyword with saved closed data links to `market-search?mode=history&keyword=…` (loads saved data,
+  no external request); one with only current runs links to `mode=current&keyword=…` (one search).
+- 相場が動いたキーワード: for keywords with two or more saved closed runs (up to 20), the newest
+  run's median is compared with the previous run's. Changes of 5% or more are listed, largest first
+  (at most four), with ▲/▼, the percentage and both medians, so direction is not colour-only. The
+  empty state says whether nothing moved or nothing is comparable yet.
+- With no runs at all, a one-line hint links to market search.
+
+Automatic periodic refresh of saved keywords belongs to alert rules, not this section.
+
 Signed-in users also get a second row (`.member-features`) linking to:
 - 出品・在庫管理 (`seller_management`)
 - アラート条件 (`alert_rules_page`)
@@ -70,12 +85,14 @@ up.
 - `Main/views/urls.py` (`index`)
 - `Main/templates/StartMenu.html`
 - `Main/templates/partials/recommendations.html`
+- `Main/services/market_activity.py`, `Main/templates/partials/market_activity.html`
 - `Main/static/JS/Recommendations.js`
 - `Main/static/CSS/start-menu.css`, `Main/static/CSS/target-results.css`
 - `Main/scraping/yahoo.py`, `Main/infrastructure/marketplaces/yahoo.py`, `Main/services/market_search.py`
 - `tests/unit/test_recommendations.py`
 - `tests/unit/test_listing_images.py`
 - `tests/integration/test_top_page_recommendations.py`
+- `tests/integration/test_market_activity.py`, `tests/e2e/test_top_page_market_activity_browser.py`
 - `tests/e2e/test_top_page_recommendations_browser.py`
 
 Verification: `python manage.py verify --feature recommendations`.

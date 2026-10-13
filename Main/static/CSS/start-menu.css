@@ -203,3 +203,70 @@ main {
         grid-template-columns: repeat(4, minmax(0, 1fr));
     }
 }
+
+/* "市場の動き": recent keywords and market moves, linking into market search. */
+.market-activity {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 1.5rem 3.5rem;
+}
+
+.activity-card {
+  background: #fdfaf6;
+  border: 1px solid #ddd3c5;
+  border-radius: 14px;
+  padding: 1.25rem 1.4rem;
+  height: 100%;
+}
+
+.activity-card h3 {
+  font-size: 1.05rem;
+  font-weight: 600;
+  margin-bottom: 0.75rem;
+}
+
+.activity-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.activity-list li {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.25rem 0.75rem;
+  padding: 0.55rem 0;
+  border-top: 1px solid #ece3d6;
+}
+
+.activity-list li:first-child { border-top: 0; }
+
+.activity-list a {
+  color: #362f28;
+  font-weight: 600;
+  text-decoration: none;
+  overflow-wrap: anywhere;
+}
+
+.activity-list a:hover { color: #c2532c; text-decoration: underline; }
+
+.activity-meta,
+.activity-empty {
+  font-size: 0.8rem;
+  color: #7a6f63;
+}
+
+.activity-meta { flex-basis: 100%; }
+.activity-empty { margin: 0; }
+
+.activity-change {
+  font-size: 0.8rem;
+  font-weight: 700;
+  border-radius: 999px;
+  padding: 0.05rem 0.55rem;
+  border: 1px solid #ddd3c5;
+}
+
+.activity-change.is-up { background: #f6ddd6; border-color: #c2532c; color: #7a2a1c; }
+.activity-change.is-down { background: #cdeee2; border-color: #2f8f78; color: #1d5c4c; }

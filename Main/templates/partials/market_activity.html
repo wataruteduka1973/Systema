@@ -1,0 +1,46 @@
+{# Top-page entry points into market search (services/market_activity.py); signed-in users only. #}
+<section class="market-activity" aria-labelledby="marketActivityHeading">
+    <h2 id="marketActivityHeading" class="section-label">市場の動き</h2>
+    {% if not market_activity.recent %}
+    <p class="hot-picks-empty">
+        市場検索で検索すると、最近のキーワードと相場の変化をここに表示します。
+        <a href="{% url 'market_search' %}?mode=closed">市場検索を開く</a>
+    </p>
+    {% else %}
+    <div class="row row-cols-1 row-cols-lg-2 g-3">
+        <div class="col">
+            <div class="activity-card" id="recentKeywords">
+                <h3 class="serif">最近検索したキーワード</h3>
+                <ul class="activity-list">
+                    {% for entry in market_activity.recent %}
+                    <li>
+                        <a href="{% url 'market_search' %}?mode={{ entry.mode }}&amp;keyword={{ entry.keyword|urlencode }}">{{ entry.keyword }}</a>
+                        <span class="activity-meta">{{ entry.searched_at|date:"n/j H:i" }}・{% if entry.mode == 'history' %}保存データを表示{% else %}出品中を検索{% endif %}</span>
+                    </li>
+                    {% endfor %}
+                </ul>
+            </div>
+        </div>
+        <div class="col">
+            <div class="activity-card" id="marketMoves">
+                <h3 class="serif">相場が動いたキーワード</h3>
+                {% if market_activity.moves %}
+                <ul class="activity-list">
+                    {% for move in market_activity.moves %}
+                    <li>
+                        <a href="{% url 'market_search' %}?mode=history&amp;keyword={{ move.keyword|urlencode }}">{{ move.keyword }}</a>
+                        <span class="activity-change is-{{ move.direction }}">{% if move.direction == 'up' %}▲ +{% else %}▼ {% endif %}{{ move.change_percent }}%</span>
+                        <span class="activity-meta">落札中央値 {{ move.previous_median|floatformat:"0g" }}円 → {{ move.latest_median|floatformat:"0g" }}円（{{ move.previous_at|date:"n/j" }}→{{ move.latest_at|date:"n/j" }}）</span>
+                    </li>
+                    {% endfor %}
+                </ul>
+                {% elif market_activity.comparable_count %}
+                <p class="activity-empty">前回の保存から5%以上動いたキーワードはありません。</p>
+                {% else %}
+                <p class="activity-empty">同じキーワードの落札相場を2回以上保存すると、前回からの変化をここに表示します。</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</section>

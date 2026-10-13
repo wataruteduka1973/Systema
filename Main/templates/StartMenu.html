@@ -4,7 +4,7 @@
 {% block title %}情報分析ツール システマ{% endblock %}
 
 {% block extra_head %}
-    <link href="{% static 'CSS/start-menu.css' %}" rel="stylesheet">
+    <link href="{% static 'CSS/start-menu.css' %}?v=20261013-activity" rel="stylesheet">
     <link href="{% static 'CSS/target-results.css' %}" rel="stylesheet">
 {% endblock %}
 
@@ -22,6 +22,7 @@
         </section>
 
         {% include 'partials/recommendations.html' %}
+        {% if request.user.is_authenticated %}{% include 'partials/market_activity.html' %}{% endif %}
 
         <section class="feature-section" aria-labelledby="featuresHeading">
             <h2 id="featuresHeading" class="section-label">機能一覧</h2>
