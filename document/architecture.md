@@ -4,22 +4,31 @@
 
 - `Main/views/urls.py`: HTML画面を返すビュー
 - `Main/views/api.py`: HTTPリクエストの検証とJSONエンドポイント
-- `Main/views/utils.py`: 検索、保存、分析処理
-- `Main/scraping/yahoo.py`: Yahoo!オークションHTMLの抽出と正規化
-- `Main/models/`: 検索結果、検索語、エラーログのモデル
-- `Main/templates/`: Djangoテンプレート
-- `Main/static/`: JavaScript、CSS、画像
+- `Main/views/utils.py`: 従来からの検索・保存処理（新しい処理はサービス層へ置く）
+- `Main/services/`: 市場検索、ターゲット分析、ウォッチリスト、仕入れ予算、出品・販売実績、アラート、通知、スケジューラーなどのアプリケーション処理
+- `Main/domain/`: 商品状態の判定、買い時判定、利益計算、取得スケジュールなどの規則
+- `Main/infrastructure/marketplaces/`: Yahoo!オークションへの取得（URL組み立て、再試行、検証）
+- `Main/scraping/`: Yahoo!オークションHTMLの抽出と正規化
+- `Main/models/`: 検索実行・取得結果、保存検索、ウォッチ、在庫・出品・販売記録、アラート、通知、エラーログ
+- `Main/management/commands/`: `run_alerts`（保存検索の取得とアラート判定）、`verify`（検査一式）
+- `Main/templates/`, `Main/static/`: Djangoテンプレート、JavaScript、CSS、画像
 - `System_Config/`: Django設定とルーティング
 
 ## データフロー
 
 1. ブラウザが `/taskle/` 配下の画面を開きます。
-2. JavaScriptがJSONエンドポイントへ検索条件を送信します。
-3. APIビューが入力を検証し、ユーティリティ層へ処理を委譲します。
-4. スクレイパーが外部HTMLを取得し、パーサーが共通形式へ正規化します。
-5. 必要に応じてSQLiteへの保存やNumPy・scikit-learnによる分析を行います。
-6. JSONを受け取ったフロントエンドが表やグラフを更新します。
+2. JavaScriptがJSONエンドポイントへ検索条件や操作を送信します。
+3. APIビューが入力と所有者を検証し、サービス層へ処理を委譲します。
+4. 外部検索はマーケットプレイスの取得層がHTMLを取得し、パーサーが共通形式へ正規化します。
+5. 検索結果は検索実行（`SearchRun`）ごとに保存し、pandasで統計・予想を計算します。
+6. JSONを受け取ったフロントエンドが表・カード・グラフを更新します。
+
+## 定期実行
+
+`run_systema.bat` で起動したサーバーの中で、アプリ内スケジューラーが1時間ごとに `manage.py run_alerts` を実行します。保存検索は設定した頻度（1・6・24時間）で取得し、失敗した場合は1時間後に再試行します。同時に2つのジョブは動かず、時間の上限を超えると打ち切ります。
 
 ## 保守境界
 
-外部HTMLの変更は `Main/scraping/yahoo.py` に閉じ込め、APIレスポンス形式や分析処理へ波及させないことを基本方針とします。公開APIの項目を変更するときは、フロントエンドとAPIテストも同時に更新します。
+- 外部HTMLの変更は取得層とパーサーに閉じ込め、APIの応答形式や分析処理へ波及させません。
+- 保存検索、取得結果、ウォッチ、在庫・出品・販売記録、アラート、通知は所有者ごとに分け、他の利用者のデータは扱いません。
+- 公開APIの項目を変更するときは、フロントエンドとテストも同時に更新します。
