@@ -56,6 +56,9 @@ The grid is responsive: about four cards per row on desktop, and on phones (<576
 card with a 104px image so several listings fit on one screen. Card text is set with
 `textContent`, and listing links accept only http(s) URLs.
 
+Opening the page with `?budget=<watch id>` (market search's 仕入れ予算 button) opens that owned
+watch item's purchase-budget editor once the watchlist has loaded; unknown ids are ignored.
+
 The result header and the empty-result message appear only after a search; reloading the
 watchlist re-renders cards (watch state) only once a result exists.
 

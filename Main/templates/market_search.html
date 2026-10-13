@@ -10,10 +10,25 @@
         .mode-button { border-radius:.75rem;padding:.85rem 1.25rem;font-weight:600 }.mode-button[aria-selected="true"] { background:#c2532c;border-color:#c2532c;color:#fff }
         .content-card { background:#fff;border:1px solid #ddd3c5;border-radius:1rem;box-shadow:0 8px 28px rgba(23,32,51,.07) }.summary-card { border-left:5px solid #c2532c }
         .table-responsive { min-height:240px }#resultTable th { white-space:nowrap }
+        .insight-tile { background:var(--systema-surface);border:1px solid var(--systema-border);border-radius:.75rem;padding:.75rem 1rem;height:100% }
+        .insight-tile .value { font-size:1.3rem;font-weight:700 }
+        .distribution { display:flex;align-items:flex-end;gap:2px;height:180px;border-bottom:1px solid var(--systema-border);padding-top:1.5rem }
+        .distribution-bin { flex:1 1 0;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:100%;min-width:0 }
+        .distribution-bin .count { font-size:.75rem;color:var(--systema-muted) }
+        .distribution-bin .bar { width:100%;max-width:24px;background:#0f8a70;opacity:.35;border-radius:4px 4px 0 0 }
+        .distribution-bin.core .bar { opacity:1 }
+        .distribution-labels { display:flex;gap:2px }
+        .distribution-labels span { flex:1 1 0;min-width:0;font-size:.7rem;color:var(--systema-muted);text-align:center;overflow-wrap:anywhere }
+        .bid-mark { display:inline-block;font-size:.7rem;font-weight:700;color:var(--systema-text) }
+        .compare-chip { display:inline-block;border-radius:999px;padding:.1rem .55rem;font-size:.8rem;font-weight:600;border:1px solid var(--systema-border);white-space:nowrap }
+        .compare-chip.below { background:var(--systema-teal-soft);border-color:var(--systema-teal);color:#1d5c4c }
+        .compare-chip.above { background:var(--systema-coral-soft);border-color:var(--systema-coral);color:#7a2a1c }
+        .row-actions { display:flex;flex-wrap:wrap;gap:.25rem }
+        #closedMarketNote[hidden],#marketInsights[hidden] { display:none !important }
     </style>
 {% endblock %}
 
-{% block body_attrs %} data-active-mode="{{ active_mode }}"{% endblock %}
+{% block body_attrs %} data-active-mode="{{ active_mode }}" data-authenticated="{{ request.user.is_authenticated|yesno:'true,false' }}"{% endblock %}
 
 {% block content %}
     <main>
@@ -37,8 +52,25 @@
                 <div class="col-6 col-md-3"><label class="form-label" for="sortOrder">並び順</label><select id="sortOrder" class="form-select"><option value="default">取得順</option><option value="price-asc">終了／現在価格が安い順</option><option value="price-desc">終了／現在価格が高い順</option><option value="startPrice-asc">開始価格が安い順</option><option value="startPrice-desc">開始価格が高い順</option><option value="bidding-asc">入札数が少ない順</option><option value="bidding-desc">入札数が多い順</option></select></div>
                 <div class="col-12 d-flex justify-content-end"><button id="resetFilters" class="btn btn-outline-secondary px-4">条件をリセット</button></div>
             </div></section>
+            <section id="marketInsights" class="content-card p-3 p-md-4 mb-4" aria-labelledby="insightHeading" hidden>
+                <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+                    <h2 id="insightHeading" class="h5 mb-0">相場の要約</h2>
+                    <div id="insightActions" class="d-flex flex-wrap gap-2"></div>
+                </div>
+                <div id="insightTiles" class="row g-2 mb-3"></div>
+                <div id="closedMarketNote" class="alert alert-secondary d-flex flex-wrap align-items-center gap-2 py-2" hidden></div>
+                <div id="distributionPanel">
+                    <h3 class="h6 mb-1">価格の分布</h3>
+                    <p class="small text-muted mb-0" id="distributionNote"></p>
+                    <div id="priceDistribution" class="distribution" role="img"></div>
+                    <div id="distributionLabels" class="distribution-labels mt-1" aria-hidden="true"></div>
+                    <details class="mt-2 small"><summary>表で見る</summary>
+                        <table class="table table-sm mb-0 mt-2" id="distributionTable"><thead><tr><th>価格帯</th><th>件数</th><th>入札数の合計</th></tr></thead><tbody></tbody></table>
+                    </details>
+                </div>
+            </section>
             <section class="content-card p-3 p-md-4"><div class="summary-card bg-light rounded p-3 mb-3"><div id="resultSummary" class="fw-bold">検索条件を入力してください。</div><div id="resultDetail" class="small text-muted mt-1"></div></div>
-                <div class="table-responsive"><table id="resultTable" class="table table-striped table-hover align-middle"><thead><tr><th>商品名</th><th id="priceHeading">価格</th><th>開始価格</th><th>入札数</th><th id="timeHeading">取得情報</th><th>商品状態</th><th>URL</th></tr></thead><tbody></tbody></table></div>
+                <div class="table-responsive"><table id="resultTable" class="table table-striped table-hover align-middle"><thead><tr><th>商品名</th><th id="priceHeading">価格</th><th>開始価格</th><th>入札数</th><th id="timeHeading">取得情報</th><th>商品状態</th><th id="compareHeading">相場比</th><th>URL</th><th id="actionHeading" class="d-none">操作</th></tr></thead><tbody></tbody></table></div>
                 <nav aria-label="検索結果ページ"><ul id="resultPagination" class="pagination justify-content-center mb-0"></ul></nav>
             </section>
         </div>
@@ -47,5 +79,5 @@
 
 {% block scripts %}
     <script src="{% static 'JS/csrf.js' %}?v=20260821-security"></script>
-    <script src="{% static 'JS/MarketSearch.js' %}?v=20260821-unified"></script>
+    <script src="{% static 'JS/MarketSearch.js' %}?v=20261013-insights"></script>
 {% endblock %}

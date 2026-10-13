@@ -46,9 +46,19 @@ document.addEventListener("DOMContentLoaded", function () {
 
         });
 
-    loadWatchlist();
+    loadWatchlist().then(openRequestedBudget);
 
 });
+
+// 市場検索の「仕入れ予算」から ?budget=<ウォッチID> で開かれたときは、その商品の試算を開く。
+function openRequestedBudget() {
+    const watchId = new URLSearchParams(window.location.search).get('budget');
+    const editor = document.getElementById('purchaseBudgetEditor');
+    const item = watchlistItems.find(entry => String(entry.id) === watchId);
+    if (!watchId || !editor || !item) return;
+    window.openPurchaseBudget(item);
+    editor.scrollIntoView({ block: 'start' });
+}
 // 検索ボタンのクリックイベント
 function TargetSearch() {
     const searchKeyword = document.getElementById("search").value.trim();
