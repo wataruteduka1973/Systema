@@ -19,6 +19,14 @@ def _migrate(targets):
     return executor.loader.project_state(targets).apps
 
 
+@pytest.fixture(autouse=True)
+def _restore_latest_schema():
+    """Leave the database at the newest migrations, so later tests see every column."""
+    yield
+    executor = MigrationExecutor(connection)
+    executor.migrate(executor.loader.graph.leaf_nodes())
+
+
 def test_backfill_copies_owner_snapshot_and_splits_exact_purchase_cost():
     old = _migrate(BEFORE)
     user = old.get_model("auth", "User").objects.create(username="ledger-owner")
