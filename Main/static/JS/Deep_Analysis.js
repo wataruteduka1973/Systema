@@ -22,6 +22,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
         const url = new URL(window.location.href);
         if (source === 'new') url.searchParams.set('source', 'new'); else url.searchParams.delete('source');
+        url.searchParams.delete('keyword');
         window.history.replaceState(null, '', url);
     }
 
@@ -72,8 +73,15 @@ document.addEventListener('DOMContentLoaded', () => {
             clearResults();
         });
     });
-    setSource(new URLSearchParams(window.location.search).get('source') === 'new' ? 'new' : 'history');
-    refreshSearchWordDropdown();
+    const query = new URLSearchParams(window.location.search);
+    setSource(query.get('source') === 'new' ? 'new' : 'history');
+    refreshSearchWordDropdown().then(() => {
+        // 市場検索の「相場分析で予想を見る」から来たときは、そのキーワードの予想をすぐ表示する。
+        const keyword = query.get('source') === 'new' ? (query.get('keyword') || '').trim() : '';
+        if (!keyword) return;
+        searchInput.value = keyword;
+        predictNewKeyword();
+    });
     window.SystemaPrediction.loadPopularWords(searchInput);
 
     analyzeButton.addEventListener('click', () => {

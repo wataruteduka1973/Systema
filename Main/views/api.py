@@ -25,6 +25,7 @@ from Main.services.alert_rules import (
     save_alert_rule,
     serialize_alert_rule,
 )
+from Main.services.closed_market import compare_with_closed_market, saved_closed_market
 from Main.services.error_logging import persist_client_error
 from Main.services.exceptions import (
     ExternalServiceError,
@@ -220,6 +221,11 @@ def handle_search_response(
                 "conditionSummary": summarize_condition_market(enriched_items),
                 "marketStatistics": market_statistics,
             }
+            if search_type == SearchRun.CURRENT:
+                # Current prices are judged against the owner's saved closed market, not each other.
+                closed_market = saved_closed_market(get_request_owner(request), searchname)
+                response_data["closedMarket"] = closed_market
+                response_data["data"] = compare_with_closed_market(enriched_items, closed_market)
         update_search_run_observability(search_run, duration_ms=timer.elapsed_ms())
         return JsonResponse(response_data)
     except ExternalServiceError as error:

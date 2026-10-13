@@ -22,7 +22,8 @@ whose price-trend charts overlapped.
 - After a new-keyword prediction, このキーワードを保存 stores the keyword through
   `update_market_data` (one closed search), switches to the history tab with it selected, and shows
   its stored summary. It is hidden when the keyword is already saved.
-- Switching tabs by hand clears the shown results. `?source=new` opens the new-keyword tab;
+- Switching tabs by hand clears the shown results. `?source=new` opens the new-keyword tab, and
+  `?source=new&keyword=…` (market search's 相場分析で予想を見る) also runs that prediction once;
   `/taskle/Yahuoku_prediction` redirects there so old links keep working.
 
 Word cloud and duplicated price-distribution charts are not part of this feature.

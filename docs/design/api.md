@@ -32,6 +32,7 @@
 - エラーは`{"error": "message", "code": "machine_code"}`または`{"error": "message"}`で統一されていない。
 - ページングはなく、検索取得数と画面側ページングに依存する。
 - `perform_search`等はGETだが外部アクセスとDB書込みを伴う。
+- `RealtimeSearch`は追加で`closedMarket`（本人の最新の成功した保存済み落札検索の`median`/`q1`/`q3`/`count`/`searchedAt`、無ければ`null`）と、各商品の`closedMarketComparison`（`marketComparison`と同じ形・同じ±15%規則で落札中央値と比較、無ければ`null`）を返す。保存データだけを読み、Yahooへ追加アクセスしない。既存の`marketComparison`（出品同士の中央値比較）は変更しない。
 
 ## 3. Compatibility Strategy
 
