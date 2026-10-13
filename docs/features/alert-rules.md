@@ -23,6 +23,14 @@ Phase 6 turns persisted market observations into owner-scoped, configurable in-a
 
 The page supports create, edit, stop/resume through `isEnabled`, and delete. All mutations use session CSRF protection.
 
+Registered rules are grouped by target (kind badge, name and rule count; saved searches, then
+watches, then listings). Each rule shows its threshold with a unit (`25,000円`, `20%`, `60分`;
+conditions without a threshold say so), the cooldown, and the last notification time or
+「まだ通知していません」. A switch on each rule toggles `isEnabled` with a partial PATCH. When creating a
+rule, choosing a condition fills a suggested threshold (e.g. 割安率 20%, 終了まで 60分, 買い時点数 70,
+入札停滞 24時間, 相場下落 10%); price and target-profit conditions start empty so the user must enter
+an amount. Notification titles name the target and condition (`<name>：<condition>`).
+
 ## Manual execution
 
 `python manage.py run_alerts` refreshes active saved searches, records their normal search results, evaluates saved-search rules, and evaluates persisted watch and seller observations. `--evaluate-only` never calls Yahoo and evaluates each saved search's latest current-listing run only when it succeeded (a newer failed run suppresses evaluation). `--user-id` and `--saved-search-id` (positive IDs) narrow the run; a `--saved-search-id` run does not evaluate watches or sellers.
@@ -32,8 +40,8 @@ Only one job runs at a time (PostgreSQL advisory lock; local SQLite uses `.local
 Scheduled refresh calls the same HTTP-independent target-search use case as the web flow. The
 command passes the authenticated owner, saved criteria, Yahoo provider, repository, `scheduled`
 trigger, and saved-search reference directly. It does not construct an `HttpRequest` or import a
-view. Only active searches owned by active users are refreshed. A successful current run produces
-one saved-search status notification and one alert-rule evaluation; a partial or complete failure
+view. Only active searches owned by active users are refreshed. A successful current run is
+counted in the owner's daily update notification and gets one alert-rule evaluation; a partial or complete failure
 records and notifies the failed run without evaluating saved-search alert rules.
 
 Invalid stored criteria fail only that saved search: the command reports the exception class,
@@ -71,7 +79,7 @@ scheduler; it is started only from `System_Config/wsgi.py` and `asgi.py`. Email 
 - `Main/templates/notifications.html`, `Main/static/JS/Notifications.js`
 - `Main/management/commands/run_alerts.py`, `Main/services/job_lock.py`, `Main/services/alert_scheduler.py`, `Main/management/commands/verify.py`
 - `tests/integration/test_alert_command_usecase.py`, `tests/integration/test_alert_job.py`, `tests/integration/test_alert_rules.py`
-- `tests/e2e/test_alert_rules_browser.py`, `tests/unit/test_alert_scheduler.py`
+- `tests/e2e/test_alert_rules_browser.py`, `tests/e2e/test_alert_notification_readability_browser.py`, `tests/unit/test_alert_scheduler.py`
 - `docs/decisions/0006-in-process-alert-scheduler.md`
 
 ## Verification

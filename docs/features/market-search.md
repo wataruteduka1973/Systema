@@ -23,8 +23,9 @@ Search closed auctions, current listings, or saved snapshots through one screen.
   another transaction committed in between (a returned success would vanish). Concurrent saves can
   briefly exceed the limit by the number of concurrent saves; the next save converges it.
 - Until X1 introduces `acquisition_id` (ADR 0003), every execution, including a resend of the same
-  criteria, is a new observation with its own `SearchRun` and rows. Notifications are deduplicated
-  per run. `tests/integration/test_search_resend_contract.py` fixes this contract, with PostgreSQL
+  criteria, is a new observation with its own `SearchRun` and rows. A successful run is counted
+  once in the owner's daily update notification (a re-recorded run is not counted again); a failed
+  run has its own notification (`notifications.md`). `tests/integration/test_search_resend_contract.py` fixes this contract, with PostgreSQL
   concurrency cases.
 - Marketplace acquisition uses `MarketplaceProvider` and normalized
   `MarketListingObservation` values. Yahoo URL construction, HTTP retrieval, parser coordination,

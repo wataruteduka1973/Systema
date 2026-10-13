@@ -44,7 +44,7 @@ def test_alert_rule_create_edit_delete_at_mobile_width(db_for_e2e, live_server):
             page.get_by_role("button", name="変更を保存").click()
             page.get_by_text("アラート条件を更新しました。").wait_for()
             # The list reloads asynchronously after the success message is shown.
-            expect(page.locator("#alertRuleList")).to_contain_text("3500")
+            expect(page.locator("#alertRuleList")).to_contain_text("3,500円")
 
             page.get_by_role("button", name="削除").click()
             page.get_by_text("アラート条件はまだありません。").wait_for()

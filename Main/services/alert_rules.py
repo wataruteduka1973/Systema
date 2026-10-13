@@ -11,6 +11,7 @@ from django.db import transaction
 from django.urls import reverse
 from django.utils import timezone
 
+from Main.domain.listing_image import safe_image_url
 from Main.domain.purchase_budget import calculate_budget
 from Main.models.alertrule import AlertRule
 from Main.models.purchasebudget import CostSettings
@@ -176,6 +177,15 @@ def _ready(rule: AlertRule, now: Any) -> bool:
     )
 
 
+def _alert_title(rule: AlertRule) -> str:
+    """Name the target and the condition so notifications can be told apart in a list."""
+    target = rule.saved_search or rule.watch_item or rule.seller_listing
+    name = str(getattr(target, "name", "") or "")
+    if len(name) > 60:
+        name = f"{name[:59]}…"
+    return f"{name}：{rule.get_rule_type_display()}"[:200]
+
+
 def _emit(
     rule: AlertRule,
     *,
@@ -188,7 +198,7 @@ def _emit(
     _, created = create_notification(
         user=rule.user,
         event_type=f"alert_{rule.rule_type}",
-        title="アラート条件に一致しました",
+        title=_alert_title(rule),
         message=message,
         target_url=target_url,
         source_type="alert_rule",
@@ -268,6 +278,9 @@ def evaluate_watch_alert_rules(item: WatchItem, *, remaining_seconds: int | None
 
 
 def _candidate_payload(item: Mapping[str, Any], run: SearchRun) -> dict[str, Any]:
+    comparison = item.get("marketComparison")
+    if not isinstance(comparison, Mapping):
+        comparison = {}
     return {
         "name": str(item.get("name") or ""),
         "url": str(item.get("url") or ""),
@@ -275,6 +288,8 @@ def _candidate_payload(item: Mapping[str, Any], run: SearchRun) -> dict[str, Any
         "bidding": item.get("bidding"),
         "remainingSeconds": item.get("remainingSeconds"),
         "marketMedian": run.result_snapshot.get("medianPrice"),
+        "differenceRate": comparison.get("differenceRate"),
+        "imageUrl": safe_image_url(item.get("imageUrl")),
         "buyDecision": item.get("buyDecision") or {},
         "observedAt": run.created_at.isoformat(),
     }

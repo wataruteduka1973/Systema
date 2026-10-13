@@ -8,6 +8,14 @@
         .notification-card { border-left: .3rem solid transparent; }
         .notification-card.is-unread { border-left-color: #c2532c; background: #fbf1ea; }
         .notification-message { overflow-wrap: anywhere; }
+        .notification-candidate { display: flex; gap: .75rem; align-items: flex-start; }
+        .candidate-image { flex: 0 0 72px; width: 72px; height: 72px; border-radius: .5rem; background: var(--systema-bg); border: 1px solid var(--systema-border); overflow: hidden; display: flex; align-items: center; justify-content: center; font-size: .7rem; color: var(--systema-muted); }
+        .candidate-image img { width: 100%; height: 100%; object-fit: cover; }
+        .candidate-body { min-width: 0; flex: 1 1 auto; }
+        .candidate-name { font-weight: 600; overflow-wrap: anywhere; color: var(--systema-text); }
+        .compare-chip { display: inline-block; border-radius: 999px; padding: .05rem .5rem; font-size: .75rem; font-weight: 600; border: 1px solid var(--systema-border); }
+        .compare-chip.below { background: var(--systema-teal-soft); border-color: var(--systema-teal); color: #1d5c4c; }
+        .compare-chip.above { background: var(--systema-coral-soft); border-color: var(--systema-coral); color: #7a2a1c; }
     </style>
 {% endblock %}
 
@@ -21,6 +29,13 @@
                 <p class="text-muted mb-0">値下げ、終了間近、保存検索とアラートの結果を確認できます。</p>
             </div>
             <button id="markAllRead" class="btn btn-outline-primary" type="button">すべて既読にする</button>
+        </div>
+        <div id="notificationCategories" class="nav nav-pills gap-2 mb-3" role="group" aria-label="通知の種類">
+            <button type="button" class="nav-link active" data-category="" aria-pressed="true">すべて</button>
+            <button type="button" class="nav-link" data-category="alert" aria-pressed="false">アラート</button>
+            <button type="button" class="nav-link" data-category="failure" aria-pressed="false">取得の失敗</button>
+            <button type="button" class="nav-link" data-category="watch" aria-pressed="false">ウォッチ</button>
+            <button type="button" class="nav-link" data-category="update" aria-pressed="false">更新のまとめ</button>
         </div>
         <div class="form-check form-switch mb-3">
             <input id="unreadOnly" class="form-check-input" type="checkbox">
@@ -37,5 +52,5 @@
 {% endblock %}
 
 {% block scripts %}
-    <script src="{% static 'JS/Notifications.js' %}?v=20260910-phase6"></script>
+    <script src="{% static 'JS/Notifications.js' %}?v=20261013-readable"></script>
 {% endblock %}

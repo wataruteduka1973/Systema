@@ -840,6 +840,7 @@ def notifications(request):
                 unread_only=unread_value == "true",
                 page=page,
                 page_size=page_size,
+                category=request.GET.get("category", ""),
             )
         )
     except ValueError as error:
