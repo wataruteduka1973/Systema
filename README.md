@@ -155,4 +155,4 @@ https://wataruteduka1973.github.io/Systema/
 
 ## 🤝 貢献
 バグ報告や機能リクエストは [GitHub Issues](https://github.com/wataruteduka1973/Systema/issues) へ。  
-ご質問は [agtmpdd992@gmail.com](mailto:agtmpdd992@gmail.com)まで
+ご質問は [agtmpwd992@gmail.com](mailto:agtmpwd992@gmail.com)まで
