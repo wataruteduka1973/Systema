@@ -1,6 +1,6 @@
 # 情報分析ツール システマ
 
-![Version](https://img.shields.io/badge/Version-1.0.0-blue) [![Documentation](https://github.com/wataruteduka1973/Systema/actions/workflows/docs.yml/badge.svg)](https://github.com/wataruteduka1973/Systema/actions/workflows/docs.yml)
+[![CI](https://github.com/wataruteduka1973/Systema/actions/workflows/ci.yml/badge.svg)](https://github.com/wataruteduka1973/Systema/actions/workflows/ci.yml) [![Documentation](https://github.com/wataruteduka1973/Systema/actions/workflows/docs.yml/badge.svg)](https://github.com/wataruteduka1973/Systema/actions/workflows/docs.yml)
 
 このツールは、ヤフオクの**購入**や**出品**に関する商品の価格や傾向を分析し、ユーザーに最適な意思決定をサポートします。相場データや現在出品中の商品を活用し、市場動向を可視化します。
 
@@ -24,6 +24,13 @@
 | **管理者モニタリング** (`/taskle/developer/`) | staffユーザー向けの読み取り専用ダッシュボード | 稼働状況の把握 |
 
 一部の機能（メルカリ連携によるドメスティック複数市場比較、掘り出し物発見スキャン、商品画像表示）は設計段階で未実装です。詳細は [docs/PROJECT.md](docs/PROJECT.md) と `docs/features/` を参照してください。
+
+## 🛠 技術スタックと設計方針
+
+- **技術**: Python 3.13、Django、PostgreSQL（一時的な確認用にSQLiteも利用可）、Bootstrap、JavaScript
+- **品質管理**: pytest（単体・結合・Playwrightによるブラウザー E2E）、Ruff、Black、mypy。pushとPull RequestごとにGitHub Actionsで検証し、SphinxドキュメントをGitHub Pagesへ公開
+- **設計**: 保存検索・取得結果・ウォッチリストはユーザー単位で分離。スクレイピング・解析・正規化・保存・分析の責務を分け、HTML解析のテストは保存済みのフィクスチャで行い、実サイトへの大量アクセスは行わない
+- **方針**: 購入・出品の意思決定を支援するツールです。自動入札・自動出品は対象外で、Yahoo!のIDやパスワードは保存しません
 
 ## 🚀 インストール
 
