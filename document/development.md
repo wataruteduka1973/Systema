@@ -7,6 +7,20 @@
 - PostgreSQL（開発・本番の標準データベース）
 - SQLite（テストとE2Eで `DB_ENGINE=sqlite` を指定したときに使用）
 
+## Linuxでの起動
+
+開発用には `./run_systema.sh` を実行します。`run_systema.bat` と同じく、仮想環境の作成、依存関係の導入、PostgreSQLへの接続確認、マイグレーション、静的ファイルの収集のあと、開発サーバーと定期実行を起動します。DB設定は `~/.config/systema/database.env`（フォルダー700・ファイル600、プロジェクトの外）に保存できます。
+
+サーバーではDocker Composeで、gunicorn・PostgreSQL・Redis・定期実行（専用の `scheduler` サービス）をまとめて動かします。
+
+```bash
+scripts/linux/create-env.sh --domain example.com   # このマシンだけで試すなら --local
+docker compose up -d --build
+scripts/linux/smoke-test.sh example.com
+```
+
+本番モードではHTTPSを終端するリバースプロキシを前に置きます。リポジトリの `docs/deployment-linux.md` に、日常の操作とバックアップ・復元の手順があります。
+
 ## Windowsでの起動
 
 プロジェクト直下の `run_systema.bat` を実行します。スクリプトは `.venv` を使用し、依存関係の導入、PostgreSQLへの接続確認、マイグレーションのあとに開発サーバーを起動します。

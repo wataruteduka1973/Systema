@@ -81,6 +81,26 @@ jobs:
       - run: python -m playwright install --with-deps --only-shell chromium
       - run: python -m pytest -m e2e -v
 
+  container:
+    name: Linux container
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - name: Check shell scripts
+        run: shellcheck run_systema.sh scripts/linux/*.sh
+      - name: Create a production .env for the smoke test
+        run: scripts/linux/create-env.sh --domain example.com
+      - name: Build and start the stack
+        run: docker compose up -d --build --wait --wait-timeout 300
+      - name: Smoke test
+        run: scripts/linux/smoke-test.sh example.com
+      - name: Show logs on failure
+        if: failure()
+        run: docker compose logs --no-color
+      - name: Stop the stack
+        if: always()
+        run: docker compose down -v
+
   docs:
     name: Documentation
     runs-on: ubuntu-latest

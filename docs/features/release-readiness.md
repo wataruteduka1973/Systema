@@ -24,9 +24,10 @@ Run `python manage.py check --deploy --fail-level WARNING` as well. Deploy with
 content of static assets through the public proxy.
 
 The default cache is development-only. Deployment must choose a supported shared
-Redis or Memcached service and install the matching Python client. Configure
-`DJANGO_CACHE_BACKEND` and `DJANGO_CACHE_LOCATION` through the secret/environment
-manager. This change does not purchase or provision a cache. The diagnostic checks
+Redis or Memcached service. `DJANGO_CACHE_BACKEND` (`locmem`, `redis`, `memcached`)
+and `DJANGO_CACHE_LOCATION` select it (`System_Config/cache.py`); the `redis` client is
+in requirements, and the Docker Compose stack runs Redis and sets both (ADR 0007,
+`docs/deployment-linux.md`). A Memcached deployment must add `pymemcache`. The diagnostic checks
 the backend type, not connectivity or atomic counter behavior; test both across
 multiple web workers before release. DatabaseCache is not accepted for this
 counter because its increment is not guaranteed atomic.
@@ -125,7 +126,9 @@ are implemented against the shared target-search use case. `test_alert_job.py` r
 advisory lock was verified locally on PostgreSQL 16, including a second OS process exiting 1 while the
 lock was held. An overlapping invocation exits 75 (`JOB_ALREADY_RUNNING_EXIT_CODE`).
 
-The in-app scheduler (ADR 0006) connects `run_alerts` hourly for local use. It runs the command
+The in-app scheduler (ADR 0006) connects `run_alerts` hourly for local use. The Linux Docker
+Compose stack runs the same loop as a dedicated `scheduler` service (`manage.py
+run_alert_scheduler`, ADR 0007) and disables it in web workers. It runs the command
 as a child process and kills it 300s after `--max-runtime-seconds`, which provides the hard timeout
 required above. Failures and timeouts are recorded in `ErrorLog`. Production still needs a decision:
 enable it on exactly one process, or use the provider's scheduler with the same command. The

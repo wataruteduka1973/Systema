@@ -1,0 +1,91 @@
+# Systema on Linux with Docker Compose: web (gunicorn), scheduler, PostgreSQL and Redis.
+# Settings and secrets come from .env (create it with scripts/linux/create-env.sh, mode 600).
+# See docs/deployment-linux.md and docs/decisions/0007-linux-docker-compose-deployment.md.
+name: systema
+
+x-app: &app
+  build: .
+  image: systema:latest
+  env_file: .env
+  environment:
+    DB_ENGINE: postgresql
+    DB_HOST: db
+    DB_PORT: "5432"
+    DB_NAME: ${POSTGRES_DB:-systema}
+    DB_USER: ${POSTGRES_USER:-systema}
+    DB_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}
+    DB_SSLMODE: disable
+    DJANGO_CACHE_BACKEND: redis
+    DJANGO_CACHE_LOCATION: redis://redis:6379/0
+    # Web workers never start the in-process timer; the scheduler service runs it once.
+    SYSTEMA_ALERT_SCHEDULER: "false"
+  volumes:
+    - app-local:/app/.local
+    - app-logs:/app/logs
+  restart: unless-stopped
+
+services:
+  db:
+    image: postgres:16
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-systema}
+      POSTGRES_USER: ${POSTGRES_USER:-systema}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U \"$$POSTGRES_USER\" -d \"$$POSTGRES_DB\""]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+    restart: unless-stopped
+
+  redis:
+    # Only rate-limit counters live here, so nothing is persisted to disk.
+    image: redis:7-alpine
+    command: ["redis-server", "--save", "", "--appendonly", "no"]
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+    restart: unless-stopped
+
+  migrate:
+    <<: *app
+    command: ["python", "manage.py", "migrate", "--noinput"]
+    restart: "no"
+    depends_on:
+      db:
+        condition: service_healthy
+
+  web:
+    <<: *app
+    ports:
+      - "${SYSTEMA_HTTP_BIND:-127.0.0.1}:${SYSTEMA_HTTP_PORT:-8000}:8000"
+    healthcheck:
+      test: ["CMD", "python", "-c", "import socket; socket.create_connection(('127.0.0.1', 8000), 3)"]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+      redis:
+        condition: service_healthy
+
+  scheduler:
+    <<: *app
+    command: ["python", "manage.py", "run_alert_scheduler"]
+    # Let a running job finish its current unit before the container is killed.
+    stop_grace_period: 60s
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+      redis:
+        condition: service_healthy
+
+volumes:
+  pgdata:
+  app-local:
+  app-logs:

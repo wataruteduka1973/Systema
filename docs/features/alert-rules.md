@@ -85,6 +85,10 @@ Outcomes are logged to `server_logger` as `scheduled_alert_job outcome=...`:
 - `failed` and `timed_out` are also written to `ErrorLog` (`scheduled_alert_job`, visible on the
   developer dashboard) with only the exit status and summary line.
 
+On Linux with Docker Compose the timer runs in the dedicated `scheduler` service instead
+(`manage.py run_alert_scheduler`, ADR 0007); web workers keep it disabled. SIGTERM stops that loop
+after the current job, and the last-start file is kept in the `app-local` volume.
+
 The child's stderr goes to the server console. Management commands and tests never start the
 scheduler; it is started only from `System_Config/wsgi.py` and `asgi.py`. Email delivery remains deferred until in-app notification behavior is stable and will use a separate outbox model.
 

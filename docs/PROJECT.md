@@ -34,6 +34,7 @@ Systema is a Django application that searches Yahoo! Auctions data, stores owner
 | Opportunity discovery scan | `docs/features/opportunity-discovery.md` |
 | Listing images | `docs/features/listing-images.md` |
 | Domestic expansion roadmap (D-series) | `docs/plans/domestic-expansion-roadmap.md` |
+| Linux deployment (Docker Compose) and Linux development launcher | `docs/deployment-linux.md` |
 | API contracts and migration | `docs/design/api.md` |
 | Database schema and migration | `docs/design/database.md` |
 

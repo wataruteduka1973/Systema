@@ -3,6 +3,7 @@ from pathlib import Path
 
 import django
 
+from System_Config.cache import build_cache_config
 from System_Config.database import build_database_config
 from System_Config.static_storage import build_storages
 
@@ -230,6 +231,9 @@ STATICFILES_DIRS = [
 
 # Production (DEBUG=false) requires `collectstatic` before serving pages.
 STORAGES = build_storages(DEBUG)
+
+# Rate-limit counters live here; production uses a shared Redis/Memcached (check_release).
+CACHES = build_cache_config(os.environ)
 
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"

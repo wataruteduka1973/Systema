@@ -1,0 +1,21 @@
+# Keep the build context to the application source; local state and generated files stay out.
+.git
+.github
+.venv
+venv
+**/__pycache__
+**/*.pyc
+.local
+.env
+.env.*
+db.sqlite3
+logs
+staticfiles
+document/build
+systema_ci
+tests
+.pytest_cache
+.mypy_cache
+.ruff_cache
+.verify-pytest-tmp
+*.log

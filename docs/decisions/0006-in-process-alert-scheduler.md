@@ -44,6 +44,12 @@ refresh interval of 1, 6 or 24 hours, and `run_alerts` skips searches that are n
 one scheduler while reducing Yahoo requests for searches that need only a daily market view. See
 `docs/features/alert-rules.md` (Refresh interval and status).
 
+## Addendum (2026-11-08): dedicated scheduler process on Linux
+
+For the Docker Compose deployment, `manage.py run_alert_scheduler` runs the same loop in the
+foreground as a single `scheduler` service, and web workers keep the in-process timer disabled
+(ADR 0007).
+
 ## Related Files
 
 - `Main/services/alert_scheduler.py`, `Main/services/job_lock.py`

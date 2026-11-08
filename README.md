@@ -46,6 +46,19 @@
 
 3. `http://127.0.0.1:8000/taskle/` を開く
 
+### Linuxで使う
+
+- 開発: `./run_systema.sh`（`run_systema.bat` と同じ流れ。DB設定は `~/.config/systema/database.env` に所有者だけが読める形で保存できます）
+- サーバー運用: Docker Composeで、アプリ（gunicorn）・PostgreSQL・Redis・定期実行をまとめて起動します。
+
+  ```bash
+  scripts/linux/create-env.sh --domain example.com   # または、このマシンだけで試すなら --local
+  docker compose up -d --build
+  scripts/linux/smoke-test.sh example.com
+  ```
+
+詳細は [Linuxでの運用](docs/deployment-linux.md) を参照してください。
+
 ### 開発環境
 
 標準データベースはPostgreSQLです（一時的な確認のみ`DB_ENGINE=sqlite`でSQLiteを使用可能）。
