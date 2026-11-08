@@ -160,6 +160,15 @@ class AlertScheduler:
                 # The scheduler thread's own connection (error logs) must not stay open idle.
                 connections.close_all()
 
+    def run_forever(self) -> None:
+        """Run the loop in the calling thread until stop() (a dedicated scheduler process)."""
+        logger.info(
+            "alert_scheduler_running interval=%ss max_runtime=%ss",
+            self.config.interval_seconds,
+            self.config.max_runtime_seconds,
+        )
+        self._loop()
+
     def start(self) -> None:
         self._thread = threading.Thread(target=self._loop, name="alert-scheduler", daemon=True)
         self._thread.start()
@@ -175,6 +184,17 @@ class AlertScheduler:
             self._thread.join(timeout)
 
 
+def configured_scheduler() -> AlertScheduler:
+    """A scheduler built from settings, keeping its last-start time under .local."""
+    config = SchedulerConfig(
+        interval_seconds=settings.ALERT_SCHEDULER_INTERVAL_SECONDS,
+        max_runtime_seconds=settings.ALERT_SCHEDULER_MAX_RUNTIME_SECONDS,
+    )
+    return AlertScheduler(
+        config, state_path=Path(settings.BASE_DIR) / ".local" / "alert-scheduler-last-start"
+    )
+
+
 _scheduler: AlertScheduler | None = None
 _scheduler_lock = threading.Lock()
 
@@ -186,13 +206,7 @@ def start_alert_scheduler() -> AlertScheduler | None:
         return None
     with _scheduler_lock:
         if _scheduler is None:
-            config = SchedulerConfig(
-                interval_seconds=settings.ALERT_SCHEDULER_INTERVAL_SECONDS,
-                max_runtime_seconds=settings.ALERT_SCHEDULER_MAX_RUNTIME_SECONDS,
-            )
-            scheduler = AlertScheduler(
-                config, state_path=Path(settings.BASE_DIR) / ".local" / "alert-scheduler-last-start"
-            )
+            scheduler = configured_scheduler()
             scheduler.start()
             atexit.register(scheduler.stop, 1.0)
             _scheduler = scheduler

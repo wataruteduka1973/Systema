@@ -13,3 +13,5 @@ scikit-learn ==1.9.0
 myst-parser ==5.1.0
 pandas ==3.0.5
 psycopg[binary] ==3.3.4
+gunicorn ==26.2.0
+redis ==8.1.0

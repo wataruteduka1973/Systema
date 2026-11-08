@@ -23,6 +23,8 @@ $env:DJANGO_BEHIND_HTTPS_PROXY = "true"
 
 秘密鍵をリポジトリ、ログ、画面、サポートメッセージへ記録しないでください。漏えいが疑われる場合は、直ちに新しい値へローテーションしてください。
 
+Linux（Docker Compose）では、これらの値を `.env` に書きます。`scripts/linux/create-env.sh --domain <ドメイン>` が秘密鍵とデータベースのパスワードをランダムに生成し、所有者だけが読めるモード600で作成します。手順は [Linuxでの運用](deployment-linux.md) を参照してください。
+
 デプロイ前診断:
 
 ```powershell
