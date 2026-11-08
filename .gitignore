@@ -15,3 +15,5 @@ logs/
 staticfiles/
 document/build/
 .venv-linux/
+# SQLite file created when DB_ENGINE=sqlite is used with the CI database name
+/systema_ci
